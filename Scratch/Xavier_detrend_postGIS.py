@@ -309,7 +309,7 @@ def make_linear_fit_plot(location_np, z_np, fit_params):
     return plt.show()
 
 def make_residual_plot(location_np, residual, R_squared):
-    # Plot residuals across longitudinal profile, show R^2
+    '''Plot residuals across longitudinal profile, show R^2. Inputs are a numpy array of location, a list of residuals, and a float for R-squared'''
     x_plot = location_np
     y_plot = np.array(residual)
     y_zero = 0*x_plot
@@ -327,9 +327,9 @@ def make_residual_plot(location_np, residual, R_squared):
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-#make_quadratic_fit_plot(location_np, z_np, fit_params)
-#make_quadratic_residual_plot(location_np, residual, R_squared)
-#quadratic_fit(location_np, location, z_np, ws)
+make_quadratic_fit_plot(location_np, z_np, fit_params)
+make_quadratic_residual_plot(location_np, residual, R_squared)
+quadratic_fit(location_np, location, z_np, ws)
 #linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[0]
 #residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[2]
 #R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[3]
