@@ -10,12 +10,12 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\COMID17569535\Settings10\las_files'
-xyz_table = direct + '\\Stationpoints_elevation_xl_4_detrend.xlsx'
-centerline = direct + '\\centerline\\COMID17569535_centerline.shp'
-station_lines = direct + '\\centerline\\COMID17569535_centerline_XS_20x5ft.shp'
-DEM = direct + '\\r1_s9_ras1.tif'
-process_footprint = direct + '\\COMID17569535_clip.shp'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\COMID17569535\Settings10'
+xyz_table = direct + '\\XY_elevation_table.xlsx'
+centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
+station_lines = direct + '\\las_files\\centerline\\smooth_centerline_XS_5x50ft.shp'
+DEM = direct + '\\las_files\\comid1756953.tif'
+process_footprint = direct + '\\las_files\\detrend_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
@@ -32,7 +32,7 @@ x = []
 y = []
 z = []
 listoflist = [location, id, z, x, y]
-listofcolumn = ["D", "I", "J", "K", "L"]
+listofcolumn = ["D", "A", "L", "I", "J"]
 
 for i in range(0, len(listofcolumn)):
     for cell in ws[listofcolumn[i]]:
@@ -327,16 +327,14 @@ def make_residual_plot(location_np, residual, R_squared):
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-make_quadratic_fit_plot(location_np, z_np, fit_params)
-make_quadratic_residual_plot(location_np, residual, R_squared)
-quadratic_fit(location_np, location, z_np, ws)
-#linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[0]
-#residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[2]
-#R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[3]
-#make_residual_plot(location_np, residual, R_squared)
-#make_linear_fit_plot(location_np, z_np, fit_params)
-
-
+#make_quadratic_fit_plot(location_np, z_np, fit_params)
+#make_quadratic_residual_plot(location_np, residual, R_squared)
+#quadratic_fit(location_np, location, z_np, ws)
+fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[0]
+residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[2]
+R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[3]
+make_residual_plot(location_np, residual, R_squared)
+make_linear_fit_plot(location_np, z_np, fit_params)
 detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[1960])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######
