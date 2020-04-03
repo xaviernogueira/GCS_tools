@@ -10,13 +10,13 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\COMID17569535\Settings10'
-xyz_table = direct + '\\XY_elevation_table.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\COMID22514218'
+xyz_table = direct + '\\XY_elevation_table_100_smooth_4_spaced.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
-station_lines = direct + '\\las_files\\centerline\\smooth_centerline_XS_5x50ft.shp'
-DEM = direct + '\\las_files\\comid1756953.tif'
-process_footprint = direct + '\\las_files\\detrend_footprint.shp'
-detrend_workplace = direct + '\\LINEAR_DETREND_BP1960'
+station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
+DEM = direct + '\\las_files\\ls_nodt.tif'
+process_footprint = direct + '\\process_extent.shp'
+detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_4ft_spacing'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
@@ -245,7 +245,7 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
     ws = wb.active
-    csv_file = 'Stationpoints_xyz_1ft_meters.csv'
+    csv_file = 'Stationpoints_xyz_sp4ft.csv'
     arcpy.env.extent = footprint
     arcpy.env.workspace = direct
     arcpy.env.snapRaster = dem
@@ -257,9 +257,9 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
 
     for i in list_of_breakpoints:
         column = ('z_fit_%s' % i)
-        detrended_raster_file = direct + "\\ras3_detren.tif"
+        detrended_raster_file = detrend_workplace + "\\ras_detren.tif"
         points = arcpy.MakeXYEventLayer_management(csv_file, "POINT_X", "POINT_Y", out_layer=("fitted_station_points%s" % i), spatial_reference=spatial_ref, in_z_field=column)
-        points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s" % i).replace('.csv', '.lyr'))
+        points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s_sp4ft" % i).replace('.csv', '.lyr'))
         points = arcpy.CopyFeatures_management(points)
         print("Creating Thiessen polygons...")
     # Delete non-relevent fields tp reduce errors
@@ -268,14 +268,25 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
         fields2delete = list(set(fields) - set(dont_delete_fields))
         points = arcpy.DeleteField_management(points, fields2delete)
 
-        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly.shp", fields_to_copy='ALL')
-        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_%s.tif' % i), cell_assignment="CELL_CENTER")
+        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_sp4ft.shp", fields_to_copy='ALL')
+        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_%s_sp4ft.tif' % i), cell_assignment="CELL_CENTER")
         detrended_DEM = arcpy.Raster(dem) - arcpy.Raster(z_fit_raster)
         detrended_DEM.save(detrended_raster_file)
         print("DEM DETRENDED!")
 
 
 ###### Define plotting function ######
+def diagnostic_quick_plot(location_np, z_np):
+    x_plot = location_np
+    y_plot = z_np
+    plt.plot(x_plot, y_plot, 'r', label="Actual elevation profile")
+    plt.xlabel("Thalweg distance downstream (ft)")
+    plt.ylabel("Bed elevation (ft)")
+    plt.grid(b=True, which='major', color='#666666', linestyle='-')
+    plt.minorticks_on()
+    plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+    return plt.show()
+
 def make_quadratic_fit_plot(location_np, z_np, fit_params):
     # Make a plot of the quadratic fit
     # Plot longitudinal elevation profile and detrending fit line
@@ -287,6 +298,9 @@ def make_quadratic_fit_plot(location_np, z_np, fit_params):
     plt.ylabel("Bed elevation (ft)")
     plt.title("Quadratic detrended elevation profile")
     plt.plot(x_plot, y2_plot, 'b', label= "Elevation profile detrending quadratic: %s * x^2 + %.4f * x + %.4f" % (fit_params[0], fit_params[1], fit_params[2]))
+    plt.grid(b=True, which='major', color='#666666', linestyle='-')
+    plt.minorticks_on()
+    plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
     plt.legend(loc=1)
     return plt.show()
 
@@ -330,11 +344,13 @@ def make_residual_plot(location_np, residual, R_squared):
 #make_quadratic_fit_plot(location_np, z_np, fit_params)
 #make_quadratic_residual_plot(location_np, residual, R_squared)
 #quadratic_fit(location_np, location, z_np, ws)
-fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[0]
-residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[2]
-R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 1960])[3]
-make_residual_plot(location_np, residual, R_squared)
-make_linear_fit_plot(location_np, z_np, fit_params)
-detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[1960])
+
+#diagnostic_quick_plot(location_np, z_np)
+#fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[0]
+#residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[2]
+#R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[3]
+#make_residual_plot(location_np, residual, R_squared)
+#make_linear_fit_plot(location_np, z_np, fit_params)
+detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[3200])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######

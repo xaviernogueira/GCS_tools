@@ -8,7 +8,7 @@ Things to consider adding:
 """
 
 from Tkinter import *
-from file_functions import *
+from file_functions_oldpy import *
 import os
 import sys
 import shutil
@@ -289,10 +289,11 @@ def process_lidar(lastoolsdir,
 
     logging.info('Using tile size of %i' % tile_size)
 
-    odir = lidardir + '01_tiled/'
+    odir = (lidardir + '01_tiled/')
 
-    # call LAStools command to create tiling
-    cmd('%slastile.exe -lof %s -cores %i -o tile.las -tile_size %i -buffer 5 -faf -odir %s -olas' % (
+    # call LAStools command to create tiling, NO OUTPUT BUT WHYYYYYY
+    cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
+    cmd('%slastile.exe -lof %s -cores %i -tile_size %i -buffer 5 -faf -odir %s -o tile.las -olas' % (
         lastoolsdir, lof, cores, tile_size, odir))
 
     logging.info('OK')
@@ -319,6 +320,7 @@ def process_lidar(lastoolsdir,
             tile_size = int(tile_size * num * 1.0 / 1500000)
             logging.info('Using tile size of %i' % tile_size)
 
+            cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
             cmd('%slastile.exe -lof %s -cores %i -o tile.las -tile_size %i -buffer 5 -faf -odir %s -olas' % (
                 lastoolsdir, lof, cores, tile_size, odir))
             # recheck largest tile number of points
@@ -441,12 +443,14 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, lidardir + '04_lasclassify/')
         odir = lidardir + '05_lastile_rm_buffer/'
 
+    cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
     cmd('%slastile.exe -lof %s -cores %i -remove_buffer -odir %s -olas' % (lastoolsdir, lof, cores, odir))
 
     if ground_poly != '':
         lof = lof_text(lastoolsdir, lidardir + '04b_lasclassify_fine/')
         odir = lidardir + '05b_lastile_rm_buffer_fine/'
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slastile.exe -lof %s -cores %i -remove_buffer -odir %s -olas' % (lastoolsdir, lof, cores, odir))
 
     logging.info('OK')
@@ -467,6 +471,8 @@ def process_lidar(lastoolsdir,
     for class_type in classes:
         odir = podir + '/' + class_type + '/'
         class_code = int(class_type.split('-')[0])
+
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slas2las.exe -lof %s -cores %i -keep_classification %i -odir %s -olas' % (
             lastoolsdir, lof, cores, class_code, odir))
 
@@ -485,6 +491,8 @@ def process_lidar(lastoolsdir,
         for class_type in classes:
             odir = lidardir + '06b_separated_fine' + '/' + class_type + '/'
             class_code = int(class_type.split('-')[0])
+
+            cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
             cmd('%slas2las.exe -lof %s -cores %i -keep_classification %i -odir %s -olas' % (
                             lastoolsdir, lof, cores, class_code, odir))
 
@@ -499,6 +507,7 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, lidardir + '06a_separated_coarse' + '/' + '02-Ground' + '/')
         odir = lidardir + '07a_ground_clipped_coarse/'
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slasclip.exe -lof %s -cores %i -poly %s -interior -donuts -odir %s -olas' % (
             lastoolsdir, lof, cores, ground_poly, odir))
 
@@ -510,6 +519,7 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, lidardir + '06b_separated_fine' + '/' + '02-Ground' + '/')
         odir = lidardir + '07b_ground_clipped_fine/'
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slasclip.exe -lof %s -cores %i -poly %s -donuts -odir %s -olas' % (
             lastoolsdir, lof, cores, ground_poly, odir))
 
@@ -537,6 +547,8 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, sources)
         odir = lidardir + '08_ground_merged/'
         ground_results = odir # will be overwritten if rm_duplicates block runs
+
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slastile.exe -lof %s -cores %i -o tile.las -tile_size %i -faf -odir %s -olas' % (
             lastoolsdir, lof, cores, tile_size, odir))
 
@@ -551,6 +563,7 @@ def process_lidar(lastoolsdir,
         odir = lidardir + '09_ground_rm_duplicates/'
         ground_results = odir
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slasduplicate.exe -lof %s -cores %i -lowest_z -odir %s -olas' % (lastoolsdir, lof, cores, odir))
 
         logging.info('OK')
@@ -566,6 +579,7 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, sources)
         odir = lidardir + '10_veg_new_merged/'
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slastile.exe -lof %s -cores %i -o tile.las -tile_size %i -faf -odir %s -olas' % (
             lastoolsdir, lof, cores, tile_size, odir))
 
@@ -580,6 +594,7 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, lidardir + '10_veg_new_merged/')
         odir = lidardir + '11_veg_new_clipped/'
 
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slasclip.exe -lof %s -cores %i -poly %s -interior -donuts -odir %s -olas' % (
             lastoolsdir, lof, cores, ground_poly, odir))
 
@@ -604,6 +619,7 @@ def process_lidar(lastoolsdir,
         odir = lidardir + '12_veg_merged/'
         veg_results = odir # will be overwritten if rm_duplicates block runs
 
+    cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
     cmd('%slastile.exe -lof %s -cores %i -o tile.las -tile_size %i -faf -odir %s -olas' % (
         lastoolsdir, lof, cores, tile_size, odir))
 
@@ -617,7 +633,7 @@ def process_lidar(lastoolsdir,
         lof = lof_text(lastoolsdir, lidardir + '12_veg_merged/')
         odir = lidardir + '13_veg_rm_duplicates/'
         veg_results = odir
-
+        cmd('%slasindex.exe -lof %s -cores %i' % (lastoolsdir, lof, cores))
         cmd('%slasduplicate.exe -lof %s -cores %i -lowest_z -odir %s -olas' % (lastoolsdir, lof, cores, odir))
 
         logging.info('OK')

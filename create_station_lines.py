@@ -1,13 +1,14 @@
 import arcpy
 from arcpy import env
 import os
-from Tkinter import *
+import tkinter
+from tkinter import *
 from file_functions import *
 import logging
 arcpy.env.overwriteOutput = True
 
 @err_info
-def create_station_lines(line_shp, spacing, xs_length):
+def create_station_lines_function(line_shp, spacing, xs_length):
     '''
     Creates station lines perpendicular to line_shp with given longitudinal spacing and lateral XS length
     (lengths are in units of input line coordinate system)
@@ -56,7 +57,7 @@ def create_station_lines(line_shp, spacing, xs_length):
 
     # convert to output polyline
     logging.info('Converting points to polyline output...')
-    out_name = line_shp.replace('.shp', '_XS.shp')
+    out_name = line_shp.replace('.shp', ('_XS_%sx%sft.shp' % (spacing, xs_length)))
     arcpy.PointsToLine_management(el, out_name, 'LOCATION')
     logging.info('OK.')
 

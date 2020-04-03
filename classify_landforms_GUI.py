@@ -4,18 +4,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import arcpy
-
 arcpy.env.overwriteOutput = True
-from Tkinter import *
+from tkinter import *
 import logging
 
 
-def clean_in_table(table, w_field='Width', z_field='Z', v_field='V', dist_field='dist_down'):
+def clean_in_table(table, w_field='W', z_field='Z', dist_field='dist_down'):
     '''Renames columns corresponding to W, Z, and dist_down, if they are not already columns'''
     check_use(table)
     df = pd.read_csv(table)
 
-    for old_name, replacement_name in [(w_field, 'W'), (z_field, 'Z'), (v_field, 'V'), (dist_field, 'dist_down')]:
+    for old_name, replacement_name in [(w_field, 'W'), (z_field, 'Z'), (dist_field, 'dist_down')]:
         if replacement_name not in df.columns.tolist():
             if old_name in df.columns.tolist():
                 df.rename(columns={old_name: replacement_name})
@@ -103,9 +102,9 @@ def landform_polygons(table, wetted_XS_polygon):
                                           'SHORT'
                                           )
             else:
-                arcpy.AddField_management(wetted_XS_polygon,
-                                          col,
-                                          'FLOAT'
+                arcpy.AddField_management(in_table=wetted_XS_polygon,
+                                          field_name=col,
+                                          field_type='FLOAT'
                                           )
     # fill each new column with values using join_on column name
     rows = arcpy.UpdateCursor(wetted_XS_polygon)
@@ -150,7 +149,7 @@ def GCS_plot(table, units='m'):
         ws = df.W_s.tolist()
         zs = df.Z_s.tolist()
         zs_ws = df.W_s_Z_s.tolist()
-    except Exception, e:
+    except Exception as e:
         logging.exception(e)
         logging.info('Could not find columns Z_s, W_s, and W_s_Z_s with GCS data.')
         raise Exception(e)
@@ -186,7 +185,7 @@ def GCS_plot(table, units='m'):
 
 
 @err_info
-def main_classify_landforms(tables, w_field, z_field, v_field, dist_field, make_plots=False):
+def main_classify_landforms(tables, w_field, z_field, dist_field, make_plots=True):
     '''Classifies river segments as normal, wide bar, constricted pool, oversized, or nozzle
 
     Args:
@@ -202,18 +201,21 @@ def main_classify_landforms(tables, w_field, z_field, v_field, dist_field, make_
             adds these computed values to attribute tables of corresponding wetted polygon rectangular XS's
     '''
     out_polys = []
-    fields = [w_field, z_field, v_field]
+    fields = [w_field, z_field]
     std_fields = [field + '_s' for field in fields]
     std_pairs = list(itertools.combinations(std_fields, 2))
-
-    for table in tables:
-        clean_in_table(table, w_field=w_field, z_field=z_field, v_field=v_field, dist_field=dist_field)
+    width_files = ['width_rectangles_10ft.shp', 'width_rectangles_11ft.shp', 'width_rectangles_12ft.shp', 'width_rectangles_13ft.shp', 'width_rectangles_14ft.shp', 'width_rectangles_15ft.shp', 'width_rectangles_16ft.shp', 'width_rectangles__0ft.shp', 'width_rectangles__1ft.shp', 'width_rectangles__2ft.shp', 'width_rectangles__3ft.shp', 'width_rectangles__4ft.shp', 'width_rectangles__5ft.shp', 'width_rectangles__6ft.shp', 'width_rectangles__7ft.shp', 'width_rectangles__8ft.shp', 'width_rectangles__9ft.shp']
+    width_dir = 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\analysis_shapefiles\\'
+    for i in range(len(tables)):
+        table = tables[i]
+        clean_in_table(table, w_field=w_field, z_field=z_field, dist_field=dist_field)
         standardize(table, fields=fields)
         for std_pair in std_pairs:
             std_covar_series(table, std_pair[0], std_pair[1])
         df = landforms(table)
-        df = landform_polygons(table, table.replace('_joined_table.csv', '.shp'))
-        out_polys.append(table.replace('_joined_table.csv', '.shp'))
+        df = landform_polygons(table, width_dir + width_files[i])
+        #table.replace('.csv', '.shp')
+        out_polys.append(width_dir + width_files[i])
         if make_plots == True:
             GCS_plot(table)
 
@@ -272,7 +274,6 @@ if __name__ == '__main__':
                command=lambda: main_classify_landforms(tables=list(root.tk.splitlist(E1.get())),
                                                        w_field=E2.get(),
                                                        z_field=E3.get(),
-                                                       v_field=E4.get(),
                                                        dist_field=E5.get()
                                                        )
                )

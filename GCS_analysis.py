@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.tri as tri
 import scipy.signal as sig
-from Tkinter import *
+from tkinter import *
 import logging
 
 # Set the default color cycle
@@ -53,7 +53,7 @@ def agg_corrs(data, field_1, field_2):
     '''
 
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
 
     output = DF(index=flow_names, columns=reach_names, title='Corr(%s,%s)' % (field_1, field_2))
 
@@ -73,7 +73,7 @@ def gcs_means(data, field_1, field_2):
     '''
 
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
 
     output = DF(index=flow_names, columns=reach_names, title='Mean C(%s,%s)' % (field_1, field_2))
 
@@ -91,7 +91,7 @@ def gcs_pos_percents(data, field_1, field_2):
     '''
 
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
 
     output = DF(index=flow_names, columns=reach_names, title='Percent of C(%s,%s) > 0' % (field_1, field_2))
 
@@ -111,7 +111,7 @@ def percents(data, field):
     Computes percent of abs(field) values above 1 for each flow and reach
     '''
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
 
     output = DF(index=flow_names, columns=reach_names, title='Percent of |%s| > 1' % field)
 
@@ -188,7 +188,7 @@ def ww_runs(data, field):
     Computes runs and expected runs for values above/below median field value
     '''
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
 
     output = []
 
@@ -211,7 +211,7 @@ def ww_runs(data, field):
 def landform_occupation(data):
     '''Computes percentage of channel each landform class occupies (not nested)'''
     flow_names = sorted(data.keys())
-    reach_names = sorted(data.values()[0].keys())
+    reach_names = sorted(list(data.values())[0].keys())
     # code number and corresponding MU
     code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}
 
@@ -656,7 +656,11 @@ def clean_in_data(tables, fields, reach_breaks=None):
         if reach_breaks is not None:
             df = pd.read_csv(table)
             table_dict = {'All': df}
+            #### ADDED COMMANDS #####
+            df = df.sort_values(by=['dist_down'], ascending=True)
+            df = df.reset_index(drop=True)
 
+            ####################################################
             # dataframe indices corresponding to reach break distance values
             reach_break_indices = [df.index[df['dist_down'] == reach_break].tolist()[0] for reach_break in reach_breaks]
             reach_indices = split_list(df.index.tolist(), reach_break_indices)
@@ -692,19 +696,20 @@ def clean_in_data(tables, fields, reach_breaks=None):
     return data
 
 
-def complete_analysis(tables, reach_breaks=None):
+def complete_analysis(tables, reach_breaks=None, fields=[]):
     '''Executes various analyses
 
     Args:
         tables: list of file names for cross-section data tables
         reach_breaks: list of distances downstream to set reach breaks
+        list of
     '''
 
     odir = os.path.dirname(__file__)+'\\results\\'
     if os.path.isdir(odir) == False:
         os.mkdir(odir)
 
-    fields = ['W', 'Z', 'V']
+
     std_fields = [field + '_s' for field in fields]
     std_pairs = list(itertools.combinations(std_fields, 2))
 
@@ -714,11 +719,11 @@ def complete_analysis(tables, reach_breaks=None):
     data = clean_in_data(tables, fields=fields, reach_breaks=reach_breaks)
     logging.info('OK')
 
-    logging.info('Computing GCS correlation between flows...')
-    for std_pair in std_pairs:
-        gcs_corrs = flow_cov_corrs(data, std_pair[0], std_pair[1])
-        df_lol.append(gcs_corrs)
-    logging.info('OK')
+    #logging.info('Computing GCS correlation between flows...')
+    #for std_pair in std_pairs:
+        #gcs_corrs = flow_cov_corrs(data, std_pair[0], std_pair[1])
+        #df_lol.append(gcs_corrs)
+    #logging.info('OK')
 
     logging.info('Computing correlations between field pairs...')
     corrs_list = []

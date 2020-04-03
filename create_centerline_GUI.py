@@ -1,6 +1,7 @@
 import arcpy
 arcpy.env.overwriteOutput = True
 arcpy.CheckOutExtension('Spatial')
+import file_functions
 from file_functions import *
 import logging
 

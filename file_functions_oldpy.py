@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import itertools
-import tkinter
-from tkinter import *
-from tkinter import messagebox
-from tkinter import filedialog
+import Tkinter
+from Tkinter import *
+import tkMessageBox
+import tkFileDialog
 import subprocess
 import logging
 import arcpy
@@ -38,7 +38,7 @@ def cmd(command):
     msg = res.communicate()[1]
     # if using for LAStools, get rid of the annoying LAStools licensing message.
     #msg = msg.replace(
-        #'Please note that LAStools is not "free" (see http://lastools.org/LICENSE.txt) contact martin.isenburg@rapidlasso.com to clarify licensing terms if needed.',
+        #'Please note that LAStools is not "free" (see http://lastools.org/LICENSE.txt)\r\ncontact \'martin.isenburg@rapidlasso.com\' to clarify licensing terms if needed.\r\n',
         #'')
     logger.info(msg)
     return
@@ -48,13 +48,13 @@ def cmd(command):
 def browse(root, entry, select='file', ftypes=[('All files', '*')]):
     """GUI button command: opens browser window and adds selected file/folder to entry"""
     if select == 'file':
-        filename = filedialog.askopenfilename(parent=root, title='Choose a file', filetypes=ftypes)
+        filename = tkFileDialog.askopenfilename(parent=root, title='Choose a file', filetypes=ftypes)
         if filename != None:
             entry.delete(0, END)
             entry.insert(END, filename)
 
     elif select == 'files':
-        files = filedialog.askopenfilenames(parent=root, title='Choose files', filetypes=ftypes)
+        files = tkFileDialog.askopenfilenames(parent=root, title='Choose files', filetypes=ftypes)
         l = root.tk.splitlist(files)
         entry.delete(0, END)
         entry.insert(END, l)
@@ -73,7 +73,7 @@ def err_info(func):
             func(*args, **kwargs)
         except Exception as e:
             logger.info(e)
-            showerror('Error', e)
+            tkMessageBox.showerror('Error', e)
     return wrapper
 
 def spatial_license(func):
