@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
@@ -32,6 +32,7 @@ upstream_source_poly = direct + "\\upstream_flow_poly.shp"
 spatial_extent = direct + "\\las_footprint.shp"
 las_dataset_name = direct + "\\las_files\\COMID17587592_ground.lasd"
 raster_location = direct + "\\las_files\\ls_nodt.tif"
+centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 xl_output = direct + ""
 flow_polygon = direct + "\\upstream_flow_poly.shp"
 station_lines_g = ""
@@ -78,7 +79,6 @@ def lidar_footptint(direct, spatial_ref):
         print("Unprojected LAS Dataset made @ %s" % raw_las_dataset)
         lidar_footprint = arcpy.PointFileInformation_3d(raw_las_dataset, direct + "\\las_footprint_pre_dissolve", "LAS", input_coordinate_system=spatial_ref)
         lidar_footprint = arcpy.Dissolve_management(lidar_footprint, direct + "\\las_footprint")
-        os.remove(str(direct + "\\las_footprint_pre_dissolve"))
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
@@ -86,7 +86,7 @@ def lidar_footptint(direct, spatial_ref):
     return lidar_footprint
 
 
-def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, spatial_ref):
+def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff, spatial_ref):
     '''This function takes the defined lidar footprint from the lidar_footprint() function, as well as a defined NAIP imagery location (in .jpg2)
     and makes a polygon of vegeation using a NDVI threshold of >0.4. This polygon is erased from the lidar footprint to give a ground_polygon used
     to define processing settings
@@ -115,10 +115,16 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, spatial_ref):
 
         NDVI = ((nir_ras - red_ras) / (nir_ras + red_ras))
         NDVI.save(direct + "//NDVI.tif")
-        veg_ras = Con(Raster(NDVI) >= 0.4, 1)
+        veg_ras_raw = Con(Raster(NDVI) >= 0.4, 1)
+        veg_ras_raw.save(direct + "//veg_ras_raw.tif")
+        veg_ras = MajorityFilter(veg_ras_raw, "EIGHT", "MAJORITY")
         veg_ras.save(direct + "//veg_ras.tif")
         print(veg_ras)
         veg_poly = arcpy.RasterToPolygon_conversion(veg_ras, direct + "//veg_poly_ndvi04.shp", simplify=FALSE)
+
+        #Project buffered centerline and use to clip vegetation polygon
+        centerline_buff_prj = arcpy.Project_management(centerline_buff, direct + "centerline_buff_prj.shp", out_coor_system=spatial_ref)
+        veg_poly = arcpy.Clip_analysis(veg_poly, centerline_buff_prj, direct + "//veg_poly_ndvi04_clip.shp")
         print(lidar_footprint)
         print(veg_poly)
     #Make a polygon of bare ground
@@ -177,7 +183,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     print("Station points shapefile at: " + str(station_points))
     print("Elevation table at: " + str(elevation_table))
 
-#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 define_ground_polygon(spatial_extent, NAIP_imagery_folder, spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location)
 #detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
