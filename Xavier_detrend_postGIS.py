@@ -1,5 +1,7 @@
 import openpyxl as xl
 import arcpy
+import os
+from os import *
 from arcpy import env
 from openpyxl import Workbook
 from openpyxl import load_workbook
@@ -10,13 +12,13 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\COMID22514218'
-xyz_table = direct + '\\XY_elevation_table_100_smooth_4_spaced.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013'
+xyz_table = direct + '\\XY_elevation_table_100_smooth_3_spaced.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
-process_footprint = direct + '\\process_extent.shp'
-detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_4ft_spacing'
+process_footprint = direct + '\\las_footprint.shp'
+detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
@@ -250,6 +252,10 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
     arcpy.env.workspace = direct
     arcpy.env.snapRaster = dem
     arcpy.overwriteoutput = True
+
+    if not os.path.exists(process_footprint):
+        os.makedirs(process_footprint)
+
     with open(csv_file, 'w', newline="") as f:
         col = csv.writer(f)
         for row in ws.rows:
@@ -345,12 +351,12 @@ def make_residual_plot(location_np, residual, R_squared):
 #make_quadratic_residual_plot(location_np, residual, R_squared)
 #quadratic_fit(location_np, location, z_np, ws)
 
-#diagnostic_quick_plot(location_np, z_np)
+diagnostic_quick_plot(location_np, z_np)
 #fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[0]
 #residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[2]
 #R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[3]
 #make_residual_plot(location_np, residual, R_squared)
 #make_linear_fit_plot(location_np, z_np, fit_params)
-detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[3200])
+#detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[3200])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######

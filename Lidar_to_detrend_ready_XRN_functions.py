@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
@@ -30,7 +30,7 @@ spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
 cell_size = 0.7
 upstream_source_poly = direct + "\\upstream_flow_poly.shp"
 spatial_extent = direct + "\\las_footprint.shp"
-las_dataset_name = direct + "\\las_files\\COMID17587592_ground.lasd"
+las_dataset_name = direct + "\\las_files\\COMID17573013_ground.lasd"
 raster_location = direct + "\\las_files\\ls_nodt.tif"
 centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 xl_output = direct + ""
@@ -123,12 +123,13 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
         veg_poly = arcpy.RasterToPolygon_conversion(veg_ras, direct + "//veg_poly_ndvi04.shp", simplify=FALSE)
 
         #Project buffered centerline and use to clip vegetation polygon
-        centerline_buff_prj = arcpy.Project_management(centerline_buff, direct + "centerline_buff_prj.shp", out_coor_system=spatial_ref)
-        veg_poly = arcpy.Clip_analysis(veg_poly, centerline_buff_prj, direct + "//veg_poly_ndvi04_clip.shp")
+        centerline_buff_prj = arcpy.Project_management(centerline_buff, direct + "//centerline_buff_prj.shp", out_coor_system=spatial_ref)
+
         print(lidar_footprint)
         print(veg_poly)
     #Make a polygon of bare ground
-        ground_poly = arcpy.Erase_analysis(spatial_extent, veg_poly, direct + "//ground_poly.shp")
+        ground_poly = arcpy.Erase_analysis(spatial_extent, veg_poly, direct + "//ground_poly_full.shp")
+        ground_poly = arcpy.Clip_analysis(ground_poly, centerline_buff, direct + "//ground_poly.shp")
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
@@ -147,7 +148,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name):
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
     global raster_location
-    raster_name = tiff_lidar_raster_ft
+    raster_name = tiff_lidar_raster
     print("las dataset at %s, raster at %s" % (las_dataset, tiff_lidar_raster_ft))
 
 
@@ -159,8 +160,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     arcpy.env.extent = spatial_extent
     print(raster_location)
 
-    spacing = 4
-    xs_length = 250
+    spacing = 3
+    xs_length = 350
     smooth_distance = 100
     #Create station centerline and stationline with Kenny's function, use intercept to get station points
     least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
@@ -183,10 +184,10 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     print("Station points shapefile at: " + str(station_points))
     print("Elevation table at: " + str(elevation_table))
 
-lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-define_ground_polygon(spatial_extent, NAIP_imagery_folder, spatial_ref)
+#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+#define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location)
-#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 
