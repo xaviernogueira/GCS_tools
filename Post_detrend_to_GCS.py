@@ -72,6 +72,7 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
         print("Flood stage polygon made with max stage of %sft and is stored: %s" % (max_stage[0], flood_stage_poly))
 
         for i in range(max_stage[0] + 1):
+            print(range(max_stage[0] + 1))
             query = ('"gridcode" <= %d' % i)
             print(query)
             stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="NEW_SELECTION",
@@ -89,17 +90,16 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
             if raster_units == "m":
                 stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + (
-                        "\\smooth_stage_poly_%sft_no_donuts" % i), "PAEK", 100)
+                        "\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 100)
             else:
-                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts,
-                                                                            out_folder + (
-                                                                                    "\\smooth_stage_poly_%sft_no_donuts" % i),
-                                                                            "PAEK", 328)
-                stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts,  out_folder + ("\\smooth_stage_poly_%sft_no_donuts" % i), gaps="NO_GAPS")
+                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 328)
+
+            stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft" % i), gaps="NO_GAPS")
             flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly,
                                                                        selection_type="CLEAR_SELECTION")
 
             # Create folder for centerline and cross sections, Make centerline based on smoothed, donut-less wetted polygons and delete spurs
+            print("Creating centerline for %sft stage" % i)
             centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts, lines_location + ("\\stage_centerline_%sft" % i))
             print('Removing spurs smaller than % s units...' % str(spur_length))
             # measure lengths
@@ -107,6 +107,15 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
             arcpy.SelectLayerByAttribute_management(centerline, where_clause='LENGTH < %s' % str(spur_length))
             arcpy.DeleteFeatures_management(centerline)
             arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
+
+            print("Deleting unnecessary files")
+
+            if os.path.exists(out_folder + ("\\smooth_stage_poly_%sft_donuts.shp" % i)):
+                os.remove(out_folder + ("\\smooth_stage_poly_%sft_donuts.shp" % i))
+            if os.path.exists(out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i)):
+                os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i))
+            if os.path.exists(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i)):
+                os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i))
 
             print("Stage %s dissolved and non-dissolved polygons in %s" % (i, out_folder))
 
