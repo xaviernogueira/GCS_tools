@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17607553"
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17610661"
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
@@ -159,15 +159,15 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     CHECK station_lines address, make sure that las_files folder is there'''
     arcpy.env.extent = spatial_extent
     print(raster_location)
-
+    print("CHECK UNITS OF HARD CODED XS SPACING AND THAT THEY MATCH THE UNITS OF THE RASTER")
     spacing = 3
-    xs_length = 350
+    xs_length = 400
     smooth_distance = 100
     #Create station centerline and stationline with Kenny's function, use intercept to get station points
     least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
     least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=2)
     centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
-    station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length)
+    station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length, stage=[])
 
     station_lines = direct + ("\\las_files\\centerline\\smooth_centerline_XS_%sx%sft.shp" % (spacing, xs_length))
     print("Station lines file at: " + str(station_lines))

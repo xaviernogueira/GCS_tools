@@ -14,8 +14,10 @@ import sys
 import shutil
 import numpy as np
 import logging
+import gc
 
 
+gc.collect()
 ##########################
 # first let's define some functions that will be helpful
 

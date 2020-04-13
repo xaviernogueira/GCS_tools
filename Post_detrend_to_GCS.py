@@ -19,7 +19,7 @@ import pandas
 
 ##### INPUTS #####
 direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10"
-out_folder = direct + '\\LINEAR_DETREND_BP1960_4ft_spacing'
+out_folder = direct + '\\LINEAR_DETREND_BP1960_4ft_spacing_TEST'
 detrended_dem_location = out_folder + "\\ras_detren.tif"
 process_footprint = direct + '\\las_footprint.shp'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
@@ -28,37 +28,61 @@ table_location = out_folder + "\\gcs_ready_tables"
 ##################
 
 arcpy.env.workplace = direct
+arcpy.env.extent = spatial_extent
 
 arcpy.env.overwriteOutput = True
 
-def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=[]):
-     '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
-    and makes smoothed, donut free, wetted polygons for each stage appending stage to the shapefile name. Each polygon is used to create a centerline
-    from which the width and detrended Z analysis is completed'''
-    arcpy.env.extent = spatial_extent
+def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=[], raster_units=""):
+    '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
+        and makes smoothed, donut free, wetted polygons for each stage appending stage to the shapefile name. Each polygon is used to create a centerline
+        from which the width and detrended Z analysis is completed. Raster units takes strings m or ft'''
+
+    if not os.path.exists(out_folder):
+        os.makedirs(shapefile_location)
 
     try:
+        # We convert raster units into feet for this stage of the analysis.
+        # The Int function rounds down, but since a 1.3ft elevation would only be wetted by a 2ft flow, we add 1 to the detrended_int_ras
         detrend_ras = Raster(detrended_dem)
-        detrend_ras_int = Int(detrend_ras)
-        detrend_ras_int.save(out_folder + "\\dtrnd_int.tif")
-        print("Stage range is: " + str(range(max_stage[0], )))
+        if raster_units == "m":
+            detrended_ras = float(detrended_ras * 3.28082)
+        detrend_ras_int = Int(detrend_ras) + 1
+        detrend_ras_int.save(out_folder + "\\dtrnd_int_ft.tif")
+        print("Stage range is: " + str(range(max_stage[0])))
 
         flood_stage_ras = Raster(Con(detrend_ras_int <= max_stage[0], detrend_ras_int))
-        flood_stage_poly = arcpy.RasterToPolygon_conversion(flood_stage_ras, out_folder + ("\\flood_stage_poly_%sft" % max_stage[0]), simplify=False, raster_field="Value", create_multipart_features=True)
-        flood_stage_poly = arcpy.Dissolve_management(flood_stage_poly, out_folder + ("\\flood_stage_poly_dissolved_%sft" % max_stage[0]), dissolve_field="gridcode", multi_part=True)
+        flood_stage_poly = arcpy.RasterToPolygon_conversion(flood_stage_ras,
+                                                            out_folder + ("\\flood_stage_poly_%sft" % max_stage[0]),
+                                                            simplify=False, raster_field="Value",
+                                                            create_multipart_features=True)
+        flood_stage_poly = arcpy.Dissolve_management(flood_stage_poly,
+                                                     out_folder + ("\\flood_stage_poly_dissolved_%sft" % max_stage[0]),
+                                                     dissolve_field="gridcode", multi_part=True)
         print("Flood stage polygon made with max stage of %sft and is stored: %s" % (max_stage[0], flood_stage_poly))
 
-        for i in range(max_stage[0]+1):
+        for i in range(max_stage[0] + 1):
             query = ('"gridcode" <= %d' % i)
             print(query)
-            stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="NEW_SELECTION", where_clause=query)
-            stage_poly = arcpy.CopyFeatures_management(stage_poly, out_feature_class= out_folder + ("\\flood_stage_poly_%sft" % i))
+            stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="NEW_SELECTION",
+                                                                 where_clause=query)
+            stage_poly = arcpy.CopyFeatures_management(stage_poly,
+                                                       out_feature_class=out_folder + ("\\flood_stage_poly_%sft" % i))
             arcpy.AddField_management(stage_poly, "null_field", "Short")
-            stage_poly_no_donuts = arcpy.Union_analysis(stage_poly, out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i), gaps="NO_GAPS")
-            stage_poly_dissolve = arcpy.Dissolve_management(stage_poly, out_folder + ("\\flood_stage_poly_dissolved_%sft" % i), dissolve_field="null_field", multi_part=True)
-            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i), dissolve_field="null_field", multi_part=True)
-            flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="CLEAR_SELECTION")
-            centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts, out_folder + ("\\stage_centerline_%sft" % i))
+            stage_poly_no_donuts = arcpy.Union_analysis(stage_poly, out_folder + (
+                        "\\flood_stage_poly_%sft_no_donuts_predissolve" % i), gaps="NO_GAPS")
+            stage_poly_dissolve = arcpy.Dissolve_management(stage_poly,
+                                                            out_folder + ("\\flood_stage_poly_dissolved_%sft" % i),
+                                                            dissolve_field="null_field", multi_part=True)
+            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, out_folder + (
+                        "\\flood_stage_poly_%sft_no_donuts" % i), dissolve_field="null_field", multi_part=True)
+            flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly,
+                                                                       selection_type="CLEAR_SELECTION")
+
+            lines_location = out_folder + '\\analysis_centerline_and_XS'
+            if not os.path.exists(lines_location):
+                os.makedirs(lines_location)
+            centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts,
+                                                               lines_location + ("\\stage_centerline_%sft" % i))
             os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i))
             print("Stage %s dissolved and non-dissolved polygons in %s" % (i, out_folder))
 
@@ -67,11 +91,15 @@ def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
 
-def width_series_analysis(out_folder, float_detrended_DEM, station_lines, spacing=[5]):
-    ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon 
+
+def width_series_analysis(out_folder, float_detrended_DEM, spacing=[5]):
+    ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon
     into rectangular slices which are used to extract mean depth and width for each filling out an excel sheet and some descriptive stats.
 
     NOTE: This function splicing the file names used for the dissolved poly, so make sure that doesn't change in the other function without updating this.'''
+    print(
+        "Width analysis commencing, check that spacing is in the same units as the reach. We should use either 1m or 3.28024ft")
+
     list_of_files_in_out_folder = [f for f in listdir(out_folder) if isfile(join(out_folder, f))]
     list_of_dissolved_polygons = []
     for file in list_of_files_in_out_folder:
@@ -79,6 +107,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, station_lines, spacin
             list_of_dissolved_polygons.append(file)
     print("Dissolved polygons: " + str(list_of_dissolved_polygons))
 
+    lines_location = out_folder + '\\analysis_centerline_and_XS'
     shapefile_location = out_folder + '\\analysis_shapefiles'
     if not os.path.exists(shapefile_location):
         os.makedirs(shapefile_location)
@@ -90,22 +119,35 @@ def width_series_analysis(out_folder, float_detrended_DEM, station_lines, spacin
 
             else:
                 stage = float(file[-8:-6])
+            centerline = (out_folder + "\\stage_centerline_%sft" % stage)
+            station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing[0],
+                                                                               xs_length=400, stage=stage[stage])
+            station_lines = lines_location + ("stage_%sft_spacing_%s_XS.shp" % (stage, spacing[0]))
+            print("Station lines file at: " + str(station_lines))
+            # DEBUG HERE TO SEE WHERE THE STATION LINES SAVE AND HOW WE CAN ITERATIVELY APPLY THEM
 
             spacing_half = float(spacing[0] / 2)
             file_location = (out_folder + "\\%s" % file)
-            clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
-            rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(shapefile_location + "\\width_rectangles_%s" % file[-8:]), buffer_distance_or_field=spacing_half, line_side="FULL", line_end_type="FLAT")
+            clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(
+                        shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
+            rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
+                        shapefile_location + "\\width_rectangles_%s" % file[-8:]),
+                                               buffer_distance_or_field=spacing_half, line_side="FULL",
+                                               line_end_type="FLAT")
             arcpy.AddField_management(rectangles, "Width", field_type="FLOAT")
             expression = ("(float(!Shape.area!)) / %d" % spacing[0])
             arcpy.CalculateField_management(rectangles, "Width", expression, "PYTHON3")
             print((shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]))
 
             rectangles = (shapefile_location + "\\width_rectangles_%s" % file[-8:])
-            zonal_table = arcpy.sa.ZonalStatisticsAsTable(rectangles, zone_field="LOCATION", in_value_raster=float_detrended_DEM, out_table=(shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]), statistics_type="MEAN")
-            rectangles = arcpy.JoinField_management(rectangles, in_field="LOCATION", join_table=zonal_table, join_field="LOCATION", fields=["MEAN"])
-            #arcpy.AddField_management(rectangles, "MEAN_Z", field_type="FLOAT")
-            #expression2 = ("%f - (float(!MEAN!))" % stage)
-            #arcpy.CalculateField_management(rectangles, "MEAN_Z", expression2, "PYTHON3")
+            zonal_table = arcpy.sa.ZonalStatisticsAsTable(rectangles, zone_field="LOCATION",
+                                                          in_value_raster=float_detrended_DEM, out_table=(
+                            shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]), statistics_type="MEAN")
+            rectangles = arcpy.JoinField_management(rectangles, in_field="LOCATION", join_table=zonal_table,
+                                                    join_field="LOCATION", fields=["MEAN"])
+            # arcpy.AddField_management(rectangles, "MEAN_Z", field_type="FLOAT")
+            # expression2 = ("%f - (float(!MEAN!))" % stage)
+            # arcpy.CalculateField_management(rectangles, "MEAN_Z", expression2, "PYTHON3")
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
@@ -249,12 +291,12 @@ def GCS_plotter(table_directory):
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, spatial_extent=process_footprint, out_folder=out_folder, max_stage=[16])
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[4])
 
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[5])
+width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[5])
 #export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
-main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
+#tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
+#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 # IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
-GCS_plotter(table_directory=table_location)
+#GCS_plotter(table_directory=table_location)
 
 
 
