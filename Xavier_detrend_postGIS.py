@@ -247,7 +247,7 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
     ws = wb.active
-    csv_file = 'Stationpoints_xyz_sp4ft.csv'
+    csv_file = direct + '\\XY_elevation_table_100_smooth_3_spaced.csv'
     arcpy.env.extent = footprint
     arcpy.env.workspace = direct
     arcpy.env.snapRaster = dem
@@ -351,12 +351,12 @@ def make_residual_plot(location_np, residual, R_squared):
 #make_quadratic_residual_plot(location_np, residual, R_squared)
 #quadratic_fit(location_np, location, z_np, ws)
 
-diagnostic_quick_plot(location_np, z_np)
-#fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[0]
-#residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[2]
-#R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 3200])[3]
+#diagnostic_quick_plot(location_np, z_np)
+#fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[0]
+#residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[2]
+#R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[3]
 #make_residual_plot(location_np, residual, R_squared)
 #make_linear_fit_plot(location_np, z_np, fit_params)
-#detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[3200])
+detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[2950])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######

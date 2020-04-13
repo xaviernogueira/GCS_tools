@@ -32,8 +32,9 @@ arcpy.env.workplace = direct
 arcpy.env.overwriteOutput = True
 
 def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=[]):
-    '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
-    and makes smoothed wetted polygons for each stage appending stage to the shapefile name'''
+     '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
+    and makes smoothed, donut free, wetted polygons for each stage appending stage to the shapefile name. Each polygon is used to create a centerline
+    from which the width and detrended Z analysis is completed'''
     arcpy.env.extent = spatial_extent
 
     try:
@@ -53,8 +54,12 @@ def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=
             stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="NEW_SELECTION", where_clause=query)
             stage_poly = arcpy.CopyFeatures_management(stage_poly, out_feature_class= out_folder + ("\\flood_stage_poly_%sft" % i))
             arcpy.AddField_management(stage_poly, "null_field", "Short")
+            stage_poly_no_donuts = arcpy.Union_analysis(stage_poly, out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i), gaps="NO_GAPS")
             stage_poly_dissolve = arcpy.Dissolve_management(stage_poly, out_folder + ("\\flood_stage_poly_dissolved_%sft" % i), dissolve_field="null_field", multi_part=True)
+            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i), dissolve_field="null_field", multi_part=True)
             flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="CLEAR_SELECTION")
+            centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts, out_folder + ("\\stage_centerline_%sft" % i))
+            os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i))
             print("Stage %s dissolved and non-dissolved polygons in %s" % (i, out_folder))
 
         print("wetted polygons created")

@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17607553"
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
@@ -149,7 +149,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name):
         print(arcpy.GetMessages())
     global raster_location
     raster_name = tiff_lidar_raster
-    print("las dataset at %s, raster at %s" % (las_dataset, tiff_lidar_raster_ft))
+    print("las dataset at %s, raster at %s" % (las_dataset, tiff_lidar_raster))
 
 
 def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
@@ -184,10 +184,10 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     print("Station points shapefile at: " + str(station_points))
     print("Elevation table at: " + str(elevation_table))
 
-#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-#define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location)
-detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
+#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 
