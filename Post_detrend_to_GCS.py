@@ -5,6 +5,8 @@ from arcpy.sa import *
 from arcpy.da import *
 import os
 from os import listdir
+import create_centerline_GUI
+from create_centerline_GUI import *
 from os.path import isfile, join
 from GCS_analysis import *
 #from Lidar_to_detrend_ready_XRN_functions import *
@@ -28,17 +30,26 @@ table_location = out_folder + "\\gcs_ready_tables"
 ##################
 
 arcpy.env.workplace = direct
-arcpy.env.extent = spatial_extent
+arcpy.env.extent = process_footprint
 
 arcpy.env.overwriteOutput = True
 
-def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=[], raster_units=""):
+def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]):
     '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
         and makes smoothed, donut free, wetted polygons for each stage appending stage to the shapefile name. Each polygon is used to create a centerline
         from which the width and detrended Z analysis is completed. Raster units takes strings m or ft'''
 
+    if raster_units == "m":
+        spur_length = 5
+    else:
+        spur_length = 15
+
     if not os.path.exists(out_folder):
-        os.makedirs(shapefile_location)
+        os.makedirs(out_folder)
+
+    lines_location = out_folder + '\\analysis_centerline_and_XS'
+    if not os.path.exists(lines_location):
+        os.makedirs(lines_location)
 
     try:
         # We convert raster units into feet for this stage of the analysis.
@@ -75,15 +86,28 @@ def detrend_to_wetted_poly(detrended_dem, spatial_extent, out_folder, max_stage=
                                                             dissolve_field="null_field", multi_part=True)
             stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, out_folder + (
                         "\\flood_stage_poly_%sft_no_donuts" % i), dissolve_field="null_field", multi_part=True)
+
+            if raster_units == "m":
+                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + (
+                        "\\smooth_stage_poly_%sft_no_donuts" % i), "PAEK", 100)
+            else:
+                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts,
+                                                                            out_folder + (
+                                                                                    "\\smooth_stage_poly_%sft_no_donuts" % i),
+                                                                            "PAEK", 328)
+                stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts,  out_folder + ("\\smooth_stage_poly_%sft_no_donuts" % i), gaps="NO_GAPS")
             flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly,
                                                                        selection_type="CLEAR_SELECTION")
 
-            lines_location = out_folder + '\\analysis_centerline_and_XS'
-            if not os.path.exists(lines_location):
-                os.makedirs(lines_location)
-            centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts,
-                                                               lines_location + ("\\stage_centerline_%sft" % i))
-            os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i))
+            # Create folder for centerline and cross sections, Make centerline based on smoothed, donut-less wetted polygons and delete spurs
+            centerline = arcpy.PolygonToCenterline_topographic(stage_poly_dissolve_no_donuts, lines_location + ("\\stage_centerline_%sft" % i))
+            print('Removing spurs smaller than % s units...' % str(spur_length))
+            # measure lengths
+            arcpy.AddGeometryAttributes_management(centerline, 'LENGTH')
+            arcpy.SelectLayerByAttribute_management(centerline, where_clause='LENGTH < %s' % str(spur_length))
+            arcpy.DeleteFeatures_management(centerline)
+            arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
+
             print("Stage %s dissolved and non-dissolved polygons in %s" % (i, out_folder))
 
         print("wetted polygons created")
@@ -291,7 +315,9 @@ def GCS_plotter(table_directory):
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, spatial_extent=process_footprint, out_folder=out_folder, max_stage=[16])
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[4])
 
-width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[5])
+
+detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[25])
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, spacing=[5], raster_units="ft")
 #export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
 #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
