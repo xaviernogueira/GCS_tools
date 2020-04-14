@@ -8,7 +8,7 @@ import logging
 arcpy.env.overwriteOutput = True
 
 @err_info
-def create_station_lines_function(line_shp, spacing, xs_length, stage=[]):
+def create_station_lines_function(line_shp, spacing, xs_length, stage):
     '''
     Creates station lines perpendicular to line_shp with given longitudinal spacing and lateral XS length
     (lengths are in units of input line coordinate system)
@@ -58,8 +58,9 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage=[]):
     # convert to output polyline
     logging.info('Converting points to polyline output...')
     if len(stage) > 0:
-        out_name = line_shp.replace('.shp', ('_XS_%s_stage_%sft.shp' % (spacing, stage)))
-    out_name = line_shp.replace('.shp', ('_XS_%sx%sft.shp' % (spacing, xs_length)))
+        out_name = line_shp.replace('.shp', ('_XS_%s_stage_%sft.shp' % (int(spacing), stage[0])))
+    else:
+        out_name = line_shp.replace('.shp', ('_XS_%sx%sft.shp' % (int(spacing), int(xs_length))))
     arcpy.PointsToLine_management(el, out_name, 'LOCATION')
     logging.info('OK.')
 
@@ -105,10 +106,16 @@ if __name__ == '__main__':
     E3.insert(END, 100)
     E3.grid(row=2, column=2)
 
+    L4 = Label(root, text='Stage')
+    L4.grid(sticky=E, row=3, column=1)
+    E4 = Entry(root, bd=5)
+    E4.insert(END, 10)
+    E4.grid(row=3, column=2)
+
     b = Button(root, text='   Run    ',
-               command=lambda: create_station_lines(line_shp=E1.get(), spacing=float(E2.get()), xs_length=float(E3.get()))
+               command=lambda: create_station_lines_function(line_shp=E1.get(), spacing=float(E2.get()), xs_length=float(E3.get()), stage=[int(E4.get())])
                )
-    b.grid(sticky=W, row=3, column=2)
-    root.grid_rowconfigure(3, minsize=80)
+    b.grid(sticky=W, row=4, column=2)
+    root.grid_rowconfigure(4, minsize=80)
 
     root.mainloop()

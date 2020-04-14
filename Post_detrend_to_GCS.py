@@ -7,6 +7,8 @@ import os
 from os import listdir
 import create_centerline_GUI
 from create_centerline_GUI import *
+import create_station_lines
+from create_station_lines import *
 from os.path import isfile, join
 from GCS_analysis import *
 #from Lidar_to_detrend_ready_XRN_functions import *
@@ -17,6 +19,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import csv
 import pandas
+import string
 
 
 ##### INPUTS #####
@@ -92,7 +95,8 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
             else:
                 stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 328)
 
-            stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft" % i), gaps="NO_GAPS")
+            stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft_no_dissolve" % i), gaps="NO_GAPS")
+            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft" % i), dissolve_field="null_field", multi_part=True)
             flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly,
                                                                        selection_type="CLEAR_SELECTION")
 
@@ -111,6 +115,8 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
             if os.path.exists(out_folder + ("\\smooth_stage_poly_%sft_donuts.shp" % i)):
                 os.remove(out_folder + ("\\smooth_stage_poly_%sft_donuts.shp" % i))
+            if os.path.exists(out_folder + ("\\smooth_stage_poly_%sft_no_dissolve" % i)):
+                os.remove(out_folder + ("\\smooth_stage_poly_%sft_no_dissolve" % i))
             if os.path.exists(out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i)):
                 os.remove(out_folder + ("\\flood_stage_poly_%sft_no_donuts" % i))
             if os.path.exists(out_folder + ("\\flood_stage_poly_%sft_no_donuts_predissolve" % i)):
@@ -124,10 +130,11 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
         print(arcpy.GetMessages())
 
 
-def width_series_analysis(out_folder, float_detrended_DEM, spacing=[5]):
+def width_series_analysis(out_folder, float_detrended_DEM, spacing=[5], centerlines=[]):
     ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon
     into rectangular slices which are used to extract mean depth and width for each filling out an excel sheet and some descriptive stats.
 
+    Centerlines created in previous function should be visually inspected for quality, edited, and adjusted. Centerlines list holds the LAST stage to use a specified stage centerline
     NOTE: This function splicing the file names used for the dissolved poly, so make sure that doesn't change in the other function without updating this.'''
     print(
         "Width analysis commencing, check that spacing is in the same units as the reach. We should use either 1m or 3.28024ft")
@@ -137,7 +144,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, spacing=[5]):
     for file in list_of_files_in_out_folder:
         if file[17:26] == "dissolved" and file[-4:] == ".shp":
             list_of_dissolved_polygons.append(file)
-    print("Dissolved polygons: " + str(list_of_dissolved_polygons))
+    print("Unsorted list of dissolved polygons:" + str(list_of_dissolved_polygons))
 
     lines_location = out_folder + '\\analysis_centerline_and_XS'
     shapefile_location = out_folder + '\\analysis_shapefiles'
@@ -145,21 +152,39 @@ def width_series_analysis(out_folder, float_detrended_DEM, spacing=[5]):
         os.makedirs(shapefile_location)
 
     try:
+        centerline_number = 0
         for file in list_of_dissolved_polygons:
             if file[-8] == "_":
-                stage = float(file[-7])
-
+                stage = int(file[-7])
+                file = (str(string.ascii_uppercase[stage])) + file
             else:
-                stage = float(file[-8:-6])
-            centerline = (out_folder + "\\stage_centerline_%sft" % stage)
+                stage = int(file[-8:-6])
+                file = (str(string.ascii_uppercase[stage])) + file
+
+        list_of_dissolved_polygons.sort()
+        print("Sorted list of dissolved polygons:" + str(list_of_dissolved_polygons))
+
+        for file in list_of_dissolved_polygons:
+            if file[-8] == "_":
+                stage = int(file[-7])
+            else:
+                stage = int(file[-8:-6])
+
+
+            if stage == centerlines[centerline_number]:
+                centerline = (lines_location + "\\stage_centerline_%sft" % centerlines[centerline_number])
+                centerline_number = centerline_number + 1
+            else:
+                centerline = (lines_location + "\\stage_centerline_%sft" % centerlines[centerline_number])
+
             station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing[0],
-                                                                               xs_length=400, stage=stage[stage])
-            station_lines = lines_location + ("stage_%sft_spacing_%s_XS.shp" % (stage, spacing[0]))
+                                                                               xs_length=400, stage=[stage])
+            station_lines = lines_location + ("\\stage_%sft_spacing_%s_XS.shp" % (int(stage), spacing[0]))
             print("Station lines file at: " + str(station_lines))
             # DEBUG HERE TO SEE WHERE THE STATION LINES SAVE AND HOW WE CAN ITERATIVELY APPLY THEM
 
             spacing_half = float(spacing[0] / 2)
-            file_location = (out_folder + "\\%s" % file)
+            file_location = (out_folder + "\\%s" % file) # might need to string splice here
             clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(
                         shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
             rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
@@ -323,14 +348,16 @@ def GCS_plotter(table_directory):
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, spatial_extent=process_footprint, out_folder=out_folder, max_stage=[16])
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[4])
 
-
-detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[10])
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, spacing=[5], raster_units="ft")
+create_station_lines.create_station_lines_function(centerline=r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST", spacing=3, xs_length=400, stage=9)
+#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[10])
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, spacing=[5], centerlines=[9])
 #export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
 #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 # IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
 #GCS_plotter(table_directory=table_location)
+
+
 
 
 
