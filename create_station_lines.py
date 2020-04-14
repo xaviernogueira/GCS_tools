@@ -58,7 +58,7 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
     # convert to output polyline
     logging.info('Converting points to polyline output...')
     if len(stage) > 0:
-        out_name = line_shp.replace('.shp', ('_XS_%sft.shp' % (int(spacing), stage[0])))
+        out_name = line_shp.replace('.shp', ('_XS_%sft.shp' % (int(spacing))))
     else:
         out_name = line_shp.replace('.shp', ('_XS_%sx%sft.shp' % (int(spacing), int(xs_length))))
     arcpy.PointsToLine_management(el, out_name, 'LOCATION')
@@ -70,6 +70,7 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
         arcpy.Delete_management(delfile)
 
     logging.info('Finished. Output: %s' % out_name)
+    return out_name
 
 
 if __name__ == '__main__':
