@@ -19,7 +19,7 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
     logging.info('Converting input line to route...')
     
     line_fields = [field.name for field in arcpy.ListFields(line_shp)]
-    id = [x for x in ['Id', 'arcid'] if x in line_fields][0]
+    id = [x for x in ['Id', 'arcid', 'ObjectID'] if x in line_fields][0]
     if id==[]:
         raise Exception('Couldn\'t find Id Field in %s' % line_shp)
 
@@ -58,7 +58,7 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
     # convert to output polyline
     logging.info('Converting points to polyline output...')
     if len(stage) > 0:
-        out_name = line_shp.replace('.shp', ('_XS_%s_stage_%sft.shp' % (int(spacing), stage[0])))
+        out_name = line_shp.replace('.shp', ('_XS_%sft.shp' % (int(spacing), stage[0])))
     else:
         out_name = line_shp.replace('.shp', ('_XS_%sx%sft.shp' % (int(spacing), int(xs_length))))
     arcpy.PointsToLine_management(el, out_name, 'LOCATION')
