@@ -152,7 +152,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name):
     print("las dataset at %s, raster at %s" % (las_dataset, tiff_lidar_raster))
 
 
-def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
+def detrend_prep1(raster_name, flow_polygon, spatial_ref, spatial_extent):
     '''This function takes the Lidar raster, creates a centerline and stationpoint at defined spacing (hard programed in function)
     Station lines are turned into station points, which are given the values of the lidar raster, and output a XLS table. OPERATIONAL.
 
@@ -183,6 +183,9 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
 
     print("Station points shapefile at: " + str(station_points))
     print("Elevation table at: " + str(elevation_table))
+
+
+
 
 lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
