@@ -21,12 +21,6 @@ process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
-
-#Import xl file
-wb = load_workbook(xyz_table)
-ws = wb.active
-print("Workbook " + str(xyz_table) + " loaded")
-
 #Fill lists with necessary data
 id = []
 location = []
@@ -36,22 +30,31 @@ z = []
 listoflist = [location, id, z, x, y]
 listofcolumn = ["D", "A", "L", "I", "J"]
 
-for i in range(0, len(listofcolumn)):
-    for cell in ws[listofcolumn[i]]:
-        listoflist[i].append(cell.value)
-    del listoflist[i][0]
 
-print(listoflist)
+def prep_xl_file(xyz_table_location,listoflist, listofcolumn):
+    #Import xl file
+    wb = load_workbook(xyz_table_location)
+    ws = wb.active
+    print("Workbook " + str(xyz_table) + " loaded")
 
-#define station point spacing, number of station points and index
-point_spacing = int(location[1]- location[0])
-number_of_points = int(location[-1]/point_spacing)
+    for i in range(0, len(listofcolumn)):
+        for cell in ws[listofcolumn[i]]:
+            listoflist[i].append(cell.value)
+        del listoflist[i][0]
 
-print("Point spacing: " + str(point_spacing))
-print("Number of points: " + str(number_of_points))
+    print(listoflist)
+    
+    #define station point spacing, number of station points and index
+    point_spacing = int(location[1]- location[0])
+    number_of_points = int(location[-1]/point_spacing)
 
-location_np = np.array(location)
-z_np = np.array(z)
+    print("Point spacing: " + str(point_spacing))
+    print("Number of points: " + str(number_of_points))
+
+    location_np = np.array(location)
+    z_np = np.array(z)
+
+    return [location_np,z_np]
 
 def quadratic_fit(location_np, location, z_np, ws):
     print("Applying quadratic fit...")

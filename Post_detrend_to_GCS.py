@@ -247,7 +247,8 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         delete_field_names = [f.name for f in arcpy.ListFields(station_points) if f not in keep_fields]
         print("The following list of fields will be deleted before exporting to csv: %s" % delete_field_names)
         elevation_table = arcpy.TableToExcel_conversion(station_points, (
-                    direct + "\\stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing)))
+                    out_folder + "\\stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing)))
+
 
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
