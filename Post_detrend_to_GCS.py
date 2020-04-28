@@ -5,6 +5,8 @@ from arcpy.sa import *
 from arcpy.da import *
 import os
 from os import listdir
+import Xavier_detrend_postGIS
+from Xavier_detrend_postGIS import *
 import create_centerline_GUI
 from create_centerline_GUI import *
 import create_station_lines
@@ -165,10 +167,15 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
                 tolerance = 20
             else:
                 tolerance = (20 * 3.28)
+
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
             create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(400), stage=[int(stage_line)])
             station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (int(stage_line), spacing[0]))
+
+            if os.path.exists(lines_location + "\\stage_centerline_%sft_D.shp" % stage_line):
+                os.remove(
+                    lines_location + "\\stage_centerline_%sft_D.shp" % stage_line)  # Remove non-smoothed, dissolved centerline
             print("Station lines file at: " + str(station_lines))
             # we need a centerline for 10ft stage OR to remove highest stage from this analysis or something
 
@@ -180,13 +187,13 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
 
             centerline_number = 0
             if stage <= centerlines[centerline_number]:
-                centerline = (lines_location + "\\stage_centerline_%sft_D.shp" % centerlines[0])
+                centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[0])
             elif stage > centerlines[-1]:
-                centerline = (lines_location + "\\stage_centerline_%sft_D.shp" % centerlines[-1])
+                centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[-1])
             else:
                 while int(stage) > centerlines[centerline_number]:
                     centerline_number += 1
-                centerline = (lines_location + "\\stage_centerline_%sft_D.shp" % centerlines[centerline_number])
+                centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[centerline_number])
             print(centerline)
 
             spacing_half = float(spacing[0] / 2)
@@ -194,13 +201,14 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
             clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(
                         shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
             rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
-                        shapefile_location + "\\width_rectangles_%s" % file[-8:]),
+                        shapefile_location + "\\width_rectangles_%sft.shp" % stage),
                                                buffer_distance_or_field=spacing_half, line_side="FULL",
                                                line_end_type="FLAT")
             arcpy.AddField_management(rectangles, "Width", field_type="FLOAT")
             expression = ("(float(!Shape.area!)) / %d" % spacing[0])
             arcpy.CalculateField_management(rectangles, "Width", expression, "PYTHON3")
-            print((shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]))
+
+            #print((shapefile_location + "\\stats_table_%s.dbf" % stage))
 
             rectangles = (shapefile_location + "\\width_rectangles_%s" % file[-8:])
             #zonal_table = arcpy.sa.ZonalStatisticsAsTable(rectangles, zone_field="LOCATION", in_value_raster=float_detrended_DEM, out_table=(shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]), statistics_type="MEAN")
@@ -242,16 +250,30 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         print("Station points made for %sft stage: %s" % (stage_num, station_points))
 
         elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=original_DEM, out_table=(detrend_file_location + "\\stage_%s_dtpoints_%sft.dbf" % (stage_num, spacing)))
+        arcpy.JoinField_management(in_data=station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"]) #Add Z value from original DEM to station points as "Value"
 
-        keep_fields = ["FID", "LOCATION", "POINT_X", "POINT_Y", "Value"]
-        delete_field_names = [f.name for f in arcpy.ListFields(station_points) if f not in keep_fields]
-        print("The following list of fields will be deleted before exporting to csv: %s" % delete_field_names)
-        elevation_table = arcpy.TableToExcel_conversion(station_points, (
-                    out_folder + "\\stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing)))
+        if os.path.exists(detrend_file_location + "\\stage_%s_dtpoints_%sft.dbf" % (stage_num, spacing)):
+            os.remove(detrend_file_location + "\\stage_%s_dtpoints_%sft.dbf" % (stage_num, spacing))  # Remove dbf table with point elevations
+        if os.path.exists(detrend_file_location + "\\stage_%s_dtpoints_%sft_SP.shp" % (stage_num, spacing)):
+            os.remove(detrend_file_location + "\\stage_%s_dtpoints_%sft_SP.shp" % (stage_num, spacing)) #Remove multipart station points
+
+        delete_field_names = ["FID_stage_", "Id", "FID_stage1", "ObjectID", "ID1", "ID_1", "InLine_FID", "ORIG_FID", "POINT_M"]
+        print("The following list of fields will be deleted before exporting to xlsx: %s" % delete_field_names)
+        arcpy.DeleteField_management(station_points, drop_field=delete_field_names)
+        elevation_table = arcpy.TableToTable_conversion(station_points,
+                    out_path=detrend_file_location, out_name="stage_%sft_XYZ_table_%sft.xlsx" % (stage_num, spacing))
 
 
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
+
+        location_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[0]
+        z_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[1]
+        ws = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[2]
+        print(str(location_np))
+        fit_params = linear_fit(location=location_np, z=z_np, ws=ws, list_of_breakpoints=[0,1960])[0]
+        make_linear_fit_plot(location_np, z_np, fit_params, stage=stage_num, location=detrend_file_location)
+
 
 
 
@@ -392,7 +414,8 @@ def GCS_plotter(table_directory):
 
 #create_station_lines.create_station_lines_function(centerline=r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST", spacing=3, xs_length=400, stage=9)
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=3)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[9, 15, 24])
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[9])
+#[9, 15, 24])
 z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9])
 #export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']

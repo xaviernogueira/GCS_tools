@@ -22,17 +22,19 @@ detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 #Fill lists with necessary data
-id = []
-location = []
-x = []
-y = []
-z = []
-listoflist = [location, id, z, x, y]
+
 listofcolumn = ["D", "A", "L", "I", "J"]
 
 
-def prep_xl_file(xyz_table_location,listoflist, listofcolumn):
+def prep_xl_file(xyz_table_location, listofcolumn):
     #Import xl file
+    id = []
+    location = []
+    x = []
+    y = []
+    z = []
+    listoflist = [location, id, z, x, y]
+
     wb = load_workbook(xyz_table_location)
     ws = wb.active
     print("Workbook " + str(xyz_table) + " loaded")
@@ -43,7 +45,7 @@ def prep_xl_file(xyz_table_location,listoflist, listofcolumn):
         del listoflist[i][0]
 
     print(listoflist)
-    
+
     #define station point spacing, number of station points and index
     point_spacing = int(location[1]- location[0])
     number_of_points = int(location[-1]/point_spacing)
@@ -54,7 +56,7 @@ def prep_xl_file(xyz_table_location,listoflist, listofcolumn):
     location_np = np.array(location)
     z_np = np.array(z)
 
-    return [location_np,z_np]
+    return [location_np,z_np, ws]
 
 def quadratic_fit(location_np, location, z_np, ws):
     print("Applying quadratic fit...")
@@ -296,7 +298,7 @@ def diagnostic_quick_plot(location_np, z_np):
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
     return plt.show()
 
-def make_quadratic_fit_plot(location_np, z_np, fit_params):
+def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
     # Make a plot of the quadratic fit
     # Plot longitudinal elevation profile and detrending fit line
     x_plot = location_np
@@ -311,9 +313,15 @@ def make_quadratic_fit_plot(location_np, z_np, fit_params):
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
     plt.legend(loc=1)
-    return plt.show()
+    if stage == 0 and location == '':
+        plt.show()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig((location + '\\Stage_%s_quadratic_detrend_plot' % stage), dpi=300, bbox_inches='tight')
+        plt.cla()
 
-def make_linear_fit_plot(location_np, z_np, fit_params):
+def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location=''):
     x_plot = location_np
     y1_plot = z_np
     y2_plots = []
@@ -329,7 +337,14 @@ def make_linear_fit_plot(location_np, z_np, fit_params):
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
     plt.legend(loc=1)
-    return plt.show()
+
+    if stage == 0 and location == '':
+        plt.show()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig((location + '\\Stage_%sft_linear_detrend_plot' % stage), dpi=300, bbox_inches='tight')
+        plt.cla()
 
 def make_residual_plot(location_np, residual, R_squared):
     '''Plot residuals across longitudinal profile, show R^2. Inputs are a numpy array of location, a list of residuals, and a float for R-squared'''
@@ -360,6 +375,6 @@ def make_residual_plot(location_np, residual, R_squared):
 #R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[3]
 #make_residual_plot(location_np, residual, R_squared)
 #make_linear_fit_plot(location_np, z_np, fit_params)
-detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[2950])
+#detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[2950])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######
