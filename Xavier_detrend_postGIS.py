@@ -35,9 +35,20 @@ def prep_xl_file(xyz_table_location, listofcolumn):
     z = []
     listoflist = [location, id, z, x, y]
 
-    wb = load_workbook(xyz_table_location)
-    ws = wb.active
-    print("Workbook " + str(xyz_table) + " loaded")
+    if xyz_table_location[-3:] == "csv":
+        print("Input table is a csv, conversion for openpyxl underway...")
+        wb = Workbook()
+        ws = wb.active
+        with open(xyz_table_location) as f:
+            reader = csv.reader(f, delimiter=',')
+            for row in reader:
+                ws.append(row)
+        wb.save(xyz_table_location[:-3] + "xlsx")
+        print("csv converted to xlsx @: %s" % (xyz_table_location[:-3] + "xlsx"))
+    else:
+        wb = load_workbook(xyz_table_location)
+        ws = wb.active
+        print("Workbook " + str(xyz_table_location) + " loaded")
 
     for i in range(0, len(listofcolumn)):
         for cell in ws[listofcolumn[i]]:
