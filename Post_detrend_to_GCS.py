@@ -269,9 +269,9 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
 
-        location_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[0]
-        z_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[1]
-        ws = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=[])[2]
+        location_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
+        z_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
+        ws = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
         print(str(location_np))
         fit_params = linear_fit(location=location_np, z=z_np, ws=ws, list_of_breakpoints=[0,1960])[0]
         make_linear_fit_plot(location_np, z_np, fit_params, stage=stage_num, location=detrend_file_location)

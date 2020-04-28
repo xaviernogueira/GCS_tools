@@ -1,7 +1,6 @@
 import openpyxl as xl
 import arcpy
-import os
-from os import *
+import os as os
 from arcpy import env
 from openpyxl import Workbook
 from openpyxl import load_workbook
@@ -12,18 +11,19 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013'
-xyz_table = direct + '\\XY_elevation_table_100_smooth_3_spaced.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST\analysis_centerline_and_XS\detrend_files'
+xyz_table = direct + '\\stage_9ft_XYZ_table_3ft.csv'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
-process_footprint = direct + '\\las_footprint.shp'
+#process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
-spatial_ref = arcpy.Describe(process_footprint).spatialReference
+#spatial_ref = arcpy.Describe(process_footprint).spatialReference
+listofcolumn = ["D", "A", "L", "I", "J"]
 ######
 #Fill lists with necessary data
 
-listofcolumn = ["D", "A", "L", "I", "J"]
+
 
 
 def prep_xl_file(xyz_table_location, listofcolumn):
@@ -39,9 +39,8 @@ def prep_xl_file(xyz_table_location, listofcolumn):
         print("Input table is a csv, conversion for openpyxl underway...")
         wb = Workbook()
         ws = wb.active
-        with open(xyz_table_location) as f:
-            reader = csv.reader(f, delimiter=',')
-            for row in reader:
+        with open(xyz_table_location, 'r') as f:
+            for row in csv.reader(f):
                 ws.append(row)
         wb.save(xyz_table_location[:-3] + "xlsx")
         print("csv converted to xlsx @: %s" % (xyz_table_location[:-3] + "xlsx"))
@@ -58,10 +57,9 @@ def prep_xl_file(xyz_table_location, listofcolumn):
     print(listoflist)
 
     #define station point spacing, number of station points and index
-    point_spacing = int(location[1]- location[0])
-    number_of_points = int(location[-1]/point_spacing)
-
+    point_spacing = int(location[1]) - int(location[0])
     print("Point spacing: " + str(point_spacing))
+    number_of_points = int(int(location[-1]) / int(point_spacing))
     print("Number of points: " + str(number_of_points))
 
     location_np = np.array(location)
@@ -135,18 +133,28 @@ def quadratic_fit(location_np, location, z_np, ws):
 
     print("Excel file ready for Arc processing!")
 
-def linear_fit(location, z, ws, list_of_breakpoints=[]):
+def linear_fit(location, z, ws, xyz_table_location, list_of_breakpoints=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
     # ADD 0 BEFORE ANY ADDED BREAKPOINTS OR THE FUNCTION WILL FAIL!!!!!!!!!!
     print("Applying linear fit")
-    list_of_breakpoints.append(location[-1])
+    list_of_breakpoints.append(int(location[-1]))
     print(list_of_breakpoints)
     fit_params = []
     split_location_list = []
     split_z_list = []
     # Split by breakpoints into a list of lists
+    point_spacing = int(location[1]) - int(location[0])
+
+    wb = load_workbook(xyz_table_location)
+    ws = wb.active
+
+    #Format input numpy arrays
+    location = np.int_(location)
+    z = np.float_(z)
+    z = np.around(z, 9) # Round z to 9 decimal points
+
     if len(list_of_breakpoints) > 0:
-        slope_break_indices = [int(distance/point_spacing) for distance in list_of_breakpoints]
+        slope_break_indices = [int(int(distance)/int(point_spacing)) for distance in list_of_breakpoints]
         for i in range(1, len(slope_break_indices)):
             temp_location_list = []
             temp_z_list = []
@@ -173,8 +181,11 @@ def linear_fit(location, z, ws, list_of_breakpoints=[]):
         # Get fit parameters for each section of the data
         if len(split_z_list) == len(split_location_list):
             for i in range(len(split_location_list)):
-                temp_loc_array = np.array(split_location_list[i])
-                temp_z_array = np.array(split_z_list[i])
+                temp_loc_array_unformatted = np.array(split_location_list[i])
+                temp_loc_array = np.int_(temp_loc_array_unformatted)
+                temp_z_array_unformatted = np.array(split_z_list[i])
+                temp_z_array = np.float_(temp_z_array_unformatted)
+
                 m, b = np.polyfit(temp_loc_array, temp_z_array, 1)
                 fit_params.append([m, b])
             print("Fit param list: " + str(fit_params))
@@ -300,7 +311,7 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
 ###### Define plotting function ######
 def diagnostic_quick_plot(location_np, z_np):
     x_plot = location_np
-    y_plot = z_np
+    y_plot = np.int_(np.float_(z_np))
     plt.plot(x_plot, y_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
     plt.ylabel("Bed elevation (ft)")
@@ -389,3 +400,10 @@ def make_residual_plot(location_np, residual, R_squared):
 #detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[2950])
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######
+
+loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
+z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
+ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
+print(loc)
+print(z)
+linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,1960])
