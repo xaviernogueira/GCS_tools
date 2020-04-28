@@ -264,17 +264,18 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
                     out_path=detrend_file_location, out_name="stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing))
         if os.path.exists(detrend_file_location + "\\stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing)):
             print("Stage %sft XYZ table for detrending is created and located at: %s" % (stage_num, elevation_table))
-
+        else:
+            print("Something went wrong...")
+        elevation_table = detrend_file_location + "\\stage_%sft_XYZ_table_%sft.csv" % (stage_num, spacing)
 
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
 
         location_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
         z_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
-        ws = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
-        print(str(location_np))
-        fit_params = linear_fit(location=location_np, z=z_np, ws=ws, list_of_breakpoints=[0,1960])[0]
+        fit_params = linear_fit(location=location_np, z=z_np, xyz_table_location=elevation_table, list_of_breakpoints=[0,1960])[0]
         make_linear_fit_plot(location_np, z_np, fit_params, stage=stage_num, location=detrend_file_location)
+
 
 
 def export_to_gcs_ready(out_folder, list_of_error_locations=[]):

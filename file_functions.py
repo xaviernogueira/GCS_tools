@@ -73,7 +73,7 @@ def err_info(func):
             func(*args, **kwargs)
         except Exception as e:
             logger.info(e)
-            showerror('Error', e)
+            #showerror('Error', e)
     return wrapper
 
 def spatial_license(func):

@@ -12,7 +12,7 @@ import csv
 ###### INPUTS ######
 # excel file containing xyz data for station points
 direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST\analysis_centerline_and_XS\detrend_files'
-xyz_table = direct + '\\stage_9ft_XYZ_table_3ft.csv'
+xyz_table = direct + '\\stage_9ft_XYZ_table_3ft.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
@@ -39,7 +39,7 @@ def prep_xl_file(xyz_table_location, listofcolumn):
         print("Input table is a csv, conversion for openpyxl underway...")
         wb = Workbook()
         ws = wb.active
-        with open(xyz_table_location, 'r') as f:
+        with open(xyz_table_location, 'r', errors='ignore') as f:
             for row in csv.reader(f):
                 ws.append(row)
         wb.save(xyz_table_location[:-3] + "xlsx")
@@ -64,6 +64,9 @@ def prep_xl_file(xyz_table_location, listofcolumn):
 
     location_np = np.array(location)
     z_np = np.array(z)
+    location_np = np.int_(location_np)
+    z_np = np.float_(z_np)
+    z_np = np.around(z_np, 9)
 
     return [location_np,z_np, ws]
 
@@ -133,7 +136,7 @@ def quadratic_fit(location_np, location, z_np, ws):
 
     print("Excel file ready for Arc processing!")
 
-def linear_fit(location, z, ws, xyz_table_location, list_of_breakpoints=[]):
+def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
     # ADD 0 BEFORE ANY ADDED BREAKPOINTS OR THE FUNCTION WILL FAIL!!!!!!!!!!
     print("Applying linear fit")
@@ -144,6 +147,9 @@ def linear_fit(location, z, ws, xyz_table_location, list_of_breakpoints=[]):
     split_z_list = []
     # Split by breakpoints into a list of lists
     point_spacing = int(location[1]) - int(location[0])
+
+    if xyz_table_location[-3:] == 'csv':
+        xyz_table_location = (xyz_table_location[:-3] + "xlsx")
 
     wb = load_workbook(xyz_table_location)
     ws = wb.active
@@ -248,22 +254,22 @@ def linear_fit(location, z, ws, xyz_table_location, list_of_breakpoints=[]):
 
     # Add fitted z values to the xyz table
     '''NOTE: ADJUST SHEET ROW FOR CELL_TEST AND COLUMN FOR THE CELL = WS.CELL COMMAND'''
-    cell_test = ws["M1"]
+    cell_test = ws["F1"]
     print(cell_test.value)
     cell_test.value = ("z_fit_%s" % (list_of_breakpoints[1]))
     print(cell_test.value)
 
-    if ws["M1"].value == cell_test.value:
+    if ws["F1"].value == cell_test.value:
         print("Sheet activated...")
         for i in range(2, len(z_fit_list)):
-            cell = ws.cell(row=i, column=13)
+            cell = ws.cell(row=i, column=6)
             cell.value = float(z_fit_list[i])
     else:
         print("Something is wrong with writing to the excel sheet")
     ws["A1"].value == "OID"
 
 
-    wb.save(filename=xyz_table)
+    wb.save(filename=xyz_table_location)
 
     print("Excel file ready for Arc processing!")
 
@@ -404,6 +410,6 @@ def make_residual_plot(location_np, residual, R_squared):
 loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
 z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
 ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
-print(loc)
-print(z)
+diagnostic_quick_plot(location_np=loc, z_np=z)
+#print(loc)
 linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,1960])

@@ -124,7 +124,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     #Create station centerline and stationline with Kenny's function, use intercept to get station points
     least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
     least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=2)
-    centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=20)
+    centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=40)
     station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length)
 
     station_lines = direct + ("\\las_files\\centerline\\smooth_centerline_XS_%sx%sft.shp" % (spacing, xs_length))
@@ -132,12 +132,12 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent):
     print("Centerline at: " + str(centerline))
 
 
-    #station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=direct + "\\station_points.shp", join_attributes="ALL", output_type="POINT")
-    #station_points = arcpy.MultipartToSinglepart_management(station_points, direct +"\\raw_station_points1.shp")
-    #station_points = arcpy.AddXY_management(station_points)
-    #elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table.dbf"))
-    #station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
-    #elevation_table = arcpy.TableToExcel_conversion(station_points, direct + "\\XY_elevation_table1.xls")
+    station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=direct + "\\station_points.shp", join_attributes="ALL", output_type="POINT")
+    station_points = arcpy.MultipartToSinglepart_management(station_points, direct +"\\raw_station_points1.shp")
+    station_points = arcpy.AddXY_management(station_points)
+    elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table.dbf"))
+    station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
+    elevation_table = arcpy.TableToExcel_conversion(station_points, direct + "\\XY_elevation_table1.xls")
 
     print("Station points shapefile at: " + str(station_points))
     print("Elevation table at: " + str(elevation_table))
