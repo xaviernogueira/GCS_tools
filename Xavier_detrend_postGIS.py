@@ -15,7 +15,7 @@ direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Sett
 xyz_table = direct + '\\stage_9ft_XYZ_table_3ft.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
-DEM = direct + '\\las_files\\ls_nodt.tif'
+DEM = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\las_files\ls_nodt.tif'
 #process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 #spatial_ref = arcpy.Describe(process_footprint).spatialReference
@@ -276,29 +276,31 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
     return [fit_params, z_fit_list, residual, R_squared]
 
 ##### Detrend in arcgis #####
-def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_breakpoints=[]):
+def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, list_of_breakpoints=[]):
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
     ws = wb.active
-    csv_file = direct + '\\XY_elevation_table_100_smooth_3_spaced.csv'
-    arcpy.env.extent = footprint
-    arcpy.env.workspace = direct
-    arcpy.env.snapRaster = dem
+    arcpy.env.workspace = detrend_location
     arcpy.overwriteoutput = True
+    spatial_ref = arcpy.Describe(original_dem).spatialReference
+    arcpy.env.extent = arcpy.Describe(original_dem).extent
 
-    if not os.path.exists(process_footprint):
-        os.makedirs(process_footprint)
 
-    with open(csv_file, 'w', newline="") as f:
+    csv_name = fit_z_xl_file[:-5] + "_fitted.csv"
+    with open(csv_name, 'w', newline="") as f:
         col = csv.writer(f)
         for row in ws.rows:
             col.writerow([cell.value for cell in row])
 
     for i in list_of_breakpoints:
         column = ('z_fit_%s' % i)
-        detrended_raster_file = detrend_workplace + "\\ras_detren.tif"
-        points = arcpy.MakeXYEventLayer_management(csv_file, "POINT_X", "POINT_Y", out_layer=("fitted_station_points%s" % i), spatial_reference=spatial_ref, in_z_field=column)
-        points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s_sp4ft" % i).replace('.csv', '.lyr'))
+        if stage != 0:
+            detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
+        else:
+            detrended_raster_file = detrend_location + "\\ras_detren.tif"
+            print("0th stage marks non-stage specific centerline")
+        points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y", out_layer=("fitted_station_points%s_stage%s" % (i, stage)), spatial_reference=spatial_ref, in_z_field=column)
+        points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s_stage%sft" % (i, stage)).replace('.csv', '.lyr'))
         points = arcpy.CopyFeatures_management(points)
         print("Creating Thiessen polygons...")
     # Delete non-relevent fields tp reduce errors
@@ -307,9 +309,9 @@ def detrend_that_raster(fit_z_xl_file, dem, footprint, spatial_ref, list_of_brea
         fields2delete = list(set(fields) - set(dont_delete_fields))
         points = arcpy.DeleteField_management(points, fields2delete)
 
-        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_sp4ft.shp", fields_to_copy='ALL')
-        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_%s_sp4ft.tif' % i), cell_assignment="CELL_CENTER")
-        detrended_DEM = arcpy.Raster(dem) - arcpy.Raster(z_fit_raster)
+        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
+        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)), cell_assignment="CELL_CENTER")
+        detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
         detrended_DEM.save(detrended_raster_file)
         print("DEM DETRENDED!")
 
@@ -374,7 +376,7 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location=''):
         plt.savefig((location + '\\Stage_%sft_linear_detrend_plot' % stage), dpi=300, bbox_inches='tight')
         plt.cla()
 
-def make_residual_plot(location_np, residual, R_squared):
+def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
     '''Plot residuals across longitudinal profile, show R^2. Inputs are a numpy array of location, a list of residuals, and a float for R-squared'''
     x_plot = location_np
     y_plot = np.array(residual)
@@ -407,9 +409,9 @@ def make_residual_plot(location_np, residual, R_squared):
 
 ####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######
 
-loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
-z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
-ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
-diagnostic_quick_plot(location_np=loc, z_np=z)
-#print(loc)
-linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,1960])
+#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
+#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
+#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
+#linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,1960])
+#make_linear_fit_plot(location_np=loc, z_np=z, fit_params=[[-0.05737116119688455, 2385.7074673230954], [-0.039883022651043085, 2352.0488414408187]], stage=9, location=direct)
+#detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=9, list_of_breakpoints=[1960])

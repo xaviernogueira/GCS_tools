@@ -271,12 +271,21 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
 
-        location_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
-        z_np = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
-        fit_params = linear_fit(location=location_np, z=z_np, xyz_table_location=elevation_table, list_of_breakpoints=[0,1960])[0]
+        location_and_z = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])
+        location_np = location_and_z[0]
+        z_np = location_and_z[1]
+        Xavier_detrend_postGIS.diagnostic_quick_plot(location_np,z_np)
+        linear_fit_return_list = linear_fit(location=location_np, z=z_np, xyz_table_location=elevation_table, list_of_breakpoints=[0,1960])
+        fit_params = linear_fit_return_list[0]
+        z_fit_list = linear_fit_return_list[1]
+        residual = linear_fit_return_list[2]
+        R_squared = linear_fit_return_list[3]
         make_linear_fit_plot(location_np, z_np, fit_params, stage=stage_num, location=detrend_file_location)
+        elevation_table_xlsx = elevation_table[:-3] + "xlsx"
+        detrend_that_raster(detrend_location=detrend_file_location, fit_z_xl_file=elevation_table_xlsx, original_dem=original_DEM, stage=stage_num,
+                            list_of_breakpoints=[1960])
 
-
+        #### Continue by using the width polygons to get zonal stats as a table and then join based on FID using the respective detrended DEM
 
 def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
     '''Export location, width, and mean depth as tables excluding damaged cross sections specified as a list.
@@ -417,7 +426,7 @@ def GCS_plotter(table_directory):
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=3)
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[9])
 #[9, 15, 24])
-z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9])
+z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9, 15, 24])
 #export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
 #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
