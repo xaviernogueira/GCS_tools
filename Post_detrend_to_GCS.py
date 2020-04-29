@@ -211,11 +211,6 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
             #print((shapefile_location + "\\stats_table_%s.dbf" % stage))
 
             rectangles = (shapefile_location + "\\width_rectangles_%s" % file[-8:])
-            #zonal_table = arcpy.sa.ZonalStatisticsAsTable(rectangles, zone_field="LOCATION", in_value_raster=float_detrended_DEM, out_table=(shapefile_location + "\\stats_table_%s.dbf" % file[-8:-4]), statistics_type="MEAN")
-            #rectangles = arcpy.JoinField_management(rectangles, in_field="LOCATION", join_table=zonal_table, join_field="LOCATION", fields=["MEAN"])
-            # arcpy.AddField_management(rectangles, "MEAN_Z", field_type="FLOAT")
-            # expression2 = ("%f - (float(!MEAN!))" % stage)
-            # arcpy.CalculateField_management(rectangles, "MEAN_Z", expression2, "PYTHON3")
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
@@ -293,13 +288,40 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         if os.path.exists('theis_raster%s_stage%sft.tif' % (breakpoint, stage_num)):
             os.remove('theis_raster%s_stage%sft.tif' % (breakpoint, stage_num))
 
-        list_of_files_in_out_folder = [f for f in listdir(out_folder) if isfile(join(out_folder, f))] #add width rectangles to a list
-        list_of_width_polygons = []
-        for file in list_of_files_in_out_folder:
-            print(file[:15]) # temporary to check splicing accuracy
-            if file[:15] == "width_rectangles" and file[-4:] == ".shp":
-                list_of_width_polygons.append(file)
-        print("Unsorted list of width polygons:" + str(list_of_width_polygons))
+    width_series_shapefile_folder = out_folder + "\\analysis_shapefiles"
+    list_of_files_width_folder = [f for f in listdir(width_series_shapefile_folder) if
+                                      isfile(join(width_series_shapefile_folder, f))]  # add width rectangles to a list
+    list_of_width_polygons = []
+    for file in list_of_files_width_folder:
+        print(file[:16])  # temporary to check splicing accuracy
+        if file[:16] == "width_rectangles" and file[-4:] == ".shp":
+            list_of_width_polygons.append(file)
+    print("Unsorted list of width polygons:" + str(list_of_width_polygons))
+
+    for file in list_of_width_polygons:
+        if file[-8] == "_":
+            stage = int(file[-7])
+        else:
+            stage = int(file[-8:-6])
+
+        centerline_number = 0
+        if stage <= centerlines[centerline_number]:
+            detrended_ras = (detrend_file_location + "\\rs_dt_s%s.tif" % centerlines[0])
+        elif stage > centerlines[-1]:
+            detrended_ras = (detrend_file_location + "\\stage_centerline_%sft_DS.shp" % centerlines[-1])
+        else:
+            while int(stage) > centerlines[centerline_number]:
+                centerline_number += 1
+            detrended_ras = (
+                    detrend_file_location + "\\stage_centerline_%sft_DS.shp" % centerlines[centerline_number])
+        print("Stage %s width analysis polygon will be joined with Z attributes from %" % (stage,detrended_ras))
+
+        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_series_shapefile_folder + "\\" + file, zone_field="LOCATION", in_value_raster=detrended_ras, out_table=(width_series_shapefile_folder + "\\stats_table_%s.dbf" % stage), statistics_type="MEAN")
+        rectangles = arcpy.JoinField_management(width_series_shapefile_folder + "\\" + file, in_field="LOCATION", join_table=zonal_table, join_field="LOCATION", fields=["MEAN"])
+
+
+
+
 
 
         #### Continue by using the width polygons to get zonal stats as a table and then join based on FID using the respective detrended DEM
