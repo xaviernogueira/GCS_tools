@@ -284,6 +284,23 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         elevation_table_xlsx = elevation_table[:-3] + "xlsx"
         detrend_that_raster(detrend_location=detrend_file_location, fit_z_xl_file=elevation_table_xlsx, original_dem=original_DEM, stage=stage_num,
                             list_of_breakpoints=[1960])
+        detrended_raster = detrend_file_location + "\\rs_dt_s%s.tif" % stage_num
+        print("Detrended raster for stage %s is made @: %s" % (stage_num, detrended_raster))
+
+        print("Deleting intermediary files...")
+        if os.path.exists(detrend_file_location + "\\thiespoly_stage%s.shp" % stage_num):
+            os.remove(detrend_file_location + "\\thiespoly_stage%s.shp" % stage_num)
+        if os.path.exists('theis_raster%s_stage%sft.tif' % (breakpoint, stage_num)):
+            os.remove('theis_raster%s_stage%sft.tif' % (breakpoint, stage_num))
+
+        list_of_files_in_out_folder = [f for f in listdir(out_folder) if isfile(join(out_folder, f))] #add width rectangles to a list
+        list_of_width_polygons = []
+        for file in list_of_files_in_out_folder:
+            print(file[:15]) # temporary to check splicing accuracy
+            if file[:15] == "width_rectangles" and file[-4:] == ".shp":
+                list_of_width_polygons.append(file)
+        print("Unsorted list of width polygons:" + str(list_of_width_polygons))
+
 
         #### Continue by using the width polygons to get zonal stats as a table and then join based on FID using the respective detrended DEM
 
