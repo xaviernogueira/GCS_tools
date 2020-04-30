@@ -309,8 +309,10 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
         fields2delete = list(set(fields) - set(dont_delete_fields))
         points = arcpy.DeleteField_management(points, fields2delete)
 
+        cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
+        cell_size = float(cell_size1.getOutput(0))
         thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
-        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)), cell_assignment="CELL_CENTER")
+        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)), cell_assignment="CELL_CENTER", cellsize=cell_size)
         detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
         detrended_DEM.save(detrended_raster_file)
         print("DEM DETRENDED!")

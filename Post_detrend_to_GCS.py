@@ -293,7 +293,6 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
                                       isfile(join(width_series_shapefile_folder, f))]  # add width rectangles to a list
     list_of_width_polygons = []
     for file in list_of_files_width_folder:
-        print(file[:16])  # temporary to check splicing accuracy
         if file[:16] == "width_rectangles" and file[-4:] == ".shp":
             list_of_width_polygons.append(file)
     print("Unsorted list of width polygons:" + str(list_of_width_polygons))
@@ -303,25 +302,27 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
             stage = int(file[-7])
         else:
             stage = int(file[-8:-6])
-
         centerline_number = 0
         if stage <= centerlines[centerline_number]:
             detrended_ras = (detrend_file_location + "\\rs_dt_s%s.tif" % centerlines[0])
         elif stage > centerlines[-1]:
-            detrended_ras = (detrend_file_location + "\\stage_centerline_%sft_DS.shp" % centerlines[-1])
+            detrended_ras = (detrend_file_location + "\\rs_dt_s%s.tif" % centerlines[-1])
         else:
             while int(stage) > centerlines[centerline_number]:
                 centerline_number += 1
-            detrended_ras = (
-                    detrend_file_location + "\\stage_centerline_%sft_DS.shp" % centerlines[centerline_number])
-        print("Stage %s width analysis polygon will be joined with Z attributes from %" % (stage,detrended_ras))
+            detrended_ras = (detrend_file_location + "\\rs_dt_s%s.tif" % centerlines[centerline_number])
+        print("Stage %s width analysis polygon will be joined with Z attributes from %s" % (stage, detrended_ras))
 
-        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_series_shapefile_folder + "\\" + file, zone_field="LOCATION", in_value_raster=detrended_ras, out_table=(width_series_shapefile_folder + "\\stats_table_%s.dbf" % stage), statistics_type="MEAN")
-        rectangles = arcpy.JoinField_management(width_series_shapefile_folder + "\\" + file, in_field="LOCATION", join_table=zonal_table, join_field="LOCATION", fields=["MEAN"])
+        width_file = width_series_shapefile_folder + "\\" + file
+        arcpy.AddField_management(width_file,field_name="loc_id",field_type="SHORT")
+        field_calc = "(int(!LOCATION!))"
+        arcpy.CalculateField_management(width_file,field="loc_id",expression=field_calc, expression_type="PYTHON3")
 
+        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_file, zone_field="loc_id", in_value_raster=detrended_ras, out_table=(width_series_shapefile_folder + "\\stats_table_%s.dbf" % stage), statistics_type="MEAN")
+        rectangles = arcpy.JoinField_management(width_series_shapefile_folder + "\\" + file, in_field="loc_id", join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
 
-
-
+        print("Z statistics added for stage %s" % stage)
+    print("Z analysis completed, use following functions to export to excel and plot")
 
 
         #### Continue by using the width polygons to get zonal stats as a table and then join based on FID using the respective detrended DEM
@@ -361,13 +362,13 @@ def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
             csv_file = table_location + ("\\%s_WD_analysis_table.csv" % file[-7:-4])
         else:
             csv_file = table_location + ("\\%s_WD_analysis_table.csv" % file[-8:-4])
-        if ws["G1"].value == "MEAN" and ws["C1"].value == "LOCATION" and ws["F1"].value == "Width":
-            ws["G1"].value = "Z"
+        if ws["H1"].value == "MEAN" and ws["C1"].value == "LOCATION" and ws["F1"].value == "Width":
+            ws["H1"].value = "Z"
             ws["F1"].value = "W"
             ws["C1"].value = "dist_down"
             wb.save(str(analysis_xlsx))
         else:
-            print("ERROR! CELL HEADERS IN UNEXPECTED POSITIONS< PLEASE EDIT LINE 143")
+            print("ERROR! CELL HEADERS IN UNEXPECTED POSITIONS @ %s" % (table_location + ("\\WD_analysis_table_%s.xlsx" % file[-8:-4])))
             return
 
         with open(csv_file, 'w', newline="") as f:
@@ -378,6 +379,9 @@ def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
 
     print("DBF and CSV tables of width/Z analysis at %s" % table_location)
     print("List of csv tables: %s" % list_of_csv_tables)
+
+    print("Landform classification is underway..")
+    main_classify_landforms(list_of_csv_tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 
     return [list_of_csv_tables, width_rectangles]
 
@@ -465,12 +469,13 @@ def GCS_plotter(table_directory):
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=3)
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[9])
 #[9, 15, 24])
-z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9, 15, 24])
-#export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+#z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9, 15, 24])
+
+export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
 #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 # IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
-#GCS_plotter(table_directory=table_location)
+GCS_plotter(table_directory=table_location)
 
 
 
