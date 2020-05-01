@@ -16,21 +16,25 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17610661"
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
 
 #Spatial reference#
 lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
+lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
 spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
+units = spatial_ref.linearUnitName
+ft_spatial_ref = arcpy.Describe(lidar_ft_projection_file).spatialReference
+print("Units are %s" % units)
 #spatial_ref_old = r"PROJCS['NAD_1983_California_zone_5_ftUS',GEOGCS['GCS_North_American_1983',DATUM['D_North_American_1983',SPHEROID['GRS_1980',6378137.0,298.257222101]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Lambert_Conformal_Conic'],PARAMETER['false_easting',6561666.667],PARAMETER['false_northing',1640416.667],PARAMETER['central_meridian',-118.0],PARAMETER['standard_parallel_1',34.03333333333333],PARAMETER['standard_parallel_2',35.46666666666667],PARAMETER['latitude_of_origin',33.5],UNIT['Foot_US',0.3048006096012192]],VERTCS['NAVD88 height - Geoid12B (ftUS)',VDATUM['North American Vertical Datum 1988'],PARAMETER['Vertical_Shift',0.0],UNIT['US survey foot',0.3048006096012192]];-117608900 -91881400 3048.00609601219;1627.52830945332 3048.00609601219;-100000 10000;3.28083333333333E-03;3.28083333333333E-03;0.001;IsHighPrecision"
 
 #Files, locations, and parameters#
-cell_size = 0.7
+#cell_size = 0.7
 upstream_source_poly = direct + "\\upstream_flow_poly.shp"
 spatial_extent = direct + "\\las_footprint.shp"
-las_dataset_name = direct + "\\las_files\\COMID17573013_ground.lasd"
+las_dataset_name = direct + "\\las_files\\COMID17586810_ground.lasd"
 raster_location = direct + "\\las_files\\ls_nodt.tif"
 centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 xl_output = direct + ""
@@ -136,36 +140,40 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
 
 
 #Take las data and make raster, input desired output names before running! GET LASD TO RASTER WORKING!
-def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name):
+def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name, ft_spatial_ref):
     '''Converts processed LAS files to a LAS dataset, and then to a raster with cell size of 1m'''
-    cell_size = 1
+    #### CHANGE THIS WHEN WE WORK WITH FT REACHES
+    if spatial_ref.linearUnitName == 'Meter':
+        cell_size = 1
+        print("Cell size (unprojected) is 1 %s" % spatial_ref.linearUnitName)
+    else:
+        cell_size = 3.28
+        print("Cell size (unprojected) is 3.28ft")
     try:
         las_dataset = arcpy.CreateLasDataset_management(las_folder, las_dataset_name, spatial_reference=spatial_ref, compute_stats=True)
         lidar_raster = arcpy.LasDatasetToRaster_conversion(las_dataset, value_field='ELEVATION', data_type='FLOAT', sampling_type="CELLSIZE", sampling_value=cell_size)
         tiff_lidar_raster = arcpy.CopyRaster_management(lidar_raster, raster_name)
-        tiff_lidar_raster = arcpy.ProjectRaster_management(lidar_raster, out_raster=raster_name, out_coor_system=spatial_extent)
+        tiff_lidar_raster = arcpy.ProjectRaster_management(lidar_raster, out_raster=raster_name, out_coor_system=ft_spatial_ref)
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
-    global raster_location
-    raster_name = tiff_lidar_raster
-    print("las dataset at %s, raster at %s" % (las_dataset, tiff_lidar_raster))
+    print("las dataset at %s, raster at %s" % (las_dataset, raster_name))
 
 
-def detrend_prep1(raster_name, flow_polygon, spatial_ref, spatial_extent):
+def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spatial_ref):
     '''This function takes the Lidar raster, creates a centerline and stationpoint at defined spacing (hard programed in function)
     Station lines are turned into station points, which are given the values of the lidar raster, and output a XLS table. OPERATIONAL.
 
     CHECK station_lines address, make sure that las_files folder is there'''
     arcpy.env.extent = spatial_extent
-    print(raster_location)
+    print(raster_name)
     print("CHECK UNITS OF HARD CODED XS SPACING AND THAT THEY MATCH THE UNITS OF THE RASTER")
     spacing = 3
-    xs_length = 400
-    smooth_distance = 100
+    xs_length = 5
+    smooth_distance = 300
     #Create station centerline and stationline with Kenny's function, use intercept to get station points
     least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
-    least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=2)
+    least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
     centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
     station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length, stage=[])
 
@@ -177,6 +185,7 @@ def detrend_prep1(raster_name, flow_polygon, spatial_ref, spatial_extent):
     station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=(direct + "\\station_points_%s_smooth_%s_spaced.shp" % (smooth_distance, spacing)), join_attributes="ALL", output_type="POINT")
     station_points = arcpy.MultipartToSinglepart_management(station_points, (direct +"\\raw_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)))
     station_points = arcpy.AddXY_management(station_points)
+    station_points = arcpy.Sort_management(station_points, out_dataset=(direct +"\\XYZ_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)), sort_field=[["LOCATION", "Ascending"]])
     elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
     station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
     elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
@@ -187,10 +196,10 @@ def detrend_prep1(raster_name, flow_polygon, spatial_ref, spatial_extent):
 
 
 
-lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-#lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location)
-#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent)
+#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+#define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+#lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 

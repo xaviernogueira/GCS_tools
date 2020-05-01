@@ -204,8 +204,8 @@ def main_classify_landforms(tables, w_field, z_field, dist_field, make_plots=Tru
     fields = [w_field, z_field]
     std_fields = [field + '_s' for field in fields]
     std_pairs = list(itertools.combinations(std_fields, 2))
-    width_files = ['width_rectangles_10ft.shp', 'width_rectangles_11ft.shp', 'width_rectangles_12ft.shp', 'width_rectangles_13ft.shp', 'width_rectangles_14ft.shp', 'width_rectangles_15ft.shp', 'width_rectangles_16ft.shp', 'width_rectangles__0ft.shp', 'width_rectangles__1ft.shp', 'width_rectangles__2ft.shp', 'width_rectangles__3ft.shp', 'width_rectangles__4ft.shp', 'width_rectangles__5ft.shp', 'width_rectangles__6ft.shp', 'width_rectangles__7ft.shp', 'width_rectangles__8ft.shp', 'width_rectangles__9ft.shp']
-    width_dir = 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\analysis_shapefiles\\'
+    width_files = ['width_rectangles_0ft.shp', 'width_rectangles_10ft.shp', 'width_rectangles_12ft.shp', 'width_rectangles_14ft.shp', 'width_rectangles_16ft.shp', 'width_rectangles_18ft.shp', 'width_rectangles_20ft.shp', 'width_rectangles_22ft.shp', 'width_rectangles_24ft.shp', 'width_rectangles_26ft.shp', 'width_rectangles_28ft.shp', 'width_rectangles_2ft.shp', 'width_rectangles_30ft.shp', 'width_rectangles_4ft.shp', 'width_rectangles_6ft.shp', 'width_rectangles_8ft.shp']
+    width_dir = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810\LINEAR_DETREND_BP3000_3ft_spacing\analysis_shapefiles'
     for i in range(len(tables)):
         table = tables[i]
         clean_in_table(table, w_field=w_field, z_field=z_field, dist_field=dist_field)
@@ -213,9 +213,9 @@ def main_classify_landforms(tables, w_field, z_field, dist_field, make_plots=Tru
         for std_pair in std_pairs:
             std_covar_series(table, std_pair[0], std_pair[1])
         df = landforms(table)
-        df = landform_polygons(table, width_dir + width_files[i])
+        df = landform_polygons(table, width_dir + "\\" + width_files[i])
         #table.replace('.csv', '.shp')
-        out_polys.append(width_dir + width_files[i])
+        out_polys.append(width_dir + "\\" + width_files[i])
         if make_plots == True:
             GCS_plot(table)
 

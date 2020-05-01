@@ -11,15 +11,15 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST\analysis_centerline_and_XS\detrend_files'
-xyz_table = direct + '\\stage_9ft_XYZ_table_3ft.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810'
+xyz_table = direct + '\\XY_elevation_table_300_smooth_3_spaced.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
-station_lines = direct + '\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp'
-DEM = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\las_files\ls_nodt.tif'
+station_lines = direct + '\\las_files\\centerline\\smooth_centerline_XS_3x400ft.shp'
+DEM = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810\las_files\ls_nodt.tif'
 #process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 #spatial_ref = arcpy.Describe(process_footprint).spatialReference
-listofcolumn = ["D", "A", "L", "I", "J"]
+listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
 ######
 #Fill lists with necessary data
 
@@ -67,6 +67,7 @@ def prep_xl_file(xyz_table_location, listofcolumn):
     location_np = np.int_(location_np)
     z_np = np.float_(z_np)
     z_np = np.around(z_np, 9)
+    print("Z array: %s" % z_np)
 
     return [location_np,z_np, ws]
 
@@ -321,7 +322,7 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
 ###### Define plotting function ######
 def diagnostic_quick_plot(location_np, z_np):
     x_plot = location_np
-    y_plot = np.int_(np.float_(z_np))
+    y_plot = z_np
     plt.plot(x_plot, y_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
     plt.ylabel("Bed elevation (ft)")
@@ -393,27 +394,23 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-    return plt.show()
+
+    if stage == 0 and location == '':
+        plt.show()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig((location + '\\Stage_%sft_linear_residual_plot' % stage), dpi=300, bbox_inches='tight')
+        plt.cla()
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-#make_quadratic_fit_plot(location_np, z_np, fit_params)
-#make_quadratic_residual_plot(location_np, residual, R_squared)
-#quadratic_fit(location_np, location, z_np, ws)
 
-#diagnostic_quick_plot(location_np, z_np)
-#fit_params = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[0]
-#residual = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[2]
-#R_squared = linear_fit(location, z, ws, list_of_breakpoints=[0, 2950])[3]
-#make_residual_plot(location_np, residual, R_squared)
-#make_linear_fit_plot(location_np, z_np, fit_params)
-#detrend_that_raster(xyz_table, DEM, process_footprint, spatial_ref, list_of_breakpoints=[2950])
-
-####### WHEN WE RETURN FIGURE OUT HOW TO TURN THIS INTO SOMETHING WE CAN DETREND THE DEM WITH ######
-
-#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[0]
-#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[1]
-#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])[2]
-#linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,1960])
-#make_linear_fit_plot(location_np=loc, z_np=z, fit_params=[[-0.05737116119688455, 2385.7074673230954], [-0.039883022651043085, 2352.0488414408187]], stage=9, location=direct)
-#detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=9, list_of_breakpoints=[1960])
+#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
+#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
+#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
+#diagnostic_quick_plot(location_np=loc, z_np=z)
+#fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,3000])
+#make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
+#make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
+#detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[3000])

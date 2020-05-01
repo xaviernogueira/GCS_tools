@@ -25,18 +25,18 @@ import string
 
 
 ##### INPUTS #####
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10"
-out_folder = direct + '\\LINEAR_DETREND_BP1960_4ft_spacing_TEST'
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
+out_folder = direct + '\\LINEAR_DETREND_BP3000_3ft_spacing'
 original_dem_location = direct + '\\las_files\\ls_nodt.tif'
 detrended_dem_location = out_folder + "\\ras_detren.tif"
 process_footprint = direct + '\\las_footprint.shp'
-spatial_ref = arcpy.Describe(process_footprint).spatialReference
-station_lines = direct + "\\las_files\\centerline_sp4ft_sm100ft\\smooth_centerline_XS_4x250ft.shp"
+spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
+station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
 table_location = out_folder + "\\gcs_ready_tables"
 ##################
 
 arcpy.env.workplace = direct
-arcpy.env.extent = process_footprint
+arcpy.env.extent =detrended_dem_location
 
 arcpy.env.overwriteOutput = True
 
@@ -170,7 +170,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
 
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
-            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(400), stage=[int(stage_line)])
+            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(1000), stage=[int(stage_line)])
             station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (int(stage_line), spacing[0]))
 
             if os.path.exists(lines_location + "\\stage_centerline_%sft_D.shp" % stage_line):
@@ -456,24 +456,14 @@ def GCS_plotter(table_directory):
 
 
 
+############### CALL FUNCTIONS AS NECESSARY #####################
+#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=2)
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[4,8,26])
+z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=2400, centerlines=[4, 8, 26])
 
-#table_location = out_folder + '\\gcs_ready_tables'
-#tables = [f for f in listdir(table_location) if isfile(join(table_location, f))]
-#tables = [i for i in tables if i[-4:] == ".csv"]
-#tables = [(table_location + '\\') + table for table in tables]
-#print(tables)
-#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, spatial_extent=process_footprint, out_folder=out_folder, max_stage=[16])
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, station_lines=station_lines, spacing=[4])
-
-#create_station_lines.create_station_lines_function(centerline=r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\Settings10\LINEAR_DETREND_BP1960_4ft_spacing_TEST", spacing=3, xs_length=400, stage=9)
-#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=3)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[9])
-#[9, 15, 24])
-#z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=1960, centerlines=[9, 15, 24])
-
-export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-#tables = ['Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\10ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\11ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\12ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\13ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\14ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\15ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\16ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\0ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\1ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\2ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\3ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\4ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\5ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\6ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\7ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\8ft_WD_analysis_table.csv', 'Z:\\users\\xavierrn\\SoCoast_Final_ResearchFiles\\SCO1\\COMID17569535\\Settings10\\LINEAR_DETREND_BP1960_4ft_spacing\\gcs_ready_tables\\9ft_WD_analysis_table.csv']
-#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
+export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+tables = export_list[0]
+main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 # IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
 GCS_plotter(table_directory=table_location)
 
