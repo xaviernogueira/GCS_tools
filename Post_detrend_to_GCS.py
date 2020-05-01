@@ -164,9 +164,9 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_D.shp" % stage_line)
             arcpy.AddField_management(centerline_dissolve, "Id", "SHORT")
             if raster_units == "m":
-                tolerance = 20
+                tolerance = 30
             else:
-                tolerance = (20 * 3.28)
+                tolerance = (30 * 3.28)
 
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
@@ -458,7 +458,7 @@ def GCS_plotter(table_directory):
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=2)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[4,8,26])
+width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[4,8,26])
 z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=2400, centerlines=[4, 8, 26])
 
 export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
