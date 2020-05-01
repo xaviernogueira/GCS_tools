@@ -71,20 +71,49 @@ Offset: 0.5, 0.05
     
 ## Function directory
 1. Lidat_to_detrend_ready_XRN_functions.py:
+
     a) lidar_footptint(direct, spatial_ref)
+    
     b) define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff, spatial_ref)
+    
     c) lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name, ft_spatial_ref)
+    
     d) detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spatial_ref)
  
 2. Xavier_detrend_postGIS.py: 
+
     a) prep_xl_file(xyz_table_location, listofcolumn)
+    
     b) quadratic_fit(location_np, location, z_np, ws), has not been used or updated for some time. Linear_fit is recomended. 
+    
     c) linear_fit(location, z, xyz_table_location, list_of_breakpoints=[])
+    
     d) detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, list_of_breakpoints=[])
+    
     e) diagnostic_quick_plot(location_np, z_np)
-    f) make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
+    
+    f) make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location='')
+    
     g) make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location='')
-    h) 
+    
+    h) make_residual_plot(location_np, residual, R_squared, stage=0, location='')
+    
+3. Post_detrend_to_GCS.py
+
+    a) detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[], step=1)
+    
+    b) width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing=[], centerlines=[])
+    
+    c) z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=[])
+    
+    d) export_to_gcs_ready(out_folder, list_of_error_locations=[])
+    
+    e) GCS_plotter(table_directory)
+    
+4. GCS_statistical_analysis_XRN.py
+
+    coming soon...
+ 
 
 
  
