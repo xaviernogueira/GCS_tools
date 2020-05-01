@@ -170,7 +170,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
 
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
-            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(1000), stage=[int(stage_line)])
+            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(2000), stage=[int(stage_line)])
             station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (int(stage_line), spacing[0]))
 
             if os.path.exists(lines_location + "\\stage_centerline_%sft_D.shp" % stage_line):
