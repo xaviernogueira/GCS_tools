@@ -26,7 +26,7 @@ import string
 
 ##### INPUTS #####
 direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
-out_folder = direct + '\\LINEAR_DETREND_BP3000_3ft_spacing'
+out_folder = direct + '\\LINEAR_DETREND_BP3200_3ft_spacing'
 original_dem_location = direct + '\\las_files\\ls_nodt.tif'
 detrended_dem_location = out_folder + "\\ras_detren.tif"
 process_footprint = direct + '\\las_footprint.shp'
@@ -295,6 +295,7 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
     for file in list_of_files_width_folder:
         if file[:16] == "width_rectangles" and file[-4:] == ".shp":
             list_of_width_polygons.append(file)
+    list_of_width_polygons.remove('width_rectangles_0ft.shp')
     print("Unsorted list of width polygons:" + str(list_of_width_polygons))
 
     for file in list_of_width_polygons:
@@ -457,15 +458,15 @@ def GCS_plotter(table_directory):
 
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
-#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=2)
-width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[4,8,26])
-z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=2400, centerlines=[4, 8, 26])
+#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[5,6,10])
+z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=3200, centerlines=[5, 6, 10])
 
-export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-tables = export_list[0]
-main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
+#export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+#tables = export_list[0]
+#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 # IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
-GCS_plotter(table_directory=table_location)
+#GCS_plotter(table_directory=table_location)
 
 
 
