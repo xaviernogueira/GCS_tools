@@ -1,6 +1,7 @@
 # GCS Stage Analysis toolset
 This repository contains a set of tools for processing geospatial data, and doing statistical analysis on longitudinal fluvial landform classifications. While some tools may have a variety of fluvial geomorphological applications, an emphasis is placed on analysis of [geomorphic covariance structures](http://pasternack.ucdavis.edu/research/projects/geomorphic-covariance-structures/) (GCS). 
 
+This research was supported by the California State Water Resources Control Board under grant number 16-062-300
 ## Prerequsites:
 -ArcGIS + Python 3.6 ; i.e. the `arcpy` python package and ArcGIS license.
 
