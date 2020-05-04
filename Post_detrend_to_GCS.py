@@ -269,8 +269,8 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         location_and_z = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])
         location_np = location_and_z[0]
         z_np = location_and_z[1]
-        Xavier_detrend_postGIS.diagnostic_quick_plot(location_np,z_np)
-        linear_fit_return_list = linear_fit(location=location_np, z=z_np, xyz_table_location=elevation_table, list_of_breakpoints=[0,1960])
+        #Xavier_detrend_postGIS.diagnostic_quick_plot(location_np,z_np) #Un-hash out if first time interacting with data
+        linear_fit_return_list = linear_fit(location=location_np, z=z_np, xyz_table_location=elevation_table, list_of_breakpoints=[0,int(breakpoint)])
         fit_params = linear_fit_return_list[0]
         z_fit_list = linear_fit_return_list[1]
         residual = linear_fit_return_list[2]
@@ -278,7 +278,7 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
         make_linear_fit_plot(location_np, z_np, fit_params, stage=stage_num, location=detrend_file_location)
         elevation_table_xlsx = elevation_table[:-3] + "xlsx"
         detrend_that_raster(detrend_location=detrend_file_location, fit_z_xl_file=elevation_table_xlsx, original_dem=original_DEM, stage=stage_num,
-                            list_of_breakpoints=[1960])
+                            list_of_breakpoints=[int(breakpoint)])
         detrended_raster = detrend_file_location + "\\rs_dt_s%s.tif" % stage_num
         print("Detrended raster for stage %s is made @: %s" % (stage_num, detrended_raster))
 
@@ -295,7 +295,7 @@ def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=
     for file in list_of_files_width_folder:
         if file[:16] == "width_rectangles" and file[-4:] == ".shp":
             list_of_width_polygons.append(file)
-    list_of_width_polygons.remove('width_rectangles_0ft.shp')
+    list_of_width_polygons.remove('width_rectangles_0ft.shp') #FIX THIS LINE
     print("Unsorted list of width polygons:" + str(list_of_width_polygons))
 
     for file in list_of_width_polygons:
@@ -459,8 +459,8 @@ def GCS_plotter(table_directory):
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[5,6,10])
-z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=3200, centerlines=[5, 6, 10])
+width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[5,6,10])
+#z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=3200, centerlines=[5, 6, 10])
 
 #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
 #tables = export_list[0]

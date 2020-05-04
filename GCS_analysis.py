@@ -30,7 +30,8 @@ def flow_cov_corrs(data, field_1, field_2):
     for reach_name in reach_names:
         # the (titled) dataframe to output for each reach
         field_abbrev = field_1[0].lower() + field_2[0].lower()
-        reach_df = DF(index=flow_names, columns=flow_names, title='Corr(C%s_i,C%s_j) %s' % (field_abbrev, field_abbrev, reach_name))
+        reach_df = DF(index=flow_names, columns=flow_names,
+                      title='Corr(C%s_i,C%s_j) %s' % (field_abbrev, field_abbrev, reach_name))
 
         # loop for rows, loop for columns
         for flow_rkey in flow_names:
@@ -229,7 +230,7 @@ def landform_occupation(data):
             for code in code_dict.keys():
                 mu = code_dict[code]
                 count = sum([1 for x in code_series if x == code])
-                percentage = round(count*100.0/n, 2)
+                percentage = round(count * 100.0 / n, 2)
                 reach_df.loc[flow, mu] = percentage
 
         output.append(reach_df)
@@ -285,7 +286,7 @@ def landform_following(data, nc=True):
 
                 start_mu = code_dict[start_code]
                 follow_mu = code_dict[follow_code]
-                percentage = round(count*100.0/n, 2)
+                percentage = round(count * 100.0 / n, 2)
                 flow_df.loc[start_mu, follow_mu] = percentage
 
         output.append(flow_df)
@@ -322,7 +323,7 @@ def landform_nesting(data):
 
     for i, nest in enumerate(nest_abundances):
         n = len(nested_landforms)
-        p = round(nest[1]*100.0/n, 2)
+        p = round(nest[1] * 100.0 / n, 2)
         output.loc[i] = [code_dict[nst] for nst in nest[0]] + [nest[1], p]
 
     return output
@@ -333,7 +334,7 @@ def series_plots(data, field, odir=''):
 
     flow_names = sorted(data.keys())
     output = []
-    figsize=(12, 6)
+    figsize = (12, 6)
 
     # plot series for each flow
     for flow in flow_names:
@@ -345,7 +346,8 @@ def series_plots(data, field, odir=''):
         plt.ylabel(r'$%s$' % field)
         plt.grid()
         plt.plot(dist, series)
-        fig.savefig(odir + '%s %s.png' % (field, flow.replace('pt', '.').replace('cms', ' cms')), bbox_inches='tight', pad_inches=0.1)
+        fig.savefig(odir + '%s %s.png' % (field, flow.replace('pt', '.').replace('cms', ' cms')), bbox_inches='tight',
+                    pad_inches=0.1)
         output.append(fig)
         plt.close(fig)
 
@@ -422,13 +424,14 @@ def GCS_plots(data, field_1, field_2, odir=''):
             plt.ylabel(r'$Z_s \cdot W_s$')
             plt.grid()
             plt.scatter(dist, czw, c=[color_code[x] for x in code], s=4, edgecolors='none')
-            legend_elements = [Line2D([0], [0], marker='o', color='w', label=mu, markerfacecolor=color, markeredgecolor='none', markersize=10)
-                               for color, mu in [[color_code[x], code_dict[x]] for x in code_dict.keys()]]
+            legend_elements = [
+                Line2D([0], [0], marker='o', color='w', label=mu, markerfacecolor=color, markeredgecolor='none',
+                       markersize=10)
+                for color, mu in [[color_code[x], code_dict[x]] for x in code_dict.keys()]]
             plt.legend(handles=legend_elements, ncol=5)
             fig.savefig(odir + 'Czw landforms %s.png' % flow, bbox_inches='tight', pad_inches=0.1)
             output.append(fig)
             plt.close(fig)
-
 
     # Bivariate Correlation vs discharge
     fig, ax = plt.subplots(1, 1, figsize=figsize)
@@ -464,7 +467,7 @@ def GCS_plots(data, field_1, field_2, odir=''):
         gcs = data[flow]['All']['%s_%s' % (field_1, field_2)]
         dist_down = data[flow]['All']['dist_down']
         spacing = abs(dist_down[1] - dist_down[0])
-        maxlags = int(len(dist_down)/2)
+        maxlags = int(len(dist_down) / 2)
         lags, lower_white, upper_white = white_noise_acf_ci(s1, maxlags=maxlags)
 
         lags, ar1_acorrs, lower_red, upper_red = ar1_acorr(s1, maxlags=maxlags)
@@ -557,7 +560,6 @@ def GCS_plots(data, field_1, field_2, odir=''):
     fig.colorbar(tpc)
     fig.savefig(odir + 'Acorr_heatmap_%s.png' % field_abbrev, bbox_inches='tight', pad_inches=0.1)
 
-
     # power spectral density
     x = []
     y = []
@@ -568,12 +570,12 @@ def GCS_plots(data, field_1, field_2, odir=''):
         gcs = data[flow]['All']['%s_%s' % (field_1, field_2)]
         dist_down = data[flow]['All']['dist_down']
         spacing = abs(dist_down[1] - dist_down[0])
-        frequencies, psd = sig.periodogram(gcs, 1.0/3, window=sig.get_window('hamming', len(gcs)))
+        frequencies, psd = sig.periodogram(gcs, 1.0 / 3, window=sig.get_window('hamming', len(gcs)))
         for j, psd_val in enumerate(psd):
             x.append(np.log10(qs[i]))
             y.append(frequencies[j])
             z.append(psd[j])
-    std_z = [z_val*1.0/np.std(z) for z_val in z]
+    std_z = [z_val * 1.0 / np.std(z) for z_val in z]
 
     triang = tri.Triangulation(x, y)
 
@@ -638,7 +640,7 @@ def clean_in_data(tables, fields, reach_breaks=None):
 
         flow_name = os.path.basename(table)
         try:
-            flow_name = os.path.basename(table).split('_')[0]
+            flow_name = os.path.basename(table).split('f')[0]
             logging.info('Using %s as flow name for %s' % (flow_name, table))
         except:
             pass
@@ -679,7 +681,7 @@ def clean_in_data(tables, fields, reach_breaks=None):
                 # try using 'Reach' attribute
                 reach_names = list(set(df['Reach'].tolist()))
                 reaches = [df[df['Reach'] == reach_name] for reach_name in reach_names]
-                reach_names = ['Reach '+str(reach) for reach in reach_names]
+                reach_names = ['Reach ' + str(reach) for reach in reach_names]
                 # if only one reach == df, use this one reach for table dict ('All' would be redundant)
                 if len(reaches) == 1 and reaches[0] == df:
                     table_dict = dict(zip(reach_names, reaches))
@@ -702,13 +704,12 @@ def complete_analysis(tables, reach_breaks=None, fields=[]):
     Args:
         tables: list of file names for cross-section data tables
         reach_breaks: list of distances downstream to set reach breaks
-        list of
+        list of field names
     '''
 
-    odir = os.path.dirname(__file__)+'\\results\\'
+    odir = os.path.dirname(__file__) + '\\results\\'
     if os.path.isdir(odir) == False:
         os.mkdir(odir)
-
 
     std_fields = [field + '_s' for field in fields]
     std_pairs = list(itertools.combinations(std_fields, 2))
@@ -719,11 +720,11 @@ def complete_analysis(tables, reach_breaks=None, fields=[]):
     data = clean_in_data(tables, fields=fields, reach_breaks=reach_breaks)
     logging.info('OK')
 
-    #logging.info('Computing GCS correlation between flows...')
-    #for std_pair in std_pairs:
-        #gcs_corrs = flow_cov_corrs(data, std_pair[0], std_pair[1])
-        #df_lol.append(gcs_corrs)
-    #logging.info('OK')
+    logging.info('Computing GCS correlation between flows...')
+    for std_pair in std_pairs:
+        gcs_corrs = flow_cov_corrs(data, std_pair[0], std_pair[1])
+        df_lol.append(gcs_corrs)
+    logging.info('OK')
 
     logging.info('Computing correlations between field pairs...')
     corrs_list = []
@@ -812,7 +813,6 @@ def complete_analysis(tables, reach_breaks=None, fields=[]):
 
 
 if __name__ == '__main__':
-
     # initialize logger
     init_logger(__file__)
     # make the GUI window
