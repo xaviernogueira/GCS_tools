@@ -164,13 +164,13 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
     '''This function takes the Lidar raster, creates a centerline and stationpoint at defined spacing (hard programed in function)
     Station lines are turned into station points, which are given the values of the lidar raster, and output a XLS table. OPERATIONAL.
 
-    CHECK station_lines address, make sure that las_files folder is there'''
+    '''
     arcpy.env.extent = spatial_extent
     print(raster_name)
     print("CHECK UNITS OF HARD CODED XS SPACING AND THAT THEY MATCH THE UNITS OF THE RASTER")
     spacing = 3
     xs_length = 5
-    smooth_distance = 300
+    smooth_distance = 100
 
     if centerline_verified == False:
         #Create station centerline and stationline with Kenny's function, use intercept to get station points
@@ -179,7 +179,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
         centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
     else:
         direct = os.path.dirname(flow_polygon)
-        centerline = direct + "\\las_folder\\centerline\\smooth_centerline.shp"
+        centerline = direct + "\\las_files\\centerline\\smooth_centerline.shp"
         station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length, stage=[])
 
         station_lines = direct + ("\\las_files\\centerline\\smooth_centerline_XS_%sx%sft.shp" % (spacing, xs_length))
@@ -204,7 +204,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
 #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
-detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=True)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 

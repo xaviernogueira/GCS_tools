@@ -11,11 +11,10 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810'
-xyz_table = direct + '\\XY_elevation_table_300_smooth_3_spaced.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013'
+xyz_table = direct + '\\XY_elevation_table_200_smooth_3_spaced.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
-station_lines = direct + '\\las_files\\centerline\\smooth_centerline_XS_3x400ft.shp'
-DEM = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810\las_files\ls_nodt.tif'
+DEM = direct + '\\las_files\\ls_nodt.tif'
 #process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 #spatial_ref = arcpy.Describe(process_footprint).spatialReference
@@ -410,7 +409,7 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
 #z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
 #ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
 #diagnostic_quick_plot(location_np=loc, z_np=z)
-#fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,3200])
+#fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,6100])
 #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
 #make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
-#detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[3200])
+#detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[6100])

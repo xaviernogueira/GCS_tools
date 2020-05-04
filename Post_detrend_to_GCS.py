@@ -25,10 +25,10 @@ import string
 
 
 ##### INPUTS #####
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810"
-out_folder = direct + '\\LINEAR_DETREND_BP3200_3ft_spacing'
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
+out_folder = direct + '\\LINEAR_DETREND_BP6100_3ft_spacing'
 original_dem_location = direct + '\\las_files\\ls_nodt.tif'
-detrended_dem_location = out_folder + "\\ras_detren.tif"
+detrended_dem_location = direct + "\\ras_detren.tif"
 process_footprint = direct + '\\las_footprint.shp'
 spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
 station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
@@ -135,7 +135,7 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
 ## GOOD TO RUN A 3m smoothing during centerline editing
 
-def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing=[], centerlines=[]):
+def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest_stage, spacing=[], centerlines=[]):
     ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon
     into rectangular slices which are used to extract mean depth and width for each filling out an excel sheet and some descriptive stats.
 
@@ -177,7 +177,14 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, spacing
                 os.remove(
                     lines_location + "\\stage_centerline_%sft_D.shp" % stage_line)  # Remove non-smoothed, dissolved centerline
             print("Station lines file at: " + str(station_lines))
-            # we need a centerline for 10ft stage OR to remove highest stage from this analysis or something
+
+        for file in list_of_dissolved_polygons: #remove dissolved polygons above designated biggest stage from list
+            if file[-8] == "_":
+                stage = int(file[-7])
+            else:
+                stage = int(file[-8:-6])
+            if stage > biggest_stage:
+                list_of_dissolved_polygons.remove(file)
 
         for file in list_of_dissolved_polygons:
             if file[-8] == "_":
@@ -337,7 +344,7 @@ def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
     analysis_folder = out_folder + "\\analysis_shapefiles"
     files_in_folder = [f for f in listdir(analysis_folder) if isfile(join(analysis_folder, f))]
     width_rectangles = [i for i in files_in_folder if i[0] == "w"]
-    width_rectangles = [i for i in width_rectangles if i[-4:] == ".shp"]
+    width_rectangles = [i for i in width_rectangles if i[-4:] == ".shp" and i[-8:-6] != '_0']
     print("Width rectanles found: %s" % width_rectangles)
 
     list_of_csv_tables = []
@@ -457,15 +464,14 @@ def GCS_plotter(table_directory):
 
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
-#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft", spacing=[3], centerlines=[5,6,10])
+detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=15 spacing=[3], centerlines=[5,6,10])
 #z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=3200, centerlines=[5, 6, 10])
 
-export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-tables = export_list[0]
-main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-# IMPORTANT: Don't forget to hardcode the width polygon directory in main_classify_lanmdforms
-GCS_plotter(table_directory=table_location)
+#export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+#tables = export_list[0]
+#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+#GCS_plotter(table_directory=table_location)
 
 
 

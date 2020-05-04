@@ -19,7 +19,7 @@ def flow_cov_corrs(data, field_1, field_2):
     Computes binary correlation between C(field_1,field_2)'s for each pair of flows
     '''
     output = []
-
+    print(data)
     flow_names = sorted(data.keys())
     # sort flow names by numerical value instead of alphabetically
     flow_nums = [float(flow.replace('pt', '.').replace('cms', '')) for flow in flow_names]
@@ -27,23 +27,23 @@ def flow_cov_corrs(data, field_1, field_2):
     #reach_names = list(zip(sorted(data.values()[0].keys())))
 
     # create dataframes of correlations between flows for each reach
-    for reach_name in reach_names:
+    #for reach_name in reach_names:
         # the (titled) dataframe to output for each reach
-        field_abbrev = field_1[0].lower() + field_2[0].lower()
-        reach_df = DF(index=flow_names, columns=flow_names,
-                      title='Corr(C%s_i,C%s_j) %s' % (field_abbrev, field_abbrev, reach_name))
+        #field_abbrev = field_1[0].lower() + field_2[0].lower()
+        #reach_df = DF(index=flow_names, columns=flow_names,
+                      #title='Corr(C%s_i,C%s_j) %s' % (field_abbrev, field_abbrev, reach_name))
 
         # loop for rows, loop for columns
-        for flow_rkey in flow_names:
-            for flow_ckey in flow_names:
-                # covariance series corresponding to flow row
-                gcs_r = data[flow_rkey][reach_name]['%s_%s' % (field_1, field_2)].tolist()
-                # covariance series corresponding to flow column
-                gcs_c = data[flow_ckey][reach_name]['%s_%s' % (field_1, field_2)].tolist()
-                # add correlation between the series to dataframe
-                reach_df.loc[flow_rkey, flow_ckey] = np.corrcoef(gcs_r, gcs_c)[0][1]
+    for flow_rkey in flow_names:
+        for flow_ckey in flow_names:
+            # covariance series corresponding to flow row
+            gcs_r = data[flow_rkey][reach_name]['%s_%s' % (field_1, field_2)].tolist()
+            # covariance series corresponding to flow column
+            gcs_c = data[flow_ckey][reach_name]['%s_%s' % (field_1, field_2)].tolist()
+            # add correlation between the series to dataframe
+            reach_df.loc[flow_rkey, flow_ckey] = np.corrcoef(gcs_r, gcs_c)[0][1]
 
-        output.append(reach_df)
+    output.append(reach_df)
 
     return output
 
