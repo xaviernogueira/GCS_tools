@@ -34,7 +34,7 @@ print("Units are %s" % units)
 #cell_size = 0.7
 upstream_source_poly = direct + "\\upstream_flow_poly.shp"
 spatial_extent = direct + "\\las_footprint.shp"
-las_dataset_name = direct + "\\las_files\\COMID17586810_ground.lasd"
+las_dataset_name = direct + "\\las_files\\COMID17573013_ground.lasd"
 raster_location = direct + "\\las_files\\ls_nodt.tif"
 centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 xl_output = direct + ""
@@ -160,7 +160,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name, ft_s
     print("las dataset at %s, raster at %s" % (las_dataset, raster_name))
 
 
-def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spatial_ref):
+def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spatial_ref, centerline_verified=False):
     '''This function takes the Lidar raster, creates a centerline and stationpoint at defined spacing (hard programed in function)
     Station lines are turned into station points, which are given the values of the lidar raster, and output a XLS table. OPERATIONAL.
 
@@ -171,35 +171,40 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
     spacing = 3
     xs_length = 5
     smooth_distance = 300
-    #Create station centerline and stationline with Kenny's function, use intercept to get station points
-    least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
-    least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
-    centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
-    station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length, stage=[])
 
-    station_lines = direct + ("\\las_files\\centerline\\smooth_centerline_XS_%sx%sft.shp" % (spacing, xs_length))
-    print("Station lines file at: " + str(station_lines))
-    print("Centerline at: " + str(centerline))
+    if centerline_verified == False:
+        #Create station centerline and stationline with Kenny's function, use intercept to get station points
+        least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
+        least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
+        centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
+    else:
+        direct = os.path.dirname(flow_polygon)
+        centerline = direct + "\\las_folder\\centerline\\smooth_centerline.shp"
+        station_lines = create_station_lines.create_station_lines_function(centerline, spacing=spacing, xs_length=xs_length, stage=[])
+
+        station_lines = direct + ("\\las_files\\centerline\\smooth_centerline_XS_%sx%sft.shp" % (spacing, xs_length))
+        print("Station lines file at: " + str(station_lines))
+        print("Centerline at: " + str(centerline))
 
 
-    station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=(direct + "\\station_points_%s_smooth_%s_spaced.shp" % (smooth_distance, spacing)), join_attributes="ALL", output_type="POINT")
-    station_points = arcpy.MultipartToSinglepart_management(station_points, (direct +"\\raw_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)))
-    station_points = arcpy.AddXY_management(station_points)
-    station_points = arcpy.Sort_management(station_points, out_dataset=(direct +"\\XYZ_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)), sort_field=[["LOCATION", "Ascending"]])
-    elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
-    station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
-    elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
+        station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=(direct + "\\station_points_%s_smooth_%s_spaced.shp" % (smooth_distance, spacing)), join_attributes="ALL", output_type="POINT")
+        station_points = arcpy.MultipartToSinglepart_management(station_points, (direct +"\\raw_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)))
+        station_points = arcpy.AddXY_management(station_points)
+        station_points = arcpy.Sort_management(station_points, out_dataset=(direct +"\\XYZ_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)), sort_field=[["LOCATION", "Ascending"]])
+        elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
+        station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
+        elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
 
-    print("Station points shapefile at: " + str(station_points))
-    print("Elevation table at: " + str(elevation_table))
+        print("Station points shapefile at: " + str(station_points))
+        print("Elevation table at: " + str(elevation_table))
 
 
 
 
 #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
-#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref)
+#lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 

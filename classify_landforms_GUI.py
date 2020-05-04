@@ -7,6 +7,9 @@ import arcpy
 arcpy.env.overwriteOutput = True
 from tkinter import *
 import logging
+import os
+from os import listdir
+from os.path import isfile, join
 
 
 def clean_in_table(table, w_field='W', z_field='Z', dist_field='dist_down'):
@@ -185,7 +188,7 @@ def GCS_plot(table, units='m'):
 
 
 @err_info
-def main_classify_landforms(tables, w_field, z_field, dist_field, make_plots=True):
+def main_classify_landforms(tables, w_field, z_field, dist_field, out_folder, make_plots=True):
     '''Classifies river segments as normal, wide bar, constricted pool, oversized, or nozzle
 
     Args:
@@ -204,8 +207,14 @@ def main_classify_landforms(tables, w_field, z_field, dist_field, make_plots=Tru
     fields = [w_field, z_field]
     std_fields = [field + '_s' for field in fields]
     std_pairs = list(itertools.combinations(std_fields, 2))
-    width_files = ['width_rectangles_0ft.shp', 'width_rectangles_10ft.shp', 'width_rectangles_12ft.shp', 'width_rectangles_14ft.shp', 'width_rectangles_16ft.shp', 'width_rectangles_18ft.shp', 'width_rectangles_20ft.shp', 'width_rectangles_22ft.shp', 'width_rectangles_24ft.shp', 'width_rectangles_26ft.shp', 'width_rectangles_28ft.shp', 'width_rectangles_2ft.shp', 'width_rectangles_30ft.shp', 'width_rectangles_4ft.shp', 'width_rectangles_6ft.shp', 'width_rectangles_8ft.shp']
-    width_dir = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810\LINEAR_DETREND_BP3000_3ft_spacing\analysis_shapefiles'
+
+    width_dir = out_folder + "\\analysis_shapefiles"
+    list_of_files_width_folder = [f for f in listdir(width_dir) if isfile(join(width_dir, f))]  # add width rectangles to a list
+    width_files = []
+    for file in list_of_files_width_folder:
+        if file[:16] == "width_rectangles" and file[-4:] == ".shp" and file[-8:-6] != '_0':
+            width_files.append(file)
+
     for i in range(len(tables)):
         table = tables[i]
         clean_in_table(table, w_field=w_field, z_field=z_field, dist_field=dist_field)

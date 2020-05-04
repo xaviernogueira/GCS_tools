@@ -19,4 +19,5 @@ for file in list_of_files_in_out_folder:
 print("List of tables ready to be formatted: %s" % tables)
 #data = GCS_analysis.clean_in_data(tables, fields=['W','Z','dist_down'], reach_breaks=None)
 #print(data)
-GCS_analysis.complete_analysis(tables, reach_breaks=None, fields=['W','Z','dist_down'])
+GCS_analysis.complete_analysis(tables, reach_breaks=None, fields=['W','Z'])
+

@@ -23,8 +23,8 @@ def flow_cov_corrs(data, field_1, field_2):
     flow_names = sorted(data.keys())
     # sort flow names by numerical value instead of alphabetically
     flow_nums = [float(flow.replace('pt', '.').replace('cms', '')) for flow in flow_names]
-    flow_names = zip(*sorted(zip(flow_nums, flow_names)))[1]
-    reach_names = sorted(data.values()[0].keys())
+    flow_names = list(zip(*sorted(zip(flow_nums, flow_names))))[1]
+    #reach_names = list(zip(sorted(data.values()[0].keys())))
 
     # create dataframes of correlations between flows for each reach
     for reach_name in reach_names:
