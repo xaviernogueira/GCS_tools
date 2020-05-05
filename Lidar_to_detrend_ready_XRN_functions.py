@@ -16,7 +16,9 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
+comid = 17609707
+SCO_number = 1
+direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
@@ -34,7 +36,7 @@ print("Units are %s" % units)
 #cell_size = 0.7
 upstream_source_poly = direct + "\\upstream_flow_poly.shp"
 spatial_extent = direct + "\\las_footprint.shp"
-las_dataset_name = direct + "\\las_files\\COMID17573013_ground.lasd"
+las_dataset_name = direct + ("\\las_files\\COMID%s_ground.lasd" % comid)
 raster_location = direct + "\\las_files\\ls_nodt.tif"
 centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 xl_output = direct + ""
@@ -201,10 +203,10 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
 
 
 
-#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-#define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
-detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=True)
+#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=True)
 
 #USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 

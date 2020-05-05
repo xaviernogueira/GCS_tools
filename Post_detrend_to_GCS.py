@@ -464,14 +464,14 @@ def GCS_plotter(table_directory):
 
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
-detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=15 spacing=[3], centerlines=[5,6,10])
-#z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=3200, centerlines=[5, 6, 10])
+#detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
+width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[2,7,14])
+z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=6100, centerlines=[2,7,14])
 
-#export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-#tables = export_list[0]
-#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-#GCS_plotter(table_directory=table_location)
+export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+tables = export_list[0]
+main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+GCS_plotter(table_directory=table_location)
 
 
 
