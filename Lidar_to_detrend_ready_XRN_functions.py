@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-comid = 17609707
+comid = 17608037
 SCO_number = 1
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
@@ -98,7 +98,7 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
     to define processing settings
 
     COMMON ISSUES: Spatial extent file may cause issues, is so just use the NAIP as the extent object after projection'''
-    arcpy.env.extent = spatial_extent
+    arcpy.env.extent = lidar_footprint
     NAIP_imagery = [f for f in listdir(NAIP_imagery_folder) if isfile(join(NAIP_imagery_folder, f))]
     NAIP_imagery = (NAIP_imagery_folder + "\\%s" % NAIP_imagery[0])
     try:
