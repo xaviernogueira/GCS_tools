@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-comid = 17608037
+comid = 22514218
 SCO_number = 1
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
@@ -24,7 +24,8 @@ NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
 
 #Spatial reference#
-lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
+lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
+#r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
 lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
 spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
 units = spatial_ref.linearUnitName
@@ -172,7 +173,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
     print("CHECK UNITS OF HARD CODED XS SPACING AND THAT THEY MATCH THE UNITS OF THE RASTER")
     spacing = 3
     xs_length = 5
-    smooth_distance = 100
+    smooth_distance = 30
 
     if centerline_verified == False:
         #Create station centerline and stationline with Kenny's function, use intercept to get station points

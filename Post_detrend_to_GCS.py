@@ -22,11 +22,16 @@ import numpy as np
 import csv
 import pandas
 import string
+import scipy
+from scipy import ndimage
+from scipy.ndimage import gaussian_filter1d
+from scipy.interpolate import UnivariateSpline
 
 
 ##### INPUTS #####
-direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013"
-out_folder = direct + '\\LINEAR_DETREND_BP6100_3ft_spacing'
+comid = 17586810
+direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID%s" % comid
+out_folder = direct + '\\LINEAR_DETREND_BP3200_3ft_spacing'
 original_dem_location = direct + '\\las_files\\ls_nodt.tif'
 detrended_dem_location = direct + "\\ras_detren.tif"
 process_footprint = direct + '\\las_footprint.shp'
@@ -424,12 +429,14 @@ def GCS_plotter(table_directory):
         pool_df = table_df.loc[table_df['code'] == -1, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
         oversized_df = table_df.loc[table_df['code'] == -2, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
 
+
         for i in numpy_columns[1:]:
             plot_1 = wide_bar_df[['dist_down', ('%s' % i)]].to_numpy()
             plot_2 = nozzle_df[['dist_down', ('%s' % i)]].to_numpy()
             plot_3 = normal_df[['dist_down', ('%s' % i)]].to_numpy()
             plot_4 = pool_df[['dist_down', ('%s' % i)]].to_numpy()
             plot_5 = oversized_df[['dist_down', ('%s' % i)]].to_numpy()
+            plot_6 = table_df[['dist_down', ('%s' % i)]].to_numpy()
 
             plt.scatter(plot_1[:,0], plot_1[:,1], c='orange', s=0.75, label="Wide bar")
             plt.scatter(plot_2[:,0], plot_2[:,1], c='gold', s=0.75, label="Nozzle")
@@ -461,16 +468,46 @@ def GCS_plotter(table_directory):
             plt.savefig((figure_output + '\\Stage_%s_%s_plot' % (stage, i)), dpi=300, bbox_inches='tight')
             plt.cla()
 
+            #Now plot Gaussian filter plot and spine plot with parameters
+            plot_6_sorted = plot_6[plot_6[:, 0].argsort()]
+            dist_points = plot_6_sorted[:,0]
+            attribute_points = plot_6_sorted[:,1]
+            gaussian_sigma3 = gaussian_filter1d(attribute_points, 3,axis=0)
+            gaussian_sigma6 = gaussian_filter1d(attribute_points, 10,axis=0)
+
+            #plot_6_sorted = plot_6[plot_6[:,0].argsort()]
+            #spline = UnivariateSpline(plot_6_sorted[:,0], plot_6_sorted[:,1])
+            #x_linespace = np.linspace(0,plot_6_sorted[:,0][-1],1000)
+            #spline_coeff = spline.get_coeffs()
+            #print("Spline coefficients are: %s" % spline_coeff)
+
+            plt.scatter(dist_points, attribute_points,c='black',s=0.75,ls='--',label=("%s points" % i))
+            plt.plot(dist_points,gaussian_sigma3,c='red',ls='-',label="Gaussian filter, sigma=3")
+            plt.plot(dist_points,gaussian_sigma6,c='green',ls='-',label="Gaussian filter, sigma=10")
+            #plt.plot(x_linespace,spline(x_linespace),c='blue',ls='-',label=("Spline ft with coefficients %s" % spline_coeff))
+            axes.set_xlim([0, max(table_df['dist_down'])])
+            plt.title("Data filtering plot for %s at stage %sft" % (i,stage))
+            plt.grid(b=True, which='major', color='#666666', linestyle='-')
+            plt.minorticks_on()
+            plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+            plt.legend(('Gaussian filter, sigma=3', 'Gaussian filter, sigma=10'), loc=1)
+            #plt.show()
+            fig = plt.gcf()
+            fig.set_size_inches(12, 6)
+            plt.savefig((figure_output + '\\Stage_%s_%s_filtering_plot' % (stage, i)), dpi=300, bbox_inches='tight')
+            plt.cla()
+
+
 
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
 #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
-width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[2,7,14])
-z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=6100, centerlines=[2,7,14])
+#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[2,7,14])
+#z_value_analysis(out_folder=out_folder, original_DEM=original_dem_location, spacing=3, breakpoint=6100, centerlines=[2,7,14])
 
-export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-tables = export_list[0]
-main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+#export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+#tables = export_list[0]
+#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
 GCS_plotter(table_directory=table_location)
 
 

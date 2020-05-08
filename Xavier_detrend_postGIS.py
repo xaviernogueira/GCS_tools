@@ -250,7 +250,7 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
     sd_res = np.std(residual)
     res_z_score = [(z_res_value - mean_res) * 1.0 / sd_res for z_res_value in residual]
     print(residual)
-    print("The mean residual is %.2f" %mean_res)
+    print("The mean residual is %.2f" % mean_res)
 
     # Add fitted z values to the xyz table
     '''NOTE: ADJUST SHEET ROW FOR CELL_TEST AND COLUMN FOR THE CELL = WS.CELL COMMAND'''
@@ -271,12 +271,90 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
 
     wb.save(filename=xyz_table_location)
 
-    print("Excel file ready for Arc processing!")
+    print("Excel file ready for wetted-polygon processing!")
 
     return [fit_params, z_fit_list, residual, R_squared]
 
+def moving_window_linear_fit(location, z, xyz_table_location, window_size):
+    point_spacing = int(location[1]) - int(location[0]) #Calculate point spacing
+    number_of_complete_windows = 0
+    while ((number_of_complete_windows*window_size) + window_size) <= location[-1]:
+        number_of_complete_windows += 1
+    print("Total number of full %sft detrending windows is %s" % (window_size, number_of_complete_windows))
+
+    if xyz_table_location[-3:] == 'csv': #Make sure we are accessing and xlsx file to use openpyxl module
+        xyz_table_location = (xyz_table_location[:-3] + "xlsx")
+
+    wb = load_workbook(xyz_table_location)
+    ws = wb.active
+
+    # Format input numpy arrays
+    location = np.int_(location)
+    z = np.float_(z)
+    z = np.around(z, 9)  # Round z to 9 decimal points
+
+    #Get window indice value
+    window_breakpoints = [0]
+    for num in range(0,number_of_complete_windows):
+        window_breakpoints.append(int(num*window_size))
+    print("Window breakpoints @ %s" % window_breakpoints)
+    window_breakpoint_indices = [int(f/point_spacing) for f in window_breakpoints]
+    print("Window breakpoint indices @ %s" % window_breakpoint_indices)
+
+    list_of_fit_params = []
+    window_breakpoint_indices.sort()
+    for bp in window_breakpoint_indices:
+        if bp == window_breakpoint_indices[0]:
+            split_loc_np = np.array(location[:bp])
+            split_z_np = np.array(z[:bp])
+            m, b = np.polyfit(split_loc_np, split_z_np, 1)
+            list_of_fit_params.append([m, b])
+            print("Fit params [m, b] for the first window of %sft are: %s" % (window_size, list_of_fit_params[0]))
+        elif bp != window_breakpoint_indices[-1]:
+            index = int(window_breakpoint_indices.index(bp))
+            split_loc_np = np.array(location[(index-1):index])
+            split_z_np = np.array(z[(index - 1):index])
+            m, b = np.polyfit(split_loc_np, split_z_np, 1)
+            list_of_fit_params.append([m, b])
+            print("Fit params [m, b] for window (%s to %s)ft are: %s" % ((point_spacing*window_breakpoint_indices[index-1]),(bp*point_spacing), list_of_fit_params[index]))
+        elif bp == window_breakpoint_indices[-1]:
+            split_loc_np = np.array(location[bp:])
+            split_z_np = np.array(z[bp:])
+            m, b = np.polyfit(split_loc_np, split_z_np, 1)
+            list_of_fit_params.append([m, b])
+            print("Fit params [m, b] for the last window from %sft ro the end are: %s" % ((bp*point_spacing), list_of_fit_params[-1]))
+
+
+
+
+    # Add fitted z values to the xyz table
+    cell_test = ws["F1"]
+    print(cell_test.value)
+    cell_test.value = ("z_fit_window%s" % window_size)
+    print(cell_test.value)
+
+    if ws["F1"].value == cell_test.value:
+        print("Sheet activated...")
+        for i in range(2, len(z_fit_list)):
+            cell = ws.cell(row=i, column=6)
+            cell.value = float(z_fit_list[i])
+    else:
+        print("Something is wrong with writing to the excel sheet")
+    ws["A1"].value == "OID"
+
+    wb.save(filename=xyz_table_location)
+
+    print("Excel file ready for wetted-polygon processing!")
+
+
+
+
+
+
+
+
 ##### Detrend in arcgis #####
-def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, list_of_breakpoints=[]):
+def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, window_size=0,list_of_breakpoints=[]):
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
     ws = wb.active
@@ -292,30 +370,35 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
         for row in ws.rows:
             col.writerow([cell.value for cell in row])
 
-    for i in list_of_breakpoints:
-        column = ('z_fit_%s' % i)
-        if stage != 0:
-            detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
-        else:
-            detrended_raster_file = detrend_location + "\\ras_detren.tif"
-            print("0th stage marks non-stage specific centerline")
-        points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y", out_layer=("fitted_station_points%s_stage%s" % (i, stage)), spatial_reference=spatial_ref, in_z_field=column)
-        points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s_stage%sft" % (i, stage)).replace('.csv', '.lyr'))
-        points = arcpy.CopyFeatures_management(points)
-        print("Creating Thiessen polygons...")
-    # Delete non-relevent fields tp reduce errors
-        fields = [f.name for f in arcpy.ListFields(points)]
-        dont_delete_fields = ['FID', 'Shape', 'POINT_X', 'POINT_Y', column]
-        fields2delete = list(set(fields) - set(dont_delete_fields))
-        points = arcpy.DeleteField_management(points, fields2delete)
+    if window_size != 0:
+        column = ('z_fit_window%s' % window_size)
+    elif len(list_of_breakpoints) == 1:
+        column = ('z_fit_%s' % list_of_breakpoints[0])
+    else:
+        column = ('z_fit_breakpoints')
 
-        cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
-        cell_size = float(cell_size1.getOutput(0))
-        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
-        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)), cell_assignment="CELL_CENTER", cellsize=cell_size)
-        detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
-        detrended_DEM.save(detrended_raster_file)
-        print("DEM DETRENDED!")
+    if stage != 0:
+        detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
+    else:
+        detrended_raster_file = detrend_location + "\\ras_detren.tif"
+        print("0th stage marks non-stage specific centerline")
+    points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y", out_layer=("fitted_station_points%s_stage%s" % (i, stage)), spatial_reference=spatial_ref, in_z_field=column)
+    points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points%s_stage%sft" % (i, stage)).replace('.csv', '.lyr'))
+    points = arcpy.CopyFeatures_management(points)
+    print("Creating Thiessen polygons...")
+    # Delete non-relevent fields tp reduce errors
+    fields = [f.name for f in arcpy.ListFields(points)]
+    dont_delete_fields = ['FID', 'Shape', 'POINT_X', 'POINT_Y', column]
+    fields2delete = list(set(fields) - set(dont_delete_fields))
+    points = arcpy.DeleteField_management(points, fields2delete)
+
+    cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
+    cell_size = float(cell_size1.getOutput(0))
+    thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
+    z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)), cell_assignment="CELL_CENTER", cellsize=cell_size)
+    detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
+    detrended_DEM.save(detrended_raster_file)
+    print("DEM DETRENDED!")
 
 
 ###### Define plotting function ######
