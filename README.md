@@ -89,15 +89,17 @@ Offset: 0.5, 0.05
     
     c) linear_fit(location, z, xyz_table_location, list_of_breakpoints=[])
     
-    d) detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, list_of_breakpoints=[])
+    d) moving_window_linear_fit(location, z, xyz_table_location, window_size)
     
-    e) diagnostic_quick_plot(location_np, z_np)
+    e) detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, list_of_breakpoints=[])
     
-    f) make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location='')
+    f) diagnostic_quick_plot(location_np, z_np)
     
-    g) make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location='')
+    g) make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location='')
     
-    h) make_residual_plot(location_np, residual, R_squared, stage=0, location='')
+    h) make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location='')
+    
+    i) make_residual_plot(location_np, residual, R_squared, stage=0, location='')
     
 3. Post_detrend_to_GCS.py
 
