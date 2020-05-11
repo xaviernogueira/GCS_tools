@@ -11,12 +11,12 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17573013'
-xyz_table = direct + '\\XY_elevation_table_200_smooth_3_spaced.xlsx'
+direct = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO2\COMID17586810\window_detrend_test'
+xyz_table = direct + '\\XY_elevation_table_300_smooth_3_spaced.xlsx' #change back to 200 to match code!
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
 #process_footprint = direct + '\\las_footprint.shp'
-detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
+#detrend_workplace = direct + '\\LINEAR_DETREND_BP1960_3ft_spacing'
 #spatial_ref = arcpy.Describe(process_footprint).spatialReference
 listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
 ######
@@ -294,14 +294,16 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
     z = np.around(z, 9)  # Round z to 9 decimal points
 
     #Get window indice value
-    window_breakpoints = [0]
+    window_breakpoints = []
     for num in range(0,number_of_complete_windows):
         window_breakpoints.append(int(num*window_size))
+    window_breakpoints.remove(0)
     print("Window breakpoints @ %s" % window_breakpoints)
     window_breakpoint_indices = [int(f/point_spacing) for f in window_breakpoints]
     print("Window breakpoint indices @ %s" % window_breakpoint_indices)
 
     list_of_fit_params = []
+    z_fit_list = []
     window_breakpoint_indices.sort()
     for bp in window_breakpoint_indices:
         if bp == window_breakpoint_indices[0]:
@@ -310,22 +312,30 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
             m, b = np.polyfit(split_loc_np, split_z_np, 1)
             list_of_fit_params.append([m, b])
             print("Fit params [m, b] for the first window of %sft are: %s" % (window_size, list_of_fit_params[0]))
+            for i in location[:bp]:
+                z_fit_list.append((i * m) + b) #add fit values to list
         elif bp != window_breakpoint_indices[-1]:
             index = int(window_breakpoint_indices.index(bp))
-            split_loc_np = np.array(location[(index-1):index])
-            split_z_np = np.array(z[(index - 1):index])
+            last_index = window_breakpoint_indices[int(index - 1)]
+            split_loc_np = np.array(location[last_index:bp])
+            split_z_np = np.array(z[last_index:bp])
             m, b = np.polyfit(split_loc_np, split_z_np, 1)
             list_of_fit_params.append([m, b])
             print("Fit params [m, b] for window (%s to %s)ft are: %s" % ((point_spacing*window_breakpoint_indices[index-1]),(bp*point_spacing), list_of_fit_params[index]))
+            for i in location[last_index:index]:
+                z_fit_list.append((i * m) + b)
         elif bp == window_breakpoint_indices[-1]:
             split_loc_np = np.array(location[bp:])
             split_z_np = np.array(z[bp:])
             m, b = np.polyfit(split_loc_np, split_z_np, 1)
             list_of_fit_params.append([m, b])
             print("Fit params [m, b] for the last window from %sft ro the end are: %s" % ((bp*point_spacing), list_of_fit_params[-1]))
+            for i in location[bp:]:
+                z_fit_list.append((i * m) + b)
 
+    print("Z fit list is ready for excel: %s" % z_fit_list)
 
-
+    #residual = [location[i]-z_fit_list[i] for i in range(len(location))]
 
     # Add fitted z values to the xyz table
     cell_test = ws["F1"]
@@ -335,7 +345,7 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
 
     if ws["F1"].value == cell_test.value:
         print("Sheet activated...")
-        for i in range(2, len(z_fit_list)):
+        for i in range(2, len(z_fit_list)): #index begins at two to ignore 0 (doesn't exist in xl) and 1 (xl titles)
             cell = ws.cell(row=i, column=6)
             cell.value = float(z_fit_list[i])
     else:
@@ -346,14 +356,9 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
 
     print("Excel file ready for wetted-polygon processing!")
 
+    return [z_fit_list]
 
 
-
-
-
-
-
-##### Detrend in arcgis #####
 def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, window_size=0,list_of_breakpoints=[]):
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
@@ -488,11 +493,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 
-#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
-#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
-#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
+loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
+z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
+ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
 #diagnostic_quick_plot(location_np=loc, z_np=z)
 #fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,6100])
+moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
+
 #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
 #make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
 #detrend_that_raster(detrend_location=direct, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[6100])
