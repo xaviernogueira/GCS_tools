@@ -54,6 +54,7 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage):
     '''This function takes the stages_dict of pandas dataframes, and the stage_stats_xl dictionary, as well as calculated max stage as arguments.
     It fills out the xlsx file for each respective stage height with mean, std, max, min, and median values for the stage as a hole and each landform'''
     for stage in range(1,max_stage+1):
+        print("Writing descriptive stats for stage %sft" % stage)
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_stat_xl = stage_stats_xl_dict['Stage_%sft' % stage]
 
@@ -88,25 +89,19 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage):
             ws.cell(row=6, column=1).value = 'MEDIAN'
 
         list_of_codes = [-2,-1,0,1,2] #Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle
+        ws['F2'].value = 'Landform Code*:'
+        ws['F2'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
         for code in list_of_codes:
-            table_df.loc[table_df['code'] == code, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
+            code_df = stage_df.loc[stage_df['code'] == code, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
+            for field in list_of_fields:
+            ws.cell().value = (np.mean(stage_df.loc[:, field].to_numpy()))
+            ws.cell().value = (np.std(stage_df.loc[:, field].to_numpy()))
+            ws.cell().value = (np.max(stage_df.loc[:, field].to_numpy()))
+            ws.cell().value = (np.min(stage_df.loc[:, field].to_numpy()))
+            ws.cell().value = (np.median(stage_df.loc[:, field].to_numpy()))
 
+        print("Stage %sft descriptive stats completed..." % stage)
+        wb.save(filename=stage_stat_xl)
+    print("All descriptive stats completed!")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#data = GCS_analysis.clean_in_data(tables, fields=['W','Z','dist_down'], reach_breaks=None)
-#print(data)
-#GCS_analysis.complete_analysis(tables, reach_breaks=None, fields=['W','Z'])
 
