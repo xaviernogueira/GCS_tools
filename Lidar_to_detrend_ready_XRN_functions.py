@@ -58,34 +58,35 @@ files_in_direct = [f for f in listdir(direct) if isfile(join(direct, f))]
 print(files_in_direct)
 
 def lidar_footptint(direct, spatial_ref):
-    '''Direct must contain raw LAZ files and nothing else, this produces a shapefile with the Lidar footprint for defining environment
-    extent and substracting vegetation for ground polygon later'''
+    '''Args: Directory containing nothing but raw LAZ files
+    Returns: A shapefile w/ LiDAR coverage to be used to make a ground polygon for LAStools processing'''
 
     laspath = direct + '\\las_files'
     if not os.path.exists(laspath):
         os.makedirs(laspath)
     try:
-        #convert LAZ files to LAS in a different folder, FOR SOME REASON THIS HAS THEM APPEARING FAR AWAY
         for f in files_in_direct:
-            if f[-4:] == ".laz":
-                #arcpy.ConvertLas_conversion((direct + "\\%s" % f), laspath)
+            if f[-4:] == ".laz": #Convert laz files to LAS files
                 cmd("%slaszip.exe -i %s\\%s -o %s\\%s_noprj.las" % (lastooldirect, direct, f, laspath, f[:-4]))
-                print("%slas2las.exe -i %s\\%s_noprj.las -o %s\\%s.las " % (lastooldirect, laspath, f[:-4], laspath, f[:-4]))
+                print("%slas2las.exe -i %s\\%s_noprj.las -o %s\\%s.las RUNNING..." % (lastooldirect, laspath, f[:-4], laspath, f[:-4]))
                 cmd("%slas2las.exe -i %s\\%s_noprj.las -o %s\\%s.las" % (lastooldirect, laspath, f[:-4], laspath, f[:-4]))
-                # -lcc 6561666.667 1640416.667 feet -118.000 34.033 35.466 33.400"
 
         files_in_laspath = [f for f in listdir(laspath) if isfile(join(laspath, f))]
-        for f in files_in_laspath:
+
+        for f in files_in_laspath: #Delete unnecessary index files
             print(f[-4:])
             if f[-4:] == 'lasx':
                 os.remove(laspath + "\\%s" % f)
             print(f[-5])
             if f[-5] == 'j':
                 os.remove(laspath + "\\%s" % f)
+
         raw_las_dataset = arcpy.CreateLasDataset_management(laspath, direct + "\\raw_las_dataset.lasd", spatial_reference=spatial_ref, compute_stats=True)
         print("Unprojected LAS Dataset made @ %s" % raw_las_dataset)
+
         lidar_footprint = arcpy.PointFileInformation_3d(raw_las_dataset, direct + "\\las_footprint_pre_dissolve", "LAS", input_coordinate_system=spatial_ref)
         lidar_footprint = arcpy.Dissolve_management(lidar_footprint, direct + "\\las_footprint")
+        print("LiDAR coverage footprint made @ %s and is ready for define_ground_polygon() input" % lidar_footprint)
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
@@ -100,15 +101,13 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
 
     COMMON ISSUES: Spatial extent file may cause issues, is so just use the NAIP as the extent object after projection'''
     arcpy.env.extent = lidar_footprint
-    NAIP_imagery = [f for f in listdir(NAIP_imagery_folder) if isfile(join(NAIP_imagery_folder, f))]
+    NAIP_imagery = [f for f in listdir(NAIP_imagery_folder) if isfile(join(NAIP_imagery_folder, f))] #Find NAIP imagery in folder
     NAIP_imagery = (NAIP_imagery_folder + "\\%s" % NAIP_imagery[0])
+
     try:
-    #project the NAIP data and extract bands 1(red) and 4(NIR)
-        #NAIP_imagery = direct + "//NAIP_prj.tif"
-        NAIP_imagery = arcpy.ProjectRaster_management(NAIP_imagery, direct + "\\NAIP_prj.tif", spatial_ref)
+        NAIP_imagery = arcpy.ProjectRaster_management(NAIP_imagery, direct + "\\NAIP_prj.tif", spatial_ref) #project the NAIP data and extract bands 1(red) and 4(NIR)
         red_lyr = arcpy.MakeRasterLayer_management(NAIP_imagery, direct + "\\rd_lyr", band_index=0)
         nir_lyr = arcpy.MakeRasterLayer_management(NAIP_imagery, direct + "\\nr_lyr", band_index=4)
-        #arcpy.env.extent = NAIP_imagery
         print(nir_lyr)
         red_lyr = arcpy.SaveToLayerFile_management(red_lyr, direct + "\\red_ras.lyr")
         nir_lyr = arcpy.SaveToLayerFile_management(nir_lyr, direct + "\\nir_ras.lyr")
@@ -118,31 +117,27 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
         print("Band rasters are ready for NDVI processing @ %s and %s..." % (red_ras, nir_ras))
         red_ras = Raster(red_ras)
         nir_ras = Raster(nir_ras)
-    #Calculate NDVI and extract values above
 
-        NDVI = ((nir_ras - red_ras) / (nir_ras + red_ras))
+        NDVI = ((nir_ras - red_ras) / (nir_ras + red_ras)) #Calculate NDVI and extract values above 0.4
         NDVI.save(direct + "//NDVI.tif")
+        print("NDVI calculated...")
+
         veg_ras_raw = Con(Raster(NDVI) >= 0.4, 1)
         veg_ras_raw.save(direct + "//veg_ras_raw.tif")
         veg_ras = MajorityFilter(veg_ras_raw, "EIGHT", "MAJORITY")
         veg_ras.save(direct + "//veg_ras.tif")
-        print(veg_ras)
         veg_poly = arcpy.RasterToPolygon_conversion(veg_ras, direct + "//veg_poly_ndvi04.shp", simplify=FALSE)
+        print("Vegetation polygon made @ %s" % veg_poly)
 
-        #Project buffered centerline and use to clip vegetation polygon
         centerline_buff_prj = arcpy.Project_management(centerline_buff, direct + "//centerline_buff_prj.shp", out_coor_system=spatial_ref)
-
-        print(lidar_footprint)
-        print(veg_poly)
-    #Make a polygon of bare ground
-        ground_poly = arcpy.Erase_analysis(spatial_extent, veg_poly, direct + "//ground_poly_full.shp")
-        ground_poly = arcpy.Clip_analysis(ground_poly, centerline_buff, direct + "//ground_poly.shp")
+        ground_poly = arcpy.Erase_analysis(spatial_extent, veg_poly, direct + "//ground_poly_full.shp") # Make polygon representing bare ground
+        ground_poly = arcpy.Clip_analysis(ground_poly, centerline_buff, direct + "//ground_poly.shp") # Use centerline buffer to clip the ground polygon for processing efficiency
+        print("Floodplain clipped ground polygon made @ %s...analysis completed!" % ground_poly)
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
 
 
-#Take las data and make raster, input desired output names before running! GET LASD TO RASTER WORKING!
 def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, ft_spatial_ref, m_cell_size=1):
     '''Converts processed LAS files to a LAS dataset, and then to a raster with cell size of 1m
     Args: Folder containing LAS files, desired cell size in meters (default is 1m), and ft spatial reference
