@@ -229,8 +229,42 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
 
     print("Clipped station lines and width rectangles in %s" % shapefile_location)
 
-    # NEXT UP GET THE MEAN DEPTH PER LOCATION RECTANGLE, and export to xl
-def z_value_analysis(out_folder, original_DEM, spacing, breakpoint, centerlines=[]):
+def z_value_analysis1(out_folder, detrended_DEM):
+    '''This function used zonal statistics with the stage dependent centerlines to extract mean detrended elevation from each width polygon.
+    NO RE-DETRENDING is done, as opposed to z_value_analysis2 where the elevation profile is detrended based on different centerlines'''
+    width_series_shapefile_folder = out_folder + "\\analysis_shapefiles"
+    list_of_files_width_folder = [f for f in listdir(width_series_shapefile_folder) if
+                                  isfile(join(width_series_shapefile_folder, f))]  # add width rectangles to a list
+    list_of_width_polygons = []
+    for file in list_of_files_width_folder:
+        if file[:16] == "width_rectangles" and file[-4:] == ".shp" and file[-8:-6] != '_0':
+            list_of_width_polygons.append(file)
+    print("Unsorted list of width polygons:" + str(list_of_width_polygons))
+
+    for file in list_of_width_polygons:
+        width_file = width_series_shapefile_folder + "\\" + file
+
+        if file[-8] == "_": # assign stage int value to label files correctly
+            stage = int(file[-7])
+        else:
+            stage = int(file[-8:-6])
+
+        arcpy.AddField_management(width_file, field_name="loc_id", field_type="SHORT")
+        field_calc = "(int(!LOCATION!))"
+        arcpy.CalculateField_management(width_file, field="loc_id", expression=field_calc, expression_type="PYTHON3")
+
+        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_file, zone_field="loc_id", in_value_raster=detrended_DEM,
+                                                      out_table=(
+                                                                  width_series_shapefile_folder + "\\stats_table_%s.dbf" % stage),
+                                                      statistics_type="MEAN")
+        rectangles = arcpy.JoinField_management(width_series_shapefile_folder + "\\" + file, in_field="loc_id",
+                                                join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
+
+        print("Z statistics added for stage %s" % stage)
+    print("Z analysis completed, use following functions to export to excel and plot")
+
+
+def z_value_analysis2(out_folder, original_DEM, spacing, breakpoint, centerlines=[]):
     '''This function iteratively detrends the lidar DEM by the used centerlines, and then is used to extract zonal statistics for the width rectanges
     and export as tables for the GCS analysis. Breakpoint much be an integer that is a multiple of the spacing'''
     lines_location = out_folder + '\\analysis_centerline_and_XS'
