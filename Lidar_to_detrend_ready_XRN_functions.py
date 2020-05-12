@@ -143,14 +143,17 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
 
 
 #Take las data and make raster, input desired output names before running! GET LASD TO RASTER WORKING!
-def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name, ft_spatial_ref):
-    '''Converts processed LAS files to a LAS dataset, and then to a raster with cell size of 1m'''
-    #### CHANGE THIS WHEN WE WORK WITH FT REACHES
+def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, ft_spatial_ref, m_cell_size=1):
+    '''Converts processed LAS files to a LAS dataset, and then to a raster with cell size of 1m
+    Args: Folder containing LAS files, desired cell size in meters (default is 1m), and ft spatial reference
+    Returns: Raster name for use in detrending '''
+    raster_name = las_folder + "\\ls_nodt.tif"
+
     if spatial_ref.linearUnitName == 'Meter':
-        cell_size = 1
+        cell_size = m_cell_size
         print("Cell size (unprojected) is 1 %s" % spatial_ref.linearUnitName)
     else:
-        cell_size = 3.28
+        cell_size = (3.28 * m_cell_size)
         print("Cell size (unprojected) is 3.28ft")
     try:
         las_dataset = arcpy.CreateLasDataset_management(las_folder, las_dataset_name, spatial_reference=spatial_ref, compute_stats=True)
@@ -162,22 +165,34 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, raster_name, ft_s
         print(arcpy.GetMessages())
     print("las dataset at %s, raster at %s" % (las_dataset, raster_name))
 
+    return raster_name
 
-def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spatial_ref, centerline_verified=False):
-    '''This function takes the Lidar raster, creates a centerline and stationpoint at defined spacing (hard programed in function)
-    Station lines are turned into station points, which are given the values of the lidar raster, and output a XLS table. OPERATIONAL.
 
-    '''
+def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_spacing=3, centerline_verified=False):
+    '''This function takes the Lidar raster, creates a least-cost thalweg centerline from a smoothed raster. Station points are
+    generated along the centerline at defined spacing (1/20th of channel width is a starting point) which are given the values of the lidar raster.
+
+    Args: raster_name, upstream flow polygon, spatial extent (can be raster), station point spacing in ft (3ft is default).
+    Run first with centerline_verified=False and visually inspect. Run again w/ True to return the [station_points, elevation_table]'''
+
     arcpy.env.extent = spatial_extent
-    print(raster_name)
-    print("CHECK UNITS OF HARD CODED XS SPACING AND THAT THEY MATCH THE UNITS OF THE RASTER")
-    spacing = 3
+    raster_folder = os.path.dirname(raster_name)
+    spacing = int(ft_spacing)
     xs_length = 5
-    smooth_distance = 30
+    smooth_distance = 20
 
     if centerline_verified == False:
-        #Create station centerline and stationline with Kenny's function, use intercept to get station points
-        least_cost_cl = create_centerline_GUI.least_cost_centerline(raster_location, upstream_source_poly)
+        ticker = 0
+        filter_out = arcpy.sa.Filter(raster_name, "LOW")
+        filter_out.save(raster_folder + "filter_out%s" % ticker)
+        while ticker < 10: #Apply an iterative low pass filter 10x to the raster to smooth the topography
+            filter_out = arcpy.sa.Filter((raster_folder + "filter_out%s" % ticker), "LOW")
+            filter_out.save(raster_folder + "filter_out%s" % (ticker+1))
+            ticker += 1
+        smooth_ras = (raster_folder + "\\filt_ras.tif")
+        filter_out.save(raster_folder + "\\filt_ras.tif")
+
+        least_cost_cl = create_centerline_GUI.least_cost_centerline(smooth_ras, upstream_source_poly) #Create least cost centerline from 10x filtered raster
         least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
         centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
     else:
@@ -201,14 +216,13 @@ def detrend_prep(raster_name, flow_polygon, spatial_ref, spatial_extent, ft_spat
         print("Station points shapefile at: " + str(station_points))
         print("Elevation table at: " + str(elevation_table))
 
+        return [station_points, elevation_table]
 
 
-
-lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+#lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+#define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
 #detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=True)
 
-#USE THIS TO ITERATIVELY MAKE LASD DATASETS FROM PROCESSED DATA
 
 
