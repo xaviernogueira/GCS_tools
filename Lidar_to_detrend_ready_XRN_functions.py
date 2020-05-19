@@ -16,15 +16,16 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-comid = 22514218
-SCO_number = 1
+comid = 17586810
+SCO_number = 2
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
 NAIP_imagery_folder = direct + "\\NAIP"
 lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
 
 #Spatial reference#
-lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
+lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
+#r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
 #r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
 lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
 spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
@@ -177,23 +178,26 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
     smooth_distance = 20
 
     if centerline_verified == False:
+        print("Smoothing raster w/ 15x low pass filters...")
         ticker = 0
         filter_out = arcpy.sa.Filter(raster_name, "LOW")
-        filter_out.save(raster_folder + "filter_out%s" % ticker)
-        while ticker < 10: #Apply an iterative low pass filter 10x to the raster to smooth the topography
-            filter_out = arcpy.sa.Filter((raster_folder + "filter_out%s" % ticker), "LOW")
-            filter_out.save(raster_folder + "filter_out%s" % (ticker+1))
+        filter_out.save(raster_folder + "\\filter_out%s" % ticker)
+        while ticker < 15: #Apply an iterative low pass filter 15x to the raster to smooth the topography
+            filter_out = arcpy.sa.Filter((raster_folder + "\\filter_out%s" % ticker), "LOW")
+            filter_out.save(raster_folder + "\\filter_out%s" % (ticker+1))
             ticker += 1
         smooth_ras = (raster_folder + "\\filt_ras.tif")
         filter_out.save(raster_folder + "\\filt_ras.tif")
 
+        print("Smoothed raster made, least-cost centerline being calculated...")
         least_cost_cl = create_centerline_GUI.least_cost_centerline(smooth_ras, upstream_source_poly) #Create least cost centerline from 10x filtered raster
         least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
         centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
 
-        for ticker in range(10): #Delete intermediate filtered rasters
-            if os.path.exists(raster_folder + "filter_out%s" % ticker):
-                os.remove(raster_folder + "filter_out%s" % ticker)
+        for ticker in range(15): #Delete intermediate filtered rasters
+            if os.path.exists(raster_folder + "\\filter_out%s" % ticker):
+                os.remove(raster_folder + "\\filter_out%s" % ticker)
+        print("Intermediate files deleted, please manually verify centerline quality and define reach range... Call this function again w/ centerline_verified=True.")
     else:
         direct = os.path.dirname(flow_polygon)
         centerline = direct + "\\las_files\\centerline\\smooth_centerline.shp"
@@ -221,7 +225,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
 #lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
-#detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_ref=spatial_ref, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, centerline_verified=True)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
 
 
 
