@@ -517,13 +517,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 
-loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
-z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
-ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
+#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
+#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
+#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
 #diagnostic_quick_plot(location_np=loc, z_np=z)
-fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,3280])
+#fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,3280])
 #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
-make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
-detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[3280])
+#make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
+#make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
+#detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[3280])

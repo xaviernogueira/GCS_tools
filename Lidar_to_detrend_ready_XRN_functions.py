@@ -16,7 +16,7 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 # READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
 
 #Input folders#
-comid = 17586810
+comid = 17609015
 SCO_number = 2
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
@@ -159,7 +159,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, ft_spatial_ref, m
 
     except arcpy.ExecuteError:
         print(arcpy.GetMessages())
-    print("las dataset at %s, raster at %s" % (las_dataset, raster_name))
+    print("las dataset at %s, raster at %s" % (las_dataset_name, raster_name))
 
     return raster_name
 
@@ -224,8 +224,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
 #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-#lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, raster_name=raster_location, ft_spatial_ref=ft_spatial_ref)
-detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
+lidar_to_raster(las_folder=ground_merged_folder, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
+detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
 
 
 
