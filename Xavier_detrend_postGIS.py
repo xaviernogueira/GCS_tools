@@ -11,7 +11,7 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17586810
+comid = 17573013
 SCO_number = 2
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 20 to match code!
@@ -437,6 +437,8 @@ def diagnostic_quick_plot(location_np, z_np):
     plt.plot(x_plot, y_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
     plt.ylabel("Bed elevation (ft)")
+    if xlim != 0:
+        plt.xlim(None,xlim)
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -465,7 +467,7 @@ def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
         plt.savefig((location + '\\Stage_%s_quadratic_detrend_plot' % stage), dpi=300, bbox_inches='tight')
         plt.cla()
 
-def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location=''):
+def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ylim=0, location=''):
     x_plot = location_np
     y1_plot = z_np
     y2_plots = []
@@ -477,6 +479,10 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, location=''):
     plt.title("Linear piecewise detrended elevation profile")
     for i in range(len(y2_plots)):
         plt.plot(x_plot, y2_plots[i], 'b', label="Elevation profile linear detrending: %.4f * x + %.4f" % (y2_plots[i][0], y2_plots[i][1]))
+    if ylim != 0:
+        plt.ylim(None,ylim)
+    if xlim != 0:
+        plt.xlim(None,xlim)
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -517,13 +523,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, location=''):
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 
-#loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
-#z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
-#ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
-#diagnostic_quick_plot(location_np=loc, z_np=z)
-#fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,3280])
+loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
+z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
+ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
+diagnostic_quick_plot(location_np=loc, z_np=z, xlim=10000)
+fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,10000])
 #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-#make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, location=direct)
+make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=10000, ylim=0, location='')
 #make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, location=direct)
-#detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[3280])
+#detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[1200])
