@@ -140,23 +140,26 @@ def quadratic_fit(location_np, location, z_np, ws):
 
 def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
-    # ADD 0 BEFORE ANY ADDED BREAKPOINTS OR THE FUNCTION WILL FAIL!!!!!!!!!!
-    print("Applying linear fit")
-
-    if len(list_of_breakpoints) != 0:
-        list_of_breakpoints.append(int(location[-1]))
-        print(list_of_breakpoints)
-
-    split_location_list = []
-    split_z_list = []
-    # Split by breakpoints into a list of lists
-    point_spacing = int(location[1]) - int(location[0])
-
     if xyz_table_location[-3:] == 'csv':
         xyz_table_location = (xyz_table_location[:-3] + "xlsx")
 
     wb = load_workbook(xyz_table_location)
     ws = wb.active
+
+    print("Applying linear fit...")
+
+    if len(list_of_breakpoints) != 0:
+        list_of_breakpoints.insert(0,0)
+        list_of_breakpoints.append(int(location[-1]))
+        print("Breakpoints imported...")
+    else:
+        print("No breakpoint imported...")
+
+    split_location_list = []
+    split_z_list = []
+
+    # Split by breakpoints into a list of lists
+    point_spacing = int(location[1]) - int(location[0])
 
     #Format input numpy arrays
     location = np.int_(location)
@@ -167,21 +170,21 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
         fit_params = []
 
         slope_break_indices = [int(int(distance)/int(point_spacing)) for distance in list_of_breakpoints]
-        for i in range(1, len(slope_break_indices)):
+        #for i in range(1, len(slope_break_indices)):
+        for i in slope_break_indices[1:]:
             temp_location_list = []
             temp_z_list = []
-            temp_break_index = slope_break_indices[i]
-            if i == 1:
-                temp_break_index = slope_break_indices[i]
+            #temp_break_index = slope_break_indices[i]
+            temp_break_index = i
+            index = slope_break_indices.index(temp_break_index)
+            #if i == 1:
+            if index == 1:
                 split_location_list.append(location[:temp_break_index])
                 split_z_list.append(z[:temp_break_index])
-            #elif i < (len(slope_break_indices)):   FIX THIS SO WE CAN WORK WITH MORE THAN JUST ONE BREAK POINT
-                #temp_last_break_index = slope_break_indices[i-1]
-                # Splice locations into split_location_list
-                #temp_location_list.append(location[temp_last_break_index:temp_break_index])
-                #split_location_list.append(temp_location_list)
-            else:
-                print("In the else: " + str(temp_z_list))
+            elif index < int(slope_break_indices.index(slope_break_indices[-1])): #May be buggy
+                temp_location_list.append(location[slope_break_indices[i-1]:temp_break_index])
+                split_location_list.append(temp_location_list)
+            elif i == slope_break_indices[-1]:
                 split_location_list.append(location[slope_break_indices[i-1]:])
                 split_z_list.append(z[slope_break_indices[i-1]:])
 
@@ -435,6 +438,8 @@ def diagnostic_quick_plot(location_np, z_np, xlim=0):
     plt.ylabel("Bed elevation (ft)")
     if xlim != 0:
         plt.xlim(0,xlim)
+    else:
+        plt.xlim(0,None)
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -468,15 +473,8 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0,
     y1_plot = z_np
     y2_plots = []
 
-    if keep_before_bp == False and keep_after_bp == False:
-        for list in fit_params:
-            y2_plots.append(list[0]*x_plot + list[1])
-    elif keep_before_bp == True and keep_after_bp == False:
-        y2_plots.append(fit_params[0][0] * x_plot + fit_params[0][1])
-    elif keep_before_bp == False and keep_after_bp == True:
-        y2_plots.append(fit_params[1][0] * x_plot + fit_params[1][1])
-    else:
-        print("Parameters invalid, must keep data either before or after breakpoint (or both segments). Please change a parameter to false...")
+    for list in fit_params:
+        y2_plots.append(list[0]*x_plot + list[1])
 
     plt.plot(x_plot, y1_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
@@ -540,9 +538,9 @@ if process_on == True:
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
     diagnostic_quick_plot(location_np=loc, z_np=z, xlim=breakpoint)
-    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[])
+    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[600,2400])
     #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-    #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=breakpoint, ymin=80, ymax=0, location=direct, keep_before_bp=False, keep_after_bp=False)
-    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=breakpoint, location='')
+    make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location='')
+    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location='')
     #detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[breakpoint])

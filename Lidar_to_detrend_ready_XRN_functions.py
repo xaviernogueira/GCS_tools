@@ -10,6 +10,7 @@ import os
 from os import listdir
 from os.path import isfile, join
 import xlrd
+import shutil
 from openpyxl.workbook import Workbook
 from openpyxl.reader.excel import load_workbook, InvalidFileException
 
@@ -178,13 +179,14 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
     spacing = int(ft_spacing)
     xs_length = 5
     smooth_distance = 20
+    filter_steps = 15
 
     if centerline_verified == False:
         print("Smoothing raster w/ 15x low pass filters...")
         ticker = 0
         filter_out = arcpy.sa.Filter(raster_name, "LOW")
         filter_out.save(raster_folder + "\\filter_out%s" % ticker)
-        while ticker < 15: #Apply an iterative low pass filter 15x to the raster to smooth the topography
+        while ticker < filter_steps: #Apply an iterative low pass filter 15x to the raster to smooth the topography
             filter_out = arcpy.sa.Filter((raster_folder + "\\filter_out%s" % ticker), "LOW")
             filter_out.save(raster_folder + "\\filter_out%s" % (ticker+1))
             ticker += 1
@@ -196,10 +198,17 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
         centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
 
-        for ticker in range(15): #Delete intermediate filtered rasters
-            if os.path.exists(raster_folder + "\\filter_out%s." % ticker):
-                os.remove(raster_folder + "\\filter_out%s" % ticker)
+        for ticker in range(filter_steps+1): #Delete intermediate filtered rasters
+            file = (raster_folder + "\\filter_out%s" % ticker)
+            if os.path.exists(file):
+                try:
+                    shutil.rmtree(file)
+                except:
+                    print("Could not remove %s " % file)
+            else:
+                print("Path %s does not exist and can't be deleted...")
         print("Intermediate files deleted, please manually verify centerline quality and define reach range... Call this function again w/ centerline_verified=True.")
+
     else:
         direct = os.path.dirname(flow_polygon)
         centerline = direct + "\\las_files\\centerline\\smooth_centerline.shp"
@@ -228,7 +237,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 #Run functions interativly
 #Run 22514218 with different spatial ref
-comids = [17607553,17609707,17609017,17610661,17608037]
+#17607553 add when doing w/ verified polygon
+comids = [17609707,17609017,17610661,17608037]
 #comids = [22514218]
 SCO = 1
 for comid2 in comids:
