@@ -26,6 +26,8 @@ from openpyxl.reader.excel import load_workbook, InvalidFileException
 #Spatial reference#
 lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
 #r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
+
+
 lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
 spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
 units = spatial_ref.linearUnitName
@@ -35,10 +37,10 @@ print("Units are %s" % units)
 
 #Files, locations, and parameters#
 #cell_size = 0.7
-#upstream_source_poly = direct + "\\upstream_flow_poly.shp"
+
 #spatial_extent = direct + "\\las_footprint.shp"
 
-#raster_location = direct + "\\las_files\\ls_nodt.tif"
+
 #centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 #xl_output = direct + ""
 #flow_polygon = direct + "\\upstream_flow_poly.shp"
@@ -226,7 +228,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 #Run functions interativly
 #Run 22514218 with different spatial ref
-comids = [17607553,17609707,17609017,17610661]
+comids = [17607553,17609707,17609017,17610661,17608037]
+#comids = [22514218]
 SCO = 1
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
@@ -235,11 +238,14 @@ for comid2 in comids:
     ground_merged_folder2 = direct + ("\\las_files\\09_ground_rm_duplicates")
     las_dataset_name = direct + ("\\las_files\\COMID%s_ground.lasd" % comid2)
     NAIP_imagery_folder = direct + "\\NAIP"
+    spatial_extent = direct + "\\las_footprint.shp"
+    upstream_source_poly = direct + "\\upstream_flow_poly.shp"
+    raster_location = direct + "\\las_files\\ls_nodt.tif"
 
-    lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
+    #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
     # lidar_footptint(direct=direct, spatial_ref=spatial_ref)
     # define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-    #detrend_prep(raster_name=raster_location, flow_polygon=flow_polygon, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
+    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
 
 
 

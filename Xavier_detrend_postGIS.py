@@ -265,7 +265,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
     print("The mean residual is %.2f" % mean_res)
 
     # Add fitted z values to the xyz table
-    '''NOTE: ADJUST SHEET ROW FOR CELL_TEST AND COLUMN FOR THE CELL = WS.CELL COMMAND'''
     cell_test = ws["F1"]
     print(cell_test.value)
 
@@ -274,9 +273,11 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
 
     if ws["F1"].value == cell_test.value:
         print("Sheet activated...")
-        for i in range(2, len(z_fit_list)):
-            cell = ws.cell(row=i, column=6)
-            cell.value = float(z_fit_list[i])
+        for i in z_fit_list:
+            index = int(z_fit_list.index(i))
+            row_index = index + 2
+            cell = ws.cell(row=row_index, column=6)
+            cell.value = float(z_fit_list[index])
     else:
         print("Something is wrong with writing to the excel sheet")
     ws["A1"].value == "OID"
@@ -462,12 +463,21 @@ def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
         plt.savefig((location + '\\Stage_%s_quadratic_detrend_plot' % stage), dpi=300, bbox_inches='tight')
         plt.cla()
 
-def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0, ymax=0, location=''):
+def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0, ymax=0, location='', keep_before_bp=False, keep_after_bp=False):
     x_plot = location_np
     y1_plot = z_np
     y2_plots = []
-    for list in fit_params:
-        y2_plots.append(list[0]*x_plot + list[1])
+
+    if keep_before_bp == False and keep_after_bp == False:
+        for list in fit_params:
+            y2_plots.append(list[0]*x_plot + list[1])
+    elif keep_before_bp == True and keep_after_bp == False:
+        y2_plots.append(fit_params[0][0] * x_plot + fit_params[0][1])
+    elif keep_before_bp == False and keep_after_bp == True:
+        y2_plots.append(fit_params[1][0] * x_plot + fit_params[1][1])
+    else:
+        print("Parameters invalid, must keep data either before or after breakpoint (or both segments). Please change a parameter to false...")
+
     plt.plot(x_plot, y1_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
     plt.ylabel("Bed elevation (ft)")
@@ -524,15 +534,15 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on=True
-breakpoint = 
+breakpoint = 0
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
     diagnostic_quick_plot(location_np=loc, z_np=z, xlim=breakpoint)
-    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[0,breakpoint])
+    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[])
     #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-    make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=breakpoint, ymin=80, ymax=0, location=direct)
-    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=breakpoint, location=direct)
-    detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[breakpoint])
+    #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=breakpoint, ymin=80, ymax=0, location=direct, keep_before_bp=False, keep_after_bp=False)
+    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=breakpoint, location='')
+    #detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[breakpoint])
