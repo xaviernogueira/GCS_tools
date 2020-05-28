@@ -27,9 +27,8 @@ from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import UnivariateSpline
 
-
 ##### INPUTS #####
-comid = 17573045
+comid = 17586504
 SCO_number = 2
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 out_folder = direct + '\\LINEAR_DETREND'
@@ -538,7 +537,7 @@ def GCS_plotter(table_directory):
 
 
 ############### CALL FUNCTIONS AS NECESSARY #####################
-detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[30], step=1)
+detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[5,10])
 #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 

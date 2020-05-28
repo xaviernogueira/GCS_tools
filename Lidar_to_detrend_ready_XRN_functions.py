@@ -238,9 +238,9 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 #Run functions interativly
 #Run 22514218 with different spatial ref
 #17607553 add when doing w/ verified polygon
-comids = [17609707,17609017,17610661,17608037]
-#comids = [22514218]
-SCO = 1
+#comids = [17609707,17609017,17610661,17608037]
+comids = [17587592]
+SCO = 2
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
     direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO, comid2)

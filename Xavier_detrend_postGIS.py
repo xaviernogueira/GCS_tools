@@ -170,23 +170,23 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[]):
         fit_params = []
 
         slope_break_indices = [int(int(distance)/int(point_spacing)) for distance in list_of_breakpoints]
-        #for i in range(1, len(slope_break_indices)):
+
         for i in slope_break_indices[1:]:
             temp_location_list = []
             temp_z_list = []
-            #temp_break_index = slope_break_indices[i]
             temp_break_index = i
             index = slope_break_indices.index(temp_break_index)
-            #if i == 1:
+
             if index == 1:
                 split_location_list.append(location[:temp_break_index])
                 split_z_list.append(z[:temp_break_index])
-            elif index < int(slope_break_indices.index(slope_break_indices[-1])): #May be buggy
-                temp_location_list.append(location[slope_break_indices[i-1]:temp_break_index])
+            elif i != slope_break_indices[-1]:
+                temp_location_list = location[slope_break_indices[index-1]:temp_break_index]
                 split_location_list.append(temp_location_list)
+                split_z_list.append(z[slope_break_indices[index-1]:temp_break_index])
             elif i == slope_break_indices[-1]:
-                split_location_list.append(location[slope_break_indices[i-1]:])
-                split_z_list.append(z[slope_break_indices[i-1]:])
+                split_location_list.append(location[slope_break_indices[index-1]:])
+                split_z_list.append(z[slope_break_indices[index-1]:])
 
         print("Breakpoints added...")
         print("Slope break index: " + str(slope_break_indices))
@@ -399,34 +399,34 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
     else:
         column = 'z_fit'
 
-    for i in list_of_breakpoints:
-        if stage != 0:
-            detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
-        else:
-            detrended_raster_file = detrend_location + "\\ras_detren.tif"
-            print("0th stage marks non-stage specific centerline")
-        points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y",
-                                                   out_layer=("fitted_station_points%s_stage%s" % (i, stage)),
-                                                   spatial_reference=spatial_ref, in_z_field=column)
-        points = arcpy.SaveToLayerFile_management(points,
-                                                  ("fitted_station_points%s_stage%sft" % (i, stage)).replace('.csv',
-                                                                                                             '.lyr'))
-        points = arcpy.CopyFeatures_management(points)
-        print("Creating Thiessen polygons...")
-        # Delete non-relevent fields tp reduce errors
-        fields = [f.name for f in arcpy.ListFields(points)]
-        dont_delete_fields = ['FID', 'Shape', 'POINT_X', 'POINT_Y', column]
-        fields2delete = list(set(fields) - set(dont_delete_fields))
-        points = arcpy.DeleteField_management(points, fields2delete)
 
-        cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
-        cell_size = float(cell_size1.getOutput(0))
-        thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
-        z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster%s_stage%sft.tif' % (i, stage)),
+    if stage != 0:
+        detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
+    else:
+        detrended_raster_file = detrend_location + "\\ras_detren.tif"
+        print("0th stage marks non-stage specific centerline")
+    points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y",
+                                                   out_layer=("fitted_station_points_stage%s" % (stage)),
+                                                   spatial_reference=spatial_ref, in_z_field=column)
+    points = arcpy.SaveToLayerFile_management(points,
+                                                  ("fitted_station_points_stage%sft" % (stage)).replace('.csv',
+                                                                                                             '.lyr'))
+    points = arcpy.CopyFeatures_management(points)
+    print("Creating Thiessen polygons...")
+    # Delete non-relevent fields tp reduce errors
+    fields = [f.name for f in arcpy.ListFields(points)]
+    dont_delete_fields = ['FID', 'Shape', 'POINT_X', 'POINT_Y', column]
+    fields2delete = list(set(fields) - set(dont_delete_fields))
+    points = arcpy.DeleteField_management(points, fields2delete)
+
+    cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
+    cell_size = float(cell_size1.getOutput(0))
+    thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
+    z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_stage%sft.tif' % (stage)),
                                                         cell_assignment="CELL_CENTER", cellsize=cell_size)
-        detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
-        detrended_DEM.save(detrended_raster_file)
-        print("DEM DETRENDED!")
+    detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
+    detrended_DEM.save(detrended_raster_file)
+    print("DEM DETRENDED!")
 
 
 ###### Define plotting function ######
@@ -531,16 +531,16 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on=True
+process_on=False
 breakpoint = 0
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
-    diagnostic_quick_plot(location_np=loc, z_np=z, xlim=breakpoint)
-    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[600,2400])
+    #diagnostic_quick_plot(location_np=loc, z_np=z, xlim=breakpoint)
+    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[612,2350])
     #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-    make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location='')
-    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location='')
-    #detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[breakpoint])
+    make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location=direct)
+    make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location=direct)
+    detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[610,2350])
