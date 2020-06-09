@@ -11,7 +11,7 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17586504
+comid = 17587592
 SCO_number = 2
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 20 to match code!
@@ -443,7 +443,9 @@ def diagnostic_quick_plot(location_np, z_np, xlim=0):
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+
     return plt.show()
+
 
 def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
     # Make a plot of the quadratic fit
@@ -532,15 +534,15 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on=False
-breakpoint = 0
+breakpoints = []
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
-    #diagnostic_quick_plot(location_np=loc, z_np=z, xlim=breakpoint)
-    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=[612,2350])
+    diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
+    fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints)
     #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
     make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location=direct)
     make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location=direct)
-    detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=[610,2350])
+    detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=breakpoints)

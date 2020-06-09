@@ -27,23 +27,6 @@ from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import UnivariateSpline
 
-##### INPUTS #####
-comid = 17586504
-SCO_number = 2
-direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-out_folder = direct + '\\LINEAR_DETREND'
-original_dem_location = direct + '\\las_files\\ls_nodt.tif'
-detrended_dem_location = out_folder + "\\ras_detren.tif"
-process_footprint = direct + '\\las_footprint.shp'
-spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
-station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
-table_location = out_folder + "\\gcs_ready_tables"
-##################
-
-arcpy.env.workplace = direct
-arcpy.env.extent =detrended_dem_location
-
-arcpy.env.overwriteOutput = True
 
 def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[], step=1):
     '''This function takes the detrended DEM and outputs stage polygons at param_list[0]=max stage, and param_list=[1]=stage interval (INTEGER)
@@ -535,16 +518,33 @@ def GCS_plotter(table_directory):
 
 
 
+##### INPUTS #####
+comid_list = [22514218,17607553,17609707,17610661,17608037]
+SCO_number = 1
 
-############### CALL FUNCTIONS AS NECESSARY #####################
-detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-#width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[5,10])
-#z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+for comid in comid_list:
+    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+    out_folder = direct + '\\LINEAR_DETREND'
+    original_dem_location = direct + '\\las_files\\ls_nodt.tif'
+    detrended_dem_location = out_folder + "\\ras_detren.tif"
+    process_footprint = direct + '\\las_footprint.shp'
+    spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
+    station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
+    table_location = out_folder + "\\gcs_ready_tables"
 
-#export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-#tables = export_list[0]
-#main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-#GCS_plotter(table_directory=table_location)
+    arcpy.env.workplace = direct #Set arcpy environment
+    arcpy.env.extent = detrended_dem_location
+    arcpy.env.overwriteOutput = True
+
+    #Call functions:
+    detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
+    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[5,10])
+    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+
+    #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+    #tables = export_list[0]
+    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+    #GCS_plotter(table_directory=table_location)
 
 
 
