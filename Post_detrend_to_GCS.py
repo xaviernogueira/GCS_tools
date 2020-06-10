@@ -41,9 +41,14 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
 
+    if not os.path.exists(out_folder + "\\wetted_polygons"):
+        os.makedirs(out_folder + "\\wetted_polygons")
+
     lines_location = out_folder + '\\analysis_centerline_and_XS'
     if not os.path.exists(lines_location):
         os.makedirs(lines_location)
+
+    wetted_folder = out_folder + "\\wetted_polygons"
 
     try:
         # We convert raster units into feet for this stage of the analysis.
@@ -57,10 +62,10 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
         flood_stage_ras = Raster(Con(detrend_ras_int <= max_stage[0], detrend_ras_int))
         flood_stage_poly = arcpy.RasterToPolygon_conversion(flood_stage_ras,
-                                                            out_folder + ("\\flood_stage_poly_%sft" % max_stage[0]),
+                                                            wetted_folder + ("\\flood_stage_poly_%sft" % max_stage[0]),
                                                             simplify=False, raster_field="Value",
                                                             create_multipart_features=True)
-        flood_stage_poly = arcpy.Dissolve_management(flood_stage_poly, out_folder + ("\\flood_stage_poly_dissolved_%sft" % max_stage[0]), dissolve_field="gridcode", multi_part=True)
+        flood_stage_poly = arcpy.Dissolve_management(flood_stage_poly, wetted_folder + ("\\flood_stage_poly_dissolved_%sft" % max_stage[0]), dissolve_field="gridcode", multi_part=True)
         print("Flood stage polygon made with max stage of %sft and is stored: %s" % (max_stage[0], flood_stage_poly))
 
         for i in range(0, max_stage[0] + 1, int(step)):
@@ -70,24 +75,24 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
             stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly, selection_type="NEW_SELECTION",
                                                                  where_clause=query)
             stage_poly = arcpy.CopyFeatures_management(stage_poly,
-                                                       out_feature_class=out_folder + ("\\flood_stage_poly_%sft" % i))
+                                                       out_feature_class=wetted_folder + ("\\flood_stage_poly_%sft" % i))
             arcpy.AddField_management(stage_poly, "null_field", "Short")
-            stage_poly_no_donuts = arcpy.Union_analysis(stage_poly, out_folder + (
+            stage_poly_no_donuts = arcpy.Union_analysis(stage_poly, wetted_folder + (
                         "\\flood_stage_poly_%sft_no_donuts_predissolve" % i), gaps="NO_GAPS")
             stage_poly_dissolve = arcpy.Dissolve_management(stage_poly,
-                                                            out_folder + ("\\flood_stage_poly_dissolved_%sft" % i),
+                                                            wetted_folder + ("\\flood_stage_poly_dissolved_%sft" % i),
                                                             dissolve_field="null_field", multi_part=True)
-            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, out_folder + (
+            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_no_donuts, wetted_folder + (
                         "\\flood_stage_poly_%sft_no_donuts" % i), dissolve_field="null_field", multi_part=True)
 
             if raster_units == "m":
-                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + (
-                        "\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 100)
+                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, wetted_folder + (
+                        "\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 50)
             else:
-                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 328)
+                stage_poly_dissolve_no_donuts = arcpy.SmoothPolygon_cartography(stage_poly_dissolve_no_donuts, wetted_folder + ("\\smooth_stage_poly_%sft_donuts" % i), "PAEK", 164)
 
-            stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft_no_dissolve" % i), gaps="NO_GAPS")
-            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_dissolve_no_donuts, out_folder + ("\\smooth_stage_poly_%sft" % i), dissolve_field="null_field", multi_part=True)
+            stage_poly_dissolve_no_donuts = arcpy.Union_analysis(stage_poly_dissolve_no_donuts, wetted_folder + ("\\smooth_stage_poly_%sft_no_dissolve" % i), gaps="NO_GAPS")
+            stage_poly_dissolve_no_donuts = arcpy.Dissolve_management(stage_poly_dissolve_no_donuts, wetted_folder + ("\\smooth_stage_poly_%sft" % i), dissolve_field="null_field", multi_part=True)
             flood_stage_poly = arcpy.SelectLayerByAttribute_management(flood_stage_poly,
                                                                        selection_type="CLEAR_SELECTION")
 
@@ -125,7 +130,7 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
 ## GOOD TO RUN A 3m smoothing during centerline editing
 
-def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest_stage, spacing=[], centerlines=[]):
+def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest_stage, spacing=[], centerlines=[], XS_lengths=[]):
     ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon
     into rectangular slices which are used to extract mean depth and width for each filling out an excel sheet and some descriptive stats.
 
@@ -134,7 +139,8 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
     print(
         "Width analysis commencing, check that spacing is in the same units as the reach. We should use either 1m or 3.28024ft")
 
-    list_of_files_in_out_folder = [f for f in listdir(out_folder) if isfile(join(out_folder, f))]
+    wetted_folder = (out_folder + "\\wetted_polygons")
+    list_of_files_in_out_folder = [f for f in listdir(wetted_folder) if isfile(join(wetted_folder, f))]
     list_of_dissolved_polygons = []
     for file in list_of_files_in_out_folder:
         if file[17:26] == "dissolved" and file[-4:] == ".shp":
@@ -148,19 +154,21 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
 
     try:
         for stage_line in centerlines:
+            index = centerlines.index(stage_line)
+            length = XS_lengths[index]
             # Make station lines for chosen centerlines
             centerline_location = (lines_location + "\\stage_centerline_%sft.shp" % stage_line)
             centerline_dissolve = arcpy.Dissolve_management(centerline_location, (lines_location + "\\stage_centerline_%sft_D.shp" % stage_line), dissolve_field="ObjectID", multi_part="MULTI_PART")
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_D.shp" % stage_line)
             arcpy.AddField_management(centerline_dissolve, "Id", "SHORT")
             if raster_units == "m":
-                tolerance = 30
+                tolerance = 15
             else:
-                tolerance = (30 * 3.28)
+                tolerance = (15 * 3.28)
 
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
-            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(2000), stage=[int(stage_line)])
+            create_station_lines.create_station_lines_function(centerline_dissolve, spacing=float(spacing[0]), xs_length=float(length), stage=[int(stage_line)])
             station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (int(stage_line), spacing[0]))
 
             if os.path.exists(lines_location + "\\stage_centerline_%sft_D.shp" % stage_line):
@@ -194,7 +202,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
             print(centerline)
 
             spacing_half = float(spacing[0] / 2)
-            file_location = (out_folder + "\\%s" % file) # might need to string splice here
+            file_location = (wetted_folder + "\\%s" % file) # might need to string splice here
             clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(
                         shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
             rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
@@ -519,7 +527,8 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [22514218,17607553,17609707,17610661,17608037]
+comid_list = [22514218] #4 and 6 used for 22514218
+#[1,2,3,9] for 17607553
 SCO_number = 1
 
 for comid in comid_list:
@@ -537,14 +546,14 @@ for comid in comid_list:
     arcpy.env.overwriteOutput = True
 
     #Call functions:
-    detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[5,10])
-    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+    #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
+    width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[4,6], XS_lengths=[100,250])
+    z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-    #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-    #tables = export_list[0]
-    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-    #GCS_plotter(table_directory=table_location)
+    export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+    tables = export_list[0]
+    main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+    GCS_plotter(table_directory=table_location)
 
 
 

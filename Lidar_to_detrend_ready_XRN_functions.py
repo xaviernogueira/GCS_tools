@@ -175,7 +175,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
     Args: raster_name, upstream flow polygon, spatial extent (can be raster), station point spacing in ft (3ft is default).
     Run first with centerline_verified=False and visually inspect. Run again w/ True to return the [station_points, elevation_table]'''
 
-    arcpy.env.extent = spatial_extent
+    #arcpy.env.extent = spatial_extent
     raster_folder = os.path.dirname(raster_name)
     spacing = int(ft_spacing)
     xs_length = 5
@@ -235,12 +235,6 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-
-#Run functions interativly
-#Run 22514218 with different spatial ref
-#add when doing w/ verified polygon
-#17609017
-
 comids = [17607863]
 SCO = 2
 for comid2 in comids:
@@ -257,7 +251,7 @@ for comid2 in comids:
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
     #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
     #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
+    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
 
 
 
