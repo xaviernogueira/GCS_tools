@@ -15,7 +15,7 @@ from openpyxl.workbook import Workbook
 from openpyxl.reader.excel import load_workbook, InvalidFileException
 
 
-def lidar_footptint(direct, spatial_ref):
+def lidar_footptint(direct, spatial_ref, las_tools_bin):
     '''Args: Directory containing nothing but raw LAZ files
     Returns: A shapefile w/ LiDAR coverage to be used to make a ground polygon for LAStools processing'''
     files_in_direct = [f for f in listdir(direct) if isfile(join(direct, f))]
@@ -202,6 +202,7 @@ for comid2 in comids:
     spatial_extent = direct + "\\las_footprint.shp"
     upstream_source_poly = direct + "\\upstream_flow_poly.shp"
     raster_location = direct + "\\las_files\\ls_nodt.tif"
+    centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
 
     # Spatial reference#
     lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
@@ -209,13 +210,15 @@ for comid2 in comids:
     spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
     units = spatial_ref.linearUnitName
     ft_spatial_ref = arcpy.Describe(lidar_ft_projection_file).spatialReference
+    lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
     print("Units are %s" % units)
 
     arcpy.env.overwriteOutput = True
-    print("Imports and variables ready...")
+    arcpy.env.extent = spatial_extent
+    print("Imports ready, processing commencing...")
 
     ######## CALL FUNCTIONS ########
-    lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+    lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
     define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
     #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
