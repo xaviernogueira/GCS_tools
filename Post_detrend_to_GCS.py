@@ -136,8 +136,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
 
     Centerlines created in previous function should be visually inspected for quality, edited, and adjusted. Centerlines list holds the LAST stage to use a specified stage centerline
     NOTE: This function splicing the file names used for the dissolved poly, so make sure that doesn't change in the other function without updating this.'''
-    print(
-        "Width analysis commencing, check that spacing is in the same units as the reach. We should use either 1m or 3.28024ft")
+    print("Width analysis comencing. XS spacing is %s%s, analysis will be conducted up to flood stage %s%s" % (spacing[0],raster_units,biggest_stage,raster_units))
 
     wetted_folder = (out_folder + "\\wetted_polygons")
     list_of_files_in_out_folder = [f for f in listdir(wetted_folder) if isfile(join(wetted_folder, f))]
@@ -162,9 +161,9 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_D.shp" % stage_line)
             arcpy.AddField_management(centerline_dissolve, "Id", "SHORT")
             if raster_units == "m":
-                tolerance = 15
+                tolerance = 25
             else:
-                tolerance = (15 * 3.28)
+                tolerance = (25 * 3.28)
 
             centerline_dissolve = arcpy.SmoothLine_cartography(centerline_dissolve, (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line), algorithm="PAEK", tolerance=tolerance)
             centerline_dissolve = (lines_location + "\\stage_centerline_%sft_DS.shp" % stage_line)
@@ -184,22 +183,28 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
             if stage > biggest_stage:
                 list_of_dissolved_polygons.remove(file)
 
-        for file in list_of_dissolved_polygons:
+        for file in list_of_dissolved_polygons: #Assign stage value to the wetted polygon
             if file[-8] == "_":
                 stage = int(file[-7])
             else:
                 stage = int(file[-8:-6])
+            print("Doing width analysis for stage %s%s" % (stage, raster_units))
 
             centerline_number = 0
-            if stage <= centerlines[centerline_number]:
+            if stage < int(centerlines[0]) or stage == int(centerlines[0]):
                 centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[0])
+                station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (centerlines[0], spacing[0]))
             elif stage > centerlines[-1]:
                 centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[-1])
+                station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (centerlines[-1], spacing[0]))
             else:
                 while int(stage) > centerlines[centerline_number]:
                     centerline_number += 1
                 centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[centerline_number])
-            print(centerline)
+                station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (centerlines[centerline_number], spacing[0]))
+
+
+            print('Using station lines found @ %s' % station_lines) #XS station lines are assigned to the stage
 
             spacing_half = float(spacing[0] / 2)
             file_location = (wetted_folder + "\\%s" % file) # might need to string splice here
@@ -527,9 +532,8 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [22514218] #4 and 6 used for 22514218
-#[1,2,3,9] for 17607553
-SCO_number = 1
+comid_list = [17587592] #4 and 6 used for 22514218
+SCO_number = 2
 
 for comid in comid_list:
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -546,14 +550,14 @@ for comid in comid_list:
     arcpy.env.overwriteOutput = True
 
     #Call functions:
-    #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-    width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[4,6], XS_lengths=[100,250])
-    z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+    detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
+    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[1,2,9], XS_lengths=[75,190,2000])
+    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-    export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-    tables = export_list[0]
-    main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-    GCS_plotter(table_directory=table_location)
+    #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+    #tables = export_list[0]
+    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+    #GCS_plotter(table_directory=table_location)
 
 
 

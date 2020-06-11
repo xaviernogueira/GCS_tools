@@ -14,56 +14,11 @@ import shutil
 from openpyxl.workbook import Workbook
 from openpyxl.reader.excel import load_workbook, InvalidFileException
 
-# READ ME! This script takes the result lidar folders from Lidar_processing_GUI to make a raster of the
-
-#Input folders#
-#comid = 22514218
-#SCO_number = 1
-#direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-#ground_merged_folder = direct + "\\las_files\\09_ground_rm_duplicates"
-
-#lastooldirect = r"C:\\Users\\xavierrn\\Documents\\LAStools\\bin\\"
-
-#Spatial reference#
-lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
-#r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
-#r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
-
-
-lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
-spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
-units = spatial_ref.linearUnitName
-ft_spatial_ref = arcpy.Describe(lidar_ft_projection_file).spatialReference
-print("Units are %s" % units)
-#spatial_ref_old = r"PROJCS['NAD_1983_California_zone_5_ftUS',GEOGCS['GCS_North_American_1983',DATUM['D_North_American_1983',SPHEROID['GRS_1980',6378137.0,298.257222101]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Lambert_Conformal_Conic'],PARAMETER['false_easting',6561666.667],PARAMETER['false_northing',1640416.667],PARAMETER['central_meridian',-118.0],PARAMETER['standard_parallel_1',34.03333333333333],PARAMETER['standard_parallel_2',35.46666666666667],PARAMETER['latitude_of_origin',33.5],UNIT['Foot_US',0.3048006096012192]],VERTCS['NAVD88 height - Geoid12B (ftUS)',VDATUM['North American Vertical Datum 1988'],PARAMETER['Vertical_Shift',0.0],UNIT['US survey foot',0.3048006096012192]];-117608900 -91881400 3048.00609601219;1627.52830945332 3048.00609601219;-100000 10000;3.28083333333333E-03;3.28083333333333E-03;0.001;IsHighPrecision"
-
-#Files, locations, and parameters#
-#cell_size = 0.7
-
-#spatial_extent = direct + "\\las_footprint.shp"
-
-
-#centerline_buff = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\FER_topo_dry_buff.shp"
-#xl_output = direct + ""
-#flow_polygon = direct + "\\upstream_flow_poly.shp"
-#station_lines_g = ""
-######
-
-print("Imports and variables ready...")
-
-#Set up arcpy environment conditions
-#arcpy.env.extent = spatial_extent
-
-
-arcpy.env.overwriteOutput = True
-
-
-#files_in_direct = [f for f in listdir(direct) if isfile(join(direct, f))]
-#print(files_in_direct)
 
 def lidar_footptint(direct, spatial_ref):
     '''Args: Directory containing nothing but raw LAZ files
     Returns: A shapefile w/ LiDAR coverage to be used to make a ground polygon for LAStools processing'''
+    files_in_direct = [f for f in listdir(direct) if isfile(join(direct, f))]
 
     laspath = direct + '\\las_files'
     if not os.path.exists(laspath):
@@ -235,8 +190,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17607863]
-SCO = 2
+comids = [17608101]
+SCO = 3
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
     direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO, comid2)
@@ -248,10 +203,22 @@ for comid2 in comids:
     upstream_source_poly = direct + "\\upstream_flow_poly.shp"
     raster_location = direct + "\\las_files\\ls_nodt.tif"
 
+    # Spatial reference#
+    lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
+    lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
+    spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
+    units = spatial_ref.linearUnitName
+    ft_spatial_ref = arcpy.Describe(lidar_ft_projection_file).spatialReference
+    print("Units are %s" % units)
+
+    arcpy.env.overwriteOutput = True
+    print("Imports and variables ready...")
+
+    ######## CALL FUNCTIONS ########
+    lidar_footptint(direct=direct, spatial_ref=spatial_ref)
+    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
-    #lidar_footptint(direct=direct, spatial_ref=spatial_ref)
-    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
+    #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
 
 
 
