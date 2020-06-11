@@ -214,7 +214,6 @@ for comid2 in comids:
     print("Units are %s" % units)
 
     arcpy.env.overwriteOutput = True
-    arcpy.env.extent = spatial_extent
     print("Imports ready, processing commencing...")
 
     ######## CALL FUNCTIONS ########
