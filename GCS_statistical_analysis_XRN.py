@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import scipy as sp
-import pandas
+import pandas as pd
 import GCS_analysis
 import openpyxl
 from openpyxl import Workbook
@@ -34,16 +34,16 @@ def analysis_setup(table_directory):
     for table in csv_tables:
         base_name = os.path.basename(table)
         if base_name[1] == "f":
-            stage = base_name[0]
+            stage = int(base_name[0])
         else:
-            stage = base_name[:2]
+            stage = int(base_name[:2])
         if int(stage) > max_stage:
             max_stage = stage
         stage_stats_xl_name = (stat_table_location + '\\%sft_stats_table.xlsx' % stage)
         if not os.path.exists(stage_stats_xl_name):
             os.makedirs(stage_stats_xl_name)
 
-        stage_df = pd.read_csv(table_directory + ('\\%s' % table))
+        stage_df = pd.read_csv(table)
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
     print("Max stage is %sft" % max_stage)
