@@ -24,7 +24,7 @@ def analysis_setup(table_directory):
         else:
             os.remove(table_directory + "\\" + file)
     print("List of tables ready to be formatted: %s" % csv_tables)
-    stat_table_location = table_directory + "\\GCS_stat_tables"
+    stat_table_location = table_directory + "\\GCS_stat_tables_and_plots"
     if not os.path.exists(stat_table_location):
         os.makedirs(stat_table_location)
 
@@ -99,6 +99,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         landform_dict = {-2:'Oversized',-1:'Constricted pool',0:'Normal',1:'Wide riffle',2:'Nozzle'}
         ws['F1'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
         ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['A'].width = 11
 
         w_codes_list = [] #initiate lists of arrays to store data for multiple box plot
         z_codes_list = []
@@ -113,33 +114,25 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
             if abs(row['W_s_Z_s']) >= stds[2]:
                 above_1_list[2] += 1
                 above_half_list[2] += 1
-            elif abs(row['W_s_Z_s']) >= stds[2]:
+            elif abs(row['W_s_Z_s']) >= (0.5*stds[2]):
                 above_half_list[2] += 1
 
-            for fields in list_of_fields[4:]: #List splice: ['W_s', 'Z_s']
-                field_index = int(list_of_fields[4:].index(field))
+            for field in list_of_fields[3:]: #List splice: ['W_s', 'Z_s']
+                field_index = int(list_of_fields[3:].index(field))
                 if abs(row[field]) >= 1:
                     above_1_list[field_index] += 1
                     above_half_list[field_index] += 1
                 elif abs(row[field]) >= 0.5:
                     above_half_list[field_index] += 1
 
-        ws.cell(row=7, column=1).value = "% >= 0.5 std"
-        ws.cell(row=8, column=1).value = "% >= 1 std"
+        ws.cell(row=7, column=1).value = "% >= 0.5 STD"
+        ws.cell(row=8, column=1).value = "% >= 1 STD"
 
-        for index in range(len(above_1_list)):
+        for index in range(len(above_1_list)): #Calculates % of W, Z, and W_s_Z_s that are greater than 0.5 and 1 of their standard deviations
             percent_above_half = float((above_half_list[index]/total_rows)*100)
             percent_above_1 = float((above_1_list[index]/total_rows)*100)
             ws.cell(row=7, column=(2 + index)).value = percent_above_half
             ws.cell(row=8, column=(2 + index)).value = percent_above_1
-
-
-
-
-
-
-
-
 
 
         row_num = 2
@@ -161,7 +154,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
                 ws.cell(row=row_num+4,column=(8+field_index)).value = (np.min(code_df.loc[:, field].to_numpy()))
                 ws.cell(row=row_num+5,column=(8+field_index)).value = (np.median(code_df.loc[:, field].to_numpy()))
 
-                if box_and_whisker == True:
+                if field_index <=2 and box_and_whisker == True:
                     box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
             row_num += 7
 
@@ -169,15 +162,28 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         print("Landform stats for stage %sft completed..." % stage)
 
         if box_and_whisker==True:
-            for field in list_of_fields:
+            directory = os.path.dirname(stage_stat_xl)
+            plot_dirs = directory + "\\Box_plots"
+            if not os.path.exists(plot_dirs):
+                os.makedirs(plot_dirs)
+
+            for field in list_of_fields[:3]:
+                fig, ax = plt.subplots()
+                ax.set_title('Stage %s ft, %s boxplots by landform' % (str(int(stage)), field))
+                ax.set_xlabel('Landform')
+                if field != 'W_s_Z_s':
+                    ax.set_ylabel('US feet')
+                else:
+                    ax.set_ylabel('C(Ws,Zs)')
                 plt.boxplot(box_plot_dict[field], patch_artist=True, labels=['Oversized', 'Const. Pool', 'Normal', 'Wide riffle', 'Nozzle'])
-                #plt.show()
+                plt.savefig(plot_dirs + ('\\stage_%sft_%s_boxplot.png' % (stage, field)), dpi=400,bbox_inches='tight')
+                plt.close(fig)
 
     print("All descriptive stats completed!")
 
 
 #INPUTS#
-table_directory = r"C:\Users\xavierrn\Documents\RESEARCH\test_csv_folder"
+table_directory = r"C:\Users\xavierrn\Documents\RESEARCH\test_csv_folder" #A folder with stage csv files in it. Other files can occupy the directory as well.
 ##
 out_list = analysis_setup(table_directory)
 stages_dict = out_list[0]
@@ -185,7 +191,7 @@ stages_stats_xl_dict = out_list[1]
 max_stage = out_list[2]
 stats_table_location = out_list[3]
 
-stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
+stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=True)
 
 
 
