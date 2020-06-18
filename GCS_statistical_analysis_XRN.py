@@ -59,7 +59,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
-        list_of_fields = ['W', 'Z', 'W_s_Z_s']
+        list_of_fields = ['W', 'Z', 'W_s_Z_s','W_s','Z_s']
         means = []
         stds = []
         high = []
@@ -82,7 +82,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         ws.cell(row=5, column=1).value = 'MIN'
         ws.cell(row=6, column=1).value = 'MEDIAN'
 
-        for field in list_of_fields: #add values in each field column
+        for field in list_of_fields[:3]: #add values in each field column
             field_index = int(list_of_fields.index(field))
 
             ws.cell(row=1, column=(2 + field_index)).value = field
@@ -96,7 +96,9 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         print("Descriptive stats for W, Z, and W_s_W_Z_s saved for stage %sft..." % stage)
 
         list_of_codes = [-2,-1,0,1,2]
+        landform_dict = {-2:'Oversized',-1:'Constricted pool',0:'Normal',1:'Wide riffle',2:'Nozzle'}
         ws['F1'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
+        ws.column_dimensions['G'].width = 15
 
         w_codes_list = [] #initiate lists of arrays to store data for multiple box plot
         z_codes_list = []
@@ -104,10 +106,46 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         list_of_field_lists = [w_codes_list,z_codes_list,cwz_codes_list]
         box_plot_dict = dict(zip(list_of_fields,list_of_field_lists)) #This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
 
+        total_rows = len(stage_df.index)
+        above_1_list = [0,0,0] #'W', 'Z', 'W_s_Z_s'
+        above_half_list = [0,0,0]
+        for index, row in stage_df.iterrows():
+            if abs(row['W_s_Z_s']) >= stds[2]:
+                above_1_list[2] += 1
+                above_half_list[2] += 1
+            elif abs(row['W_s_Z_s']) >= stds[2]:
+                above_half_list[2] += 1
+
+            for fields in list_of_fields[4:]: #List splice: ['W_s', 'Z_s']
+                field_index = int(list_of_fields[4:].index(field))
+                if abs(row[field]) >= 1:
+                    above_1_list[field_index] += 1
+                    above_half_list[field_index] += 1
+                elif abs(row[field]) >= 0.5:
+                    above_half_list[field_index] += 1
+
+        ws.cell(row=7, column=1).value = "% >= 0.5 std"
+        ws.cell(row=8, column=1).value = "% >= 1 std"
+
+        for index in range(len(above_1_list)):
+            percent_above_half = float((above_half_list[index]/total_rows)*100)
+            percent_above_1 = float((above_1_list[index]/total_rows)*100)
+            ws.cell(row=7, column=(2 + index)).value = percent_above_half
+            ws.cell(row=8, column=(2 + index)).value = percent_above_1
+
+
+
+
+
+
+
+
+
+
         row_num = 2
-        for code in list_of_codes: #Calculating same descriptive stats for each landform, each table is sapced 7 cells apart
-            code_df = stage_df.loc[stage_df['code'] == code, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
-            ws.cell(row=row_num, column=7).value = ("Landform Code %s" % code) #Preparing the table
+        for code in list_of_codes: #Calculating same descriptive stats for each landform, each table is spaced 7 cells apart
+            code_df = stage_df.loc[stage_df['code'] == code, ['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s']]
+            ws.cell(row=row_num, column=7).value = (str(landform_dict[code])) #Preparing the table
             ws.cell(row=row_num + 1, column=7).value = 'MEAN'
             ws.cell(row=row_num + 2, column=7).value = 'STD'
             ws.cell(row=row_num + 3, column=7).value = 'MAX'
@@ -128,11 +166,11 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
             row_num += 7
 
         wb.save(stage_stat_xl)
-        print("Landform stats for stage %ft completed..." % stage)
+        print("Landform stats for stage %sft completed..." % stage)
 
         if box_and_whisker==True:
             for field in list_of_fields:
-                plt.boxplot(box_plot_dict[field], patch_artist=True, labels=['Oversized', 'Const. Pool', 'Normal', 'Wide riffle', 'Nozzle'])\
+                plt.boxplot(box_plot_dict[field], patch_artist=True, labels=['Oversized', 'Const. Pool', 'Normal', 'Wide riffle', 'Nozzle'])
                 #plt.show()
 
     print("All descriptive stats completed!")
