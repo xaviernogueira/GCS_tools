@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import pandas as pd
 import GCS_analysis
-import openpyxl
+import openpyxl as xl
 from openpyxl import Workbook
 import os
 from os import listdir
@@ -29,7 +29,7 @@ def analysis_setup(table_directory):
         os.makedirs(stat_table_location)
 
     stages_dict = {}
-    stage_stats_xl_dict = {}
+    stages_stats_xl_dict = {}
     max_stage = 0
     for table in csv_tables:
         base_name = os.path.basename(table)
@@ -40,23 +40,24 @@ def analysis_setup(table_directory):
         if int(stage) > max_stage:
             max_stage = stage
         stage_stats_xl_name = (stat_table_location + '\\%sft_stats_table.xlsx' % stage)
-        if not os.path.exists(stage_stats_xl_name):
-            os.makedirs(stage_stats_xl_name)
+        wb = xl.Workbook()
+        wb.save(stage_stats_xl_name)
+        wb.close()
 
         stage_df = pd.read_csv(table)
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
     print("Max stage is %sft" % max_stage)
-    return [stages_dict,stage_stats_xl_dict,max_stage,stat_table_location]
+    return [stages_dict,stages_stats_xl_dict,max_stage,stat_table_location]
 
-def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_and_whisker=False):
+def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False):
     '''This function takes the stages_dict of pandas dataframes, and the stage_stats_xl dictionary, as well as calculated max stage as arguments.
     It fills out the xlsx file for each respective stage height with mean, std, max, min, and median values for the stage as a hole and each landform
     If the box_and_whisker parameter is set to True (not default), then box and whisker plots comparing the W, Z, and C(W,Z)'''
     for stage in range(1,max_stage+1):
         print("Writing descriptive stats for stage %sft" % stage)
         stage_df = stages_dict['Stage_%sft' % stage]
-        stage_stat_xl = stage_stats_xl_dict['Stage_%sft' % stage]
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
         list_of_fields = ['W', 'Z', 'W_s_Z_s']
         means = []
@@ -65,7 +66,7 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_
         low = []
         medians = []
         for field in list_of_fields[:3]: # add the mean and std_deviation of each field in list_of_fields to a list
-            means.append(np.mean(stage_df.loc[:,field].to_numpy()))
+            means.append(np.mean(stage_df.loc[:, field].to_numpy()))
             stds.append(np.std(stage_df.loc[:, field].to_numpy()))
             high.append(np.max(stage_df.loc[:, field].to_numpy()))
             low.append(np.min(stage_df.loc[:, field].to_numpy()))
@@ -84,11 +85,15 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_
         for field in list_of_fields: #add values in each field column
             field_index = int(list_of_fields.index(field))
 
-            ws.cell(row=2, column=(1 + field_index)).value = means[field_index]
-            ws.cell(row=3, column=(1 + field_index)).value = stds[field_index]
-            ws.cell(row=4, column=(1 + field_index)).value = high[field_index]
-            ws.cell(row=5, column=(1 + field_index)).value = low[field_index]
-            ws.cell(row=6, column=(1 + field_index)).value = medians[field_index]
+            ws.cell(row=1, column=(2 + field_index)).value = field
+            ws.cell(row=2, column=(2 + field_index)).value = means[field_index]
+            ws.cell(row=3, column=(2 + field_index)).value = stds[field_index]
+            ws.cell(row=4, column=(2 + field_index)).value = high[field_index]
+            ws.cell(row=5, column=(2 + field_index)).value = low[field_index]
+            ws.cell(row=6, column=(2 + field_index)).value = medians[field_index]
+
+        wb.save(stage_stat_xl)
+        print("Descriptive stats for W, Z, and W_s_W_Z_s saved for stage %sft..." % stage)
 
         list_of_codes = [-2,-1,0,1,2]
         ws['F1'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
@@ -97,7 +102,7 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_
         z_codes_list = []
         cwz_codes_list = []
         list_of_field_lists = [w_codes_list,z_codes_list,cwz_codes_list]
-        box_plot_dict  = dict(zip(list_of_fields,list_of_field_lists)) #This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
+        box_plot_dict = dict(zip(list_of_fields,list_of_field_lists)) #This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
 
         row_num = 2
         for code in list_of_codes: #Calculating same descriptive stats for each landform, each table is sapced 7 cells apart
@@ -122,8 +127,8 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_
                     box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
             row_num += 7
 
-        print("Stage %sft descriptive stats completed..." % stage)
-        wb.save(filename=stage_stat_xl)
+        wb.save(stage_stat_xl)
+        print("Landform stats for stage %ft completed..." % stage)
 
         if box_and_whisker==True:
             for field in list_of_fields:
@@ -136,8 +141,13 @@ def stage_level_descriptive_stats(stages_dict,stage_stats_xl_dict,max_stage,box_
 #INPUTS#
 table_directory = r"C:\Users\xavierrn\Documents\RESEARCH\test_csv_folder"
 ##
+out_list = analysis_setup(table_directory)
+stages_dict = out_list[0]
+stages_stats_xl_dict = out_list[1]
+max_stage = out_list[2]
+stats_table_location = out_list[3]
 
-analysis_setup(table_directory)
+stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
 
 
 
