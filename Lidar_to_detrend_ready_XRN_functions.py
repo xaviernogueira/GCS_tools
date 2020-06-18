@@ -190,7 +190,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17608101]
+comids = [17585738]
+#[17563722,17594703,17570395,17585756,17611423,17610905,17611427]
 SCO = 3
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
@@ -206,6 +207,7 @@ for comid2 in comids:
 
     # Spatial reference#
     lidar_source_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEFINE_2018_So_Ca_Wildfire_QL2.shp"
+    #r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
     lidar_ft_projection_file = r"Z:\users\xavierrn\Lidar Reports and metadata\PRJ_DEINFE_2015_Los_Angeles_County_QL2.shp"
     spatial_ref = arcpy.Describe(lidar_source_projection_file).spatialReference
     units = spatial_ref.linearUnitName
@@ -217,10 +219,10 @@ for comid2 in comids:
     print("Imports ready, processing commencing...")
 
     ######## CALL FUNCTIONS ########
-    lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    #lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
+    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
-    #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
+    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
 
 
 

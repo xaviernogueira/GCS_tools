@@ -34,9 +34,9 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
         from which the width and detrended Z analysis is completed. Raster units takes strings m or ft'''
 
     if raster_units == "m":
-        spur_length = 5
+        spur_length = 10
     else:
-        spur_length = 15
+        spur_length = 30
 
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
@@ -130,7 +130,7 @@ def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[]
 
 ## GOOD TO RUN A 3m smoothing during centerline editing
 
-def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest_stage, spacing=[], centerlines=[], XS_lengths=[], ft_smoothing_tolerance=75):
+def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest_stage, spacing=[], centerlines=[], XS_lengths=[], ft_smoothing_tolerance=75, clip_poly=''):
     ''' For each wetted polygon produced within the max_stage range set in the detrend_to_wetted_poly function, this function splits the polygon
     into rectangular slices which are used to extract mean depth and width for each filling out an excel sheet and some descriptive stats.
 
@@ -209,7 +209,11 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
             spacing_half = float(spacing[0] / 2)
             file_location = (wetted_folder + "\\%s" % file) # might need to string splice here
             clipped_lines = arcpy.Clip_analysis(station_lines, file_location, out_feature_class=(
-                        shapefile_location + "\\clipped_station_lines_%s" % file[-8:]))
+                        shapefile_location + "\\clipped_station_lines1_%s" % file[-8:]))
+
+            if clip_poly != '':
+                clipped_lines = arcpy.Clip_analysis(clipped_lines, file_location, out_feature_class=(shapefile_location + "\\clipped_station_lines2_%s" % file[-8:]))
+
             rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
                         shapefile_location + "\\width_rectangles_%sft.shp" % stage),
                                                buffer_distance_or_field=spacing_half, line_side="FULL",
@@ -246,6 +250,7 @@ def z_value_analysis1(out_folder, detrended_DEM):
             stage = int(file[-7])
         else:
             stage = int(file[-8:-6])
+
 
         arcpy.AddField_management(width_file, field_name="loc_id", field_type="SHORT")
         field_calc = "(int(!LOCATION!))"
@@ -532,32 +537,33 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17586810] #4 and 6 used for 22514218
-SCO_number = 2
+comid_list = [17585738,17586610,17595173]
+SCO_number = 3
 
 for comid in comid_list:
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
     out_folder = direct + '\\LINEAR_DETREND'
     original_dem_location = direct + '\\las_files\\ls_nodt.tif'
-    detrended_dem_location = out_folder + "\\ras_detren.tif"
+    detrended_dem_location = out_folder + "\\ras_detren.tif" #change back
     process_footprint = direct + '\\las_footprint.shp'
     spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
     station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
     table_location = out_folder + "\\gcs_ready_tables"
+    channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
 
     arcpy.env.workplace = direct #Set arcpy environment
     arcpy.env.extent = detrended_dem_location
     arcpy.env.overwriteOutput = True
 
     #Call functions:
-    #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-    width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[9], centerlines=[6,10,20], XS_lengths=[2000,2000,2000],ft_smoothing_tolerance=125)
-    z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+    detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
+    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[2,5,8,15], XS_lengths=[250,800,1700,3000],ft_smoothing_tolerance=75, clip_poly='')
+    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-    export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-    tables = export_list[0]
-    main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-    GCS_plotter(table_directory=table_location)
+    #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+    #tables = export_list[0]
+    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+    #GCS_plotter(table_directory=table_location)
 
 
 
