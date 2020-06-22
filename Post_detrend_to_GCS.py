@@ -478,7 +478,7 @@ def GCS_plotter(table_directory):
             plt.scatter(plot_1[:,0], plot_1[:,1], c='orange', s=0.75, label="Wide bar")
             plt.scatter(plot_2[:,0], plot_2[:,1], c='gold', s=0.75, label="Nozzle")
             plt.scatter(plot_3[:,0], plot_3[:,1], c='c', s=0.75, label="Normal")
-            plt.scatter(plot_4[:,0], plot_4[:,1], c='grey', s=0.75, label="Pool")
+            plt.scatter(plot_4[:,0], plot_4[:,1], c='grey', s=0.75, label="Const. Pool")
             plt.scatter(plot_5[:,0], plot_5[:,1], c='navy', s=0.75, label="Oversized")
 
             t1 = plot_5[:,0]
@@ -511,12 +511,6 @@ def GCS_plotter(table_directory):
             attribute_points = plot_6_sorted[:,1]
             gaussian_sigma3 = gaussian_filter1d(attribute_points, 3,axis=0)
             gaussian_sigma6 = gaussian_filter1d(attribute_points, 10,axis=0)
-
-            #plot_6_sorted = plot_6[plot_6[:,0].argsort()]
-            #spline = UnivariateSpline(plot_6_sorted[:,0], plot_6_sorted[:,1])
-            #x_linespace = np.linspace(0,plot_6_sorted[:,0][-1],1000)
-            #spline_coeff = spline.get_coeffs()
-            #print("Spline coefficients are: %s" % spline_coeff)
 
             plt.scatter(dist_points, attribute_points,c='black',s=0.75,ls='--',label=("%s points" % i))
             plt.plot(dist_points,gaussian_sigma3,c='red',ls='-',label="Gaussian filter, sigma=3")

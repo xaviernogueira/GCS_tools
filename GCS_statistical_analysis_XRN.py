@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import scipy as sp
 import pandas as pd
 import GCS_analysis
@@ -144,6 +145,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
             ws.cell(row=row_num + 3, column=7).value = 'MAX'
             ws.cell(row=row_num + 4, column=7).value = 'MIN'
             ws.cell(row=row_num + 5, column=7).value = 'MEDIAN'
+            ws.cell(row_num + 6, column=7).value = '% Abundance:'
 
             for field in list_of_fields:
                 field_index = int(list_of_fields.index(field))
@@ -156,7 +158,10 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
 
                 if field_index <=2 and box_and_whisker == True:
                     box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
-            row_num += 7
+
+            ws.cell(row_num + 6, column=8).value = float(code_df.shape[0]/total_rows)*100 #Calculates % of XS with the given landform designation
+
+            row_num += 8
 
         wb.save(stage_stat_xl)
         print("Landform stats for stage %sft completed..." % stage)
@@ -181,6 +186,97 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
 
     print("All descriptive stats completed!")
 
+def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
+    list_of_lists = [[],[],[]] #W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
+    list_of_landforms = [[],[],[],[],[]] #-2,-1,0,1,2
+
+    for stage in range(1, max_stage + 1):
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+
+        wb = xl.load_workbook(stage_stat_xl)
+        ws = wb.active
+        list_of_lists[0].append(float(ws.cell(row=2, column=2).value))
+        list_of_lists[1].append(float(ws.cell(row=2, column=3).value))
+        list_of_lists[2].append(float(ws.cell(row=2, column=4).value))
+
+        for num in range(len(list_of_landforms)):
+            row_num = 8 + (8*num)
+            list_of_landforms[num].append(float(ws.cell(row=row_num, column=8).value))
+        wb.close()
+
+        directory = os.path.dirname(stage_stat_xl)
+        plot_dirs = directory + "\\Line_plots"
+        if not os.path.exists(plot_dirs):
+            os.makedirs(plot_dirs)
+
+    x_values = np.arange(start=1,stop=max_stage+1,step=1) #Setting up subplots showing W, Z, and C(W,Z) vs stage
+
+    ax1 = plt.subplot(311)
+    plt.plot(x_values, np.array(list_of_lists[0]),color='g')
+    plt.ylabel('Mean width (US ft)')
+    plt.ylim(0, np.max(np.array(list_of_lists[0])))
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax2 = plt.subplot(312, sharex=ax1)
+    plt.plot(x_values,np.array(list_of_lists[1]),color='m')
+    plt.ylabel('Mean detrended Z (US ft)')
+    plt.ylim(0, np.max(np.array(list_of_lists[1])))
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax3 = plt.subplot(313, sharex=ax1)
+    plt.plot(x_values,np.array(list_of_lists[2]),color='darkorange')
+    plt.ylabel('Mean C(Ws,Zs)')
+    plt.xlabel("Flood stage height (US ft)")
+    plt.ylim(np.min(np.array(list_of_lists[2])), np.max(np.array(list_of_lists[2])))
+    plt.setp(ax3.get_xticklabels(), fontsize=12)
+    ax3.xaxis.set_major_locator(MaxNLocator(nbins=40,integer=True))
+    plt.grid(True)
+
+    if save_plots == False:
+        plt.show()
+        plt.cla()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig(plot_dirs + "\\w_z_csz_stage_plot", dpi=300, bbox_inches='tight')
+        plt.cla()
+        print("W, Z, C(W,Z) plot vs flood stage saved @ %s" % plot_dirs)
+
+    x_values = np.arange(start=1, stop=max_stage + 1, step=1) #Setting up lineplots of landform abundance vs stage
+
+    list_of_land_labels = ['Oversized', 'Const. Pool', 'Normal', 'Wide Riffle', 'Nozzle']
+    list_of_land_colors = ['navy', 'orange', 'c', 'grey', 'gold']
+
+    fig, ax = plt.subplots()
+
+    for landform in list_of_landforms:
+        landform_index = list_of_landforms.index(landform)
+        ax.plot(x_values,np.array(landform),color=list_of_land_colors[landform_index],label=list_of_land_labels[landform_index])
+
+    ax.set_xlabel('Flood stage height (US ft)')
+    ax.set_ylabel('% Abundance')
+    ax.set_title("Landform abundance vs. flood stage height")
+    ax.legend()
+    ax.set_ylim(0,100)
+    ax.set_xlim(1,max_stage)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
+    plt.grid(True)
+
+    if save_plots == False:
+        plt.show()
+        plt.cla()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig(plot_dirs + "\\Landform_abundance", dpi=300, bbox_inches='tight')
+        plt.cla()
+        print("Landform abundace plot saved @ %s" % plot_dirs)
+
+
+
 
 #INPUTS#
 table_directory = r"C:\Users\xavierrn\Documents\RESEARCH\test_csv_folder" #A folder with stage csv files in it. Other files can occupy the directory as well.
@@ -191,7 +287,8 @@ stages_stats_xl_dict = out_list[1]
 max_stage = out_list[2]
 stats_table_location = out_list[3]
 
-stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=True)
+stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
+compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
 
 
 
