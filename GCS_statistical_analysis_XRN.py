@@ -100,7 +100,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         landform_dict = {-2:'Oversized',-1:'Constricted pool',0:'Normal',1:'Wide riffle',2:'Nozzle'}
         ws['F1'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
         ws.column_dimensions['G'].width = 15
-        ws.column_dimensions['A'].width = 11
+        ws.column_dimensions['A'].width = 16
 
         w_codes_list = [] #initiate lists of arrays to store data for multiple box plot
         z_codes_list = []
@@ -189,6 +189,7 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
 def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
     list_of_lists = [[],[],[]] #W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
     list_of_landforms = [[],[],[],[],[]] #-2,-1,0,1,2
+    wz_corr_lists = [[], [], [], [], []]  # Pearson correlation coefficients for Ws and Zs for each increasing flood stage for landforms [-2,-1,0,1,2]
 
     for stage in range(1, max_stage + 1):
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
@@ -200,8 +201,10 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         list_of_lists[2].append(float(ws.cell(row=2, column=4).value))
 
         for num in range(len(list_of_landforms)):
-            row_num = 8 + (8*num)
-            list_of_landforms[num].append(float(ws.cell(row=row_num, column=8).value))
+            row_num1 = 8 + (8*num)
+            row_num2 = 3 + (8*num)
+            list_of_landforms[num].append(float(ws.cell(row=row_num1, column=8).value))
+            wz_corr_lists[num].append(float(ws.cell(row_num2,column=10).value))
         wb.close()
 
         directory = os.path.dirname(stage_stat_xl)
@@ -275,6 +278,58 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         plt.cla()
         print("Landform abundace plot saved @ %s" % plot_dirs)
 
+    x_values = np.arange(start=1, stop=max_stage + 1, step=1)  # Setting up subplots with C(Ws,Zs) for each landform plotted vs floog stafe height
+
+    ax1 = plt.subplot(311)
+    plt.plot(x_values, np.array(wz_corr_lists[0]), color=list_of_land_colors[0])
+    plt.ylabel('Mean width (US ft)')
+    plt.ylim(0, np.max(np.array(list_of_lists[0])))
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax2 = plt.subplot(312, sharex=ax1)
+    plt.plot(x_values, np.array(wz_corr_lists[1]), color=list_of_land_colors[1])
+    plt.ylabel('Mean detrended Z (US ft)')
+    plt.ylim(0, np.max(np.array(list_of_lists[1])))
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax3 = plt.subplot(313, sharex=ax1)
+    plt.plot(x_values, np.array(wz_corr_lists[2]), color=list_of_land_colors[2])
+    plt.ylabel('Mean C(Ws,Zs)')
+    plt.xlabel("Flood stage height (US ft)")
+    plt.ylim(np.min(np.array(list_of_lists[2])), np.max(np.array(list_of_lists[2])))
+    plt.setp(ax3.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax4 = plt.subplot(314, sharex=ax1)
+    plt.plot(x_values, np.array(wz_corr_lists[3]), color=list_of_land_colors[3])
+    plt.ylabel('Mean C(Ws,Zs)')
+    plt.xlabel("Flood stage height (US ft)")
+    plt.ylim(np.min(np.array(wz_corr_lists[3])), np.max(np.array(list_of_lists[2])))
+    plt.setp(ax4.get_xticklabels(), visible=False)
+    plt.grid(True)
+
+    ax5 = plt.subplot(315, sharex=ax1)
+    plt.plot(x_values, np.array(wz_corr_lists[4]), color=list_of_land_colors[4])
+    plt.ylabel('Mean C(Ws,Zs)')
+    plt.xlabel("Flood stage height (US ft)")
+    plt.ylim(np.min(np.array(wz_corr_lists[4])), np.max(np.array(wz_corr_lists[4])))
+    plt.setp(ax5.get_xticklabels(), fontsize=12)
+    ax3.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
+    plt.grid(True)
+
+    if save_plots == False:
+        plt.show()
+        plt.cla()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig(plot_dirs + "\\Landform_cwz_plot", dpi=300, bbox_inches='tight')
+        plt.cla()
+        print("Landform C(Ws,Zs) vs. flood stage plot saved @ %s" % plot_dirs)
+
+
 
 
 
@@ -289,6 +344,7 @@ stats_table_location = out_list[3]
 
 stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
 compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
+
 
 
 
