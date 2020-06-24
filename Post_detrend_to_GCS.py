@@ -499,7 +499,7 @@ def GCS_plotter(table_directory):
             plt.minorticks_on()
             plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
             plt.legend(('Wide bar', 'Nozzle', 'Normal', 'Pool', 'Oversized'), loc=1)
-            #plt.show()
+
             fig = plt.gcf()
             fig.set_size_inches(12, 6)
             plt.savefig((figure_output + '\\Stage_%s_%s_plot' % (stage, i)), dpi=300, bbox_inches='tight')

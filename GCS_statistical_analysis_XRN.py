@@ -328,9 +328,9 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_df = stage_df.sort_values(by=['dist_down'])
         stage_df = stage_df.reset_index(drop=True)
-        ws = stage_df['W_s'] #formerly s1, took away ['ALL'] before field name
-        zs = stage_df['Z_s'] #Formerly s2
-        cwz = stage_df['W_s_Z_s'] #Formarly gcs
+        ws = stage_df['W_s']
+        zs = stage_df['Z_s']
+        cwz = stage_df['W_s_Z_s']
         dist_down = stage_df['dist_down']
         spacing = abs(dist_down[1] - dist_down[0])
         maxlags = int(len(dist_down) / 2)
@@ -456,12 +456,12 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
     print("Autocorrelation heat plot created @ %s" % plot_dirs)
 
     # Power spectral density plotting
-    x2 = []
-    y2 = []
-    z2 = []
-    lower_whites = []
+    x2 = [] #Stores flood stage heights
+    y2 = [] #Stores frequencies
+    z2 = [] #Stores power spectral density for a given frequency at a given stage height
+    lower_whites = [] 
     upper_whites = []
-    corr_list = []
+    corr_list = [] #Stores C(Ws,Zs) for each stage
     qs = [float(stage) for stage in range(1,max_stage+1)]
     for stage in range(1, max_stage + 1):
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
@@ -544,7 +544,7 @@ max_stage = out_list[2]
 stats_table_location = out_list[3]
 
 stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
-#compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
+compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
 autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots=True)
 
 #Get power spectral density,autocorrelation, and runs test functions going
