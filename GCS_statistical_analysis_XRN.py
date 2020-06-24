@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from matplotlib.lines import Line2D
+import matplotlib.tri as tri
 import scipy as sp
 import pandas as pd
 import GCS_analysis
@@ -10,6 +12,10 @@ from openpyxl import Workbook
 import os
 from os import listdir
 from os.path import isfile, join
+import scipy.signal as sig
+import file_functions
+from file_functions import *
+
 
 #This py file updates functions in the GCS_analysis for Python 3#
 def analysis_setup(table_directory):
@@ -278,45 +284,23 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         plt.cla()
         print("Landform abundace plot saved @ %s" % plot_dirs)
 
-    x_values = np.arange(start=1, stop=max_stage + 1, step=1)  # Setting up subplots with C(Ws,Zs) for each landform plotted vs floog stafe height
+    x_values = np.arange(start=1, stop=max_stage + 1, step=1)  # Setting up mean C(Ws,Zs) for each landform plotted vs flood stage height
 
-    ax1 = plt.subplot(311)
-    plt.plot(x_values, np.array(wz_corr_lists[0]), color=list_of_land_colors[0])
-    plt.ylabel('Mean width (US ft)')
-    plt.ylim(0, np.max(np.array(list_of_lists[0])))
-    plt.setp(ax1.get_xticklabels(), visible=False)
-    plt.grid(True)
+    fig, ax = plt.subplots()
 
-    ax2 = plt.subplot(312, sharex=ax1)
-    plt.plot(x_values, np.array(wz_corr_lists[1]), color=list_of_land_colors[1])
-    plt.ylabel('Mean detrended Z (US ft)')
-    plt.ylim(0, np.max(np.array(list_of_lists[1])))
-    plt.setp(ax2.get_xticklabels(), visible=False)
-    plt.grid(True)
+    for landform in wz_corr_lists:
+        landform_index = wz_corr_lists.index(landform)
+        ax.plot(x_values, np.array(landform), color=list_of_land_colors[landform_index],
+                label=list_of_land_labels[landform_index])
 
-    ax3 = plt.subplot(313, sharex=ax1)
-    plt.plot(x_values, np.array(wz_corr_lists[2]), color=list_of_land_colors[2])
-    plt.ylabel('Mean C(Ws,Zs)')
-    plt.xlabel("Flood stage height (US ft)")
-    plt.ylim(np.min(np.array(list_of_lists[2])), np.max(np.array(list_of_lists[2])))
-    plt.setp(ax3.get_xticklabels(), visible=False)
-    plt.grid(True)
-
-    ax4 = plt.subplot(314, sharex=ax1)
-    plt.plot(x_values, np.array(wz_corr_lists[3]), color=list_of_land_colors[3])
-    plt.ylabel('Mean C(Ws,Zs)')
-    plt.xlabel("Flood stage height (US ft)")
-    plt.ylim(np.min(np.array(wz_corr_lists[3])), np.max(np.array(list_of_lists[2])))
-    plt.setp(ax4.get_xticklabels(), visible=False)
-    plt.grid(True)
-
-    ax5 = plt.subplot(315, sharex=ax1)
-    plt.plot(x_values, np.array(wz_corr_lists[4]), color=list_of_land_colors[4])
-    plt.ylabel('Mean C(Ws,Zs)')
-    plt.xlabel("Flood stage height (US ft)")
-    plt.ylim(np.min(np.array(wz_corr_lists[4])), np.max(np.array(wz_corr_lists[4])))
-    plt.setp(ax5.get_xticklabels(), fontsize=12)
-    ax3.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
+    ax.set_xlabel('Flood stage height (US ft)')
+    ax.set_ylabel('C(Ws,Zs)')
+    ax.set_title("Landform mean C(Ws,Zs) vs. flood stage height")
+    ax.legend()
+    #ax.set_ylim(0, 100)
+    ax.set_xlim(1, max_stage)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
     plt.grid(True)
 
     if save_plots == False:
@@ -329,8 +313,225 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         plt.cla()
         print("Landform C(Ws,Zs) vs. flood stage plot saved @ %s" % plot_dirs)
 
+def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots=False):
+    #Set up autocorrelation subplots
+    plt.rcParams.update({'figure.max_open_warning': 0})
 
+    for stage in range(1,max_stage+1):
+        fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+        directory = os.path.dirname(stage_stat_xl)  # Define folder for autocorrlation spot
+        plot_dirs = directory + "\\Autocorrelation_plots"
+        if not os.path.exists(plot_dirs):
+            os.makedirs(plot_dirs)
 
+        stage_df = stages_dict['Stage_%sft' % stage]
+        stage_df = stage_df.sort_values(by=['dist_down'])
+        stage_df = stage_df.reset_index(drop=True)
+        ws = stage_df['W_s'] #formerly s1, took away ['ALL'] before field name
+        zs = stage_df['Z_s'] #Formerly s2
+        cwz = stage_df['W_s_Z_s'] #Formarly gcs
+        dist_down = stage_df['dist_down']
+        spacing = abs(dist_down[1] - dist_down[0])
+        maxlags = int(len(dist_down) / 2)
+        lags, lower_white, upper_white = white_noise_acf_ci(ws, maxlags=maxlags)
+
+        lags, ar1_acorrs, lower_red, upper_red = ar1_acorr(ws, maxlags=maxlags)
+        ax[0].plot(*cox_acorr(ws, maxlags=maxlags))
+        ax[0].plot(lags, ar1_acorrs, color='red')
+        ax[0].plot(lags, lower_red, '--', color='salmon')
+        ax[0].plot(lags, upper_red, '--', color='salmon')
+        ax[0].plot(lags, lower_white, '--', color='grey')
+        ax[0].plot(lags, upper_white, '--', color='grey')
+        ax[0].set_ylabel(r'Ws' + ' Autocorrelation')
+
+        lags, ar1_acorrs, lower_red, upper_red = ar1_acorr(zs, maxlags=maxlags)
+        ax[1].plot(*cox_acorr(zs, maxlags=maxlags))
+        ax[1].plot(lags, ar1_acorrs, color='red')
+        ax[1].plot(lags, lower_red, '--', color='salmon')
+        ax[1].plot(lags, upper_red, '--', color='salmon')
+        ax[1].plot(lags, lower_white, '--', color='grey')
+        ax[1].plot(lags, upper_white, '--', color='grey')
+        ax[1].set_ylabel(r'Zs Autocorrelation')
+
+        lags, ar1_acorrs, lower_red, upper_red = ar1_acorr(cwz, maxlags=maxlags)
+        ax[2].plot(*cox_acorr(cwz, maxlags=maxlags))
+        ax[2].plot(lags, ar1_acorrs, color='red')
+        ax[2].plot(lags, lower_red, '--', color='salmon')
+        ax[2].plot(lags, upper_red, '--', color='salmon')
+        ax[2].plot(lags, lower_white, '--', color='grey')
+        ax[2].plot(lags, upper_white, '--', color='grey')
+        ax[2].set_ylabel('C(Ws,Zs) Autocorrelation')
+
+        ax[0].set_title('Stage %sft autocorrelation' % stage)
+        ax[2].set_xlabel('Lag (US ft)')
+        for j in range(3):
+            ax[j].grid()
+            ax[j].set_xlim(0, maxlags)
+            ticks = map(int, ax[j].get_xticks() * spacing)
+            ax[j].set_xticklabels(ticks)
+            fig.set_size_inches(12, 6)
+            plt.grid(True,which='both')
+        if save_plots == False:
+            plt.show()
+            plt.cla()
+        else:
+            fig = plt.gcf()
+            fig.set_size_inches(12, 6)
+            plt.savefig(plot_dirs + ("\\Autocorr_plot_stage%sft" % stage), dpi=300, bbox_inches='tight')
+            plt.cla()
+    print("Autocorrelation plots created for each stage @ %s" % plot_dirs)
+
+# Autocorrelation Heat Map plottinh
+    x = []
+    y = []
+    z = []
+    lower_whites = []
+    upper_whites = []
+    for stage in range(1, max_stage + 1):
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+        directory = os.path.dirname(stage_stat_xl)  # Define folder for autocorrlation spot
+        plot_dirs = directory + "\\Autocorrelation_plots"
+        if not os.path.exists(plot_dirs):
+            os.makedirs(plot_dirs)
+
+        stage_df = stages_dict['Stage_%sft' % stage]
+        stage_df = stage_df.sort_values(by=['dist_down'])
+        stage_df = stage_df.reset_index(drop=True)
+        ws = stage_df['W_s']
+        zs = stage_df['Z_s']
+        cwz = stage_df['W_s_Z_s']
+        dist_down = stage_df['dist_down']
+        spacing = abs(dist_down[1] - dist_down[0])
+        maxlags = int(len(dist_down) / 2)
+        lags, lower_white, upper_white = white_noise_acf_ci(cwz, maxlags=maxlags)
+        lags, acorrs = cox_acorr(cwz, maxlags=maxlags)
+        # only include positive autocorrelations
+        for j, acorr_val in enumerate(acorrs):
+            if acorr_val > 0:
+                x.append('%s' % stage)
+                y.append(lags[j])
+                z.append(acorrs[j])
+                lower_whites.append(lower_white[j])
+                upper_whites.append(upper_white[j])
+
+    triang = tri.Triangulation(x, y)
+    # mask where acorr (z) is below the white noise threshold at that lag (y)
+    mask = []
+    for triangle in triang.triangles:
+        z_vals = [z[vertex] for vertex in triangle]
+        lws = [lower_whites[vertex] for vertex in triangle]
+        uws = [upper_whites[vertex] for vertex in triangle]
+        cond_1 = all(z_val > lw for z_val, lw in zip(z_vals, lws))
+        cond_2 = all(z_val < uw for z_val, uw in zip(z_vals, uws))
+        if cond_1 and cond_2:
+            mask_val = 1
+        else:
+            mask_val = 0
+        mask.append(mask_val)
+    triang.set_mask(mask)
+
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches(12, 6)
+    tpc = ax.tripcolor(triang, z, cmap='jet')
+    ax.set(xlabel='Flood stage height (US ft)', ylabel='Lag (US ft)')
+    qlabels = range(1, max_stage + 1)
+    xticks = [1*q for q in qlabels]
+    ax.set_xticks(xticks)
+    xticklabels = [q for q in qlabels]
+    ax.set_xticklabels(xticklabels)
+    plt.xticks(rotation=-45)
+    yticklabels = map(int, ax.get_yticks() * spacing)
+    ax.set_yticklabels(yticklabels)
+    fig.colorbar(tpc)
+    plt.grid(True, which='both')
+    if save_plots == False:
+        plt.show()
+        plt.cla()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig(plot_dirs + ("\\Autocorr_heat_plot"), dpi=300, bbox_inches='tight')
+        plt.cla()
+    print("Autocorrelation heat plot created @ %s" % plot_dirs)
+
+    # Power spectral density plotting
+    x2 = []
+    y2 = []
+    z2 = []
+    lower_whites = []
+    upper_whites = []
+    corr_list = []
+    qs = [float(stage) for stage in range(1,max_stage+1)]
+    for stage in range(1, max_stage + 1):
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+        directory = os.path.dirname(stage_stat_xl)
+        plot_dirs = directory + "\\Autocorrelation_plots"
+        if not os.path.exists(plot_dirs):
+            os.makedirs(plot_dirs)
+
+        stage_df = stages_dict['Stage_%sft' % stage]
+        stage_df = stage_df.sort_values(by=['dist_down'])
+        stage_df = stage_df.reset_index(drop=True)
+        ws = stage_df['W_s']
+        zs = stage_df['Z_s']
+        cwz = stage_df['W_s_Z_s']
+        dist_down = stage_df['dist_down']
+
+        corr = np.corrcoef(ws, zs)[0][1]
+        corr_list.append(corr)
+        spacing = abs(dist_down[1] - dist_down[0])
+        frequencies, psd = sig.periodogram(cwz, 1.0 / 3, window=sig.get_window('hamming', len(cwz)))
+        index = stage - 1
+
+        maxlags = int(len(dist_down) / 2)
+        lags, lower_white, upper_white = white_noise_acf_ci(cwz, maxlags=maxlags)
+        for j, psd_val in enumerate(psd):
+            x2.append(qs[index])
+            y2.append(frequencies[j])
+            z2.append(psd[j])
+            lower_whites.append(lower_white[j])
+            upper_whites.append(upper_white[j])
+    std_z = [z_val * 1.0 / np.std(z2) for z_val in z2]
+    qs, corr_list = zip(*sorted(zip(qs, corr_list)))
+    triang = tri.Triangulation(x2, y2)
+
+    mask = []
+    for triangle in triang.triangles:
+        z_vals = [z2[vertex] for vertex in triangle]
+        lws = [lower_whites[vertex] for vertex in triangle]
+        uws = [upper_whites[vertex] for vertex in triangle]
+        cond_1 = all(z_val > lw for z_val, lw in zip(z_vals, lws))
+        cond_2 = all(z_val < uw for z_val, uw in zip(z_vals, uws))
+        if cond_1 and cond_2:
+            mask_val = 1
+        else:
+            mask_val = 0
+        mask.append(mask_val)
+    triang.set_mask(mask)
+
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches(12, 6)
+    tpc = ax.tripcolor(triang, std_z, cmap='jet')
+    ax.set(xlabel='Flood stage height (US ft)', ylabel='Spatial Frequency (cycles/ft)')
+    qlabels = range(1,max_stage+1)  # show less discharge ticks to make plot less cluttered
+    xticks = [1*q for q in qlabels]
+    ax.set_xticks(xticks)
+    xticklabels = [('%s' % q) for q in qlabels]
+    ax.set_xticklabels(xticklabels)
+    plt.xticks(rotation=-45)
+    ax.set_ylim(min(y2), 0.01)
+    fig.colorbar(tpc)
+    plt.grid(True, which='both')
+    if save_plots == False:
+        plt.show()
+        plt.cla()
+    else:
+        fig = plt.gcf()
+        fig.set_size_inches(12, 6)
+        plt.savefig(plot_dirs + ("\\PSD_plot.png"), dpi=300, bbox_inches='tight')
+        plt.cla()
+    print("Power spectral density plot created @ %s" % plot_dirs)
 
 
 #INPUTS#
@@ -343,7 +544,10 @@ max_stage = out_list[2]
 stats_table_location = out_list[3]
 
 stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
-compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
+#compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
+autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots=True)
+
+#Get power spectral density,autocorrelation, and runs test functions going
 
 
 
