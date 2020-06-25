@@ -141,7 +141,6 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
             ws.cell(row=7, column=(2 + index)).value = percent_above_half
             ws.cell(row=8, column=(2 + index)).value = percent_above_1
 
-
         row_num = 2
         for code in list_of_codes: #Calculating same descriptive stats for each landform, each table is spaced 7 cells apart
             code_df = stage_df.loc[stage_df['code'] == code, ['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s']]
@@ -153,17 +152,36 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
             ws.cell(row=row_num + 5, column=7).value = 'MEDIAN'
             ws.cell(row_num + 6, column=7).value = '% Abundance:'
 
-            for field in list_of_fields:
-                field_index = int(list_of_fields.index(field))
-                ws.cell(row=row_num,column=(8+field_index)).value = str(field)
-                ws.cell(row=row_num+1,column=(8+field_index)).value = (np.mean(code_df.loc[:, field].to_numpy()))
-                ws.cell(row=row_num+2,column=(8+field_index)).value = (np.std(code_df.loc[:, field].to_numpy()))
-                ws.cell(row=row_num+3,column=(8+field_index)).value = (np.max(code_df.loc[:, field].to_numpy()))
-                ws.cell(row=row_num+4,column=(8+field_index)).value = (np.min(code_df.loc[:, field].to_numpy()))
-                ws.cell(row=row_num+5,column=(8+field_index)).value = (np.median(code_df.loc[:, field].to_numpy()))
+            if len(code_df.index) == 0:
+                for field in list_of_fields:
+                    field_index = int(list_of_fields.index(field))
+                    ws.cell(row=row_num, column=(8 + field_index)).value = str(field)
+                    ws.cell(row=row_num + 1, column=(8 + field_index)).value = 0
+                    ws.cell(row=row_num + 2, column=(8 + field_index)).value = 0
+                    ws.cell(row=row_num + 3, column=(8 + field_index)).value = 0
+                    ws.cell(row=row_num + 4, column=(8 + field_index)).value = 0
+                    ws.cell(row=row_num + 5, column=(8 + field_index)).value = 0
 
-                if field_index <=2 and box_and_whisker == True:
-                    box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
+                    if field_index <= 2 and box_and_whisker == True:
+                        box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
+
+            else:
+                for field in list_of_fields:
+                    field_index = int(list_of_fields.index(field))
+                    ws.cell(row=row_num, column=(8 + field_index)).value = str(field)
+                    ws.cell(row=row_num + 1, column=(8 + field_index)).value = (
+                        np.mean(code_df.loc[:, field].to_numpy()))
+                    ws.cell(row=row_num + 2, column=(8 + field_index)).value = (
+                        np.std(code_df.loc[:, field].to_numpy()))
+                    ws.cell(row=row_num + 3, column=(8 + field_index)).value = (
+                        np.max(code_df.loc[:, field].to_numpy()))
+                    ws.cell(row=row_num + 4, column=(8 + field_index)).value = (
+                        np.min(code_df.loc[:, field].to_numpy()))
+                    ws.cell(row=row_num + 5, column=(8 + field_index)).value = (
+                        np.median(code_df.loc[:, field].to_numpy()))
+
+                    if field_index <= 2 and box_and_whisker == True:
+                        box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
 
             ws.cell(row_num + 6, column=8).value = float(code_df.shape[0]/total_rows)*100 #Calculates % of XS with the given landform designation
 
@@ -459,7 +477,7 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
     x2 = [] #Stores flood stage heights
     y2 = [] #Stores frequencies
     z2 = [] #Stores power spectral density for a given frequency at a given stage height
-    lower_whites = [] 
+    lower_whites = []
     upper_whites = []
     corr_list = [] #Stores C(Ws,Zs) for each stage
     qs = [float(stage) for stage in range(1,max_stage+1)]
@@ -535,7 +553,7 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
 
 
 #INPUTS#
-table_directory = r"C:\Users\xavierrn\Documents\RESEARCH\test_csv_folder" #A folder with stage csv files in it. Other files can occupy the directory as well.
+table_directory = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\LINEAR_DETREND\gcs_ready_tables" #A folder with stage csv files in it. Other files can occupy the directory as well.
 ##
 out_list = analysis_setup(table_directory)
 stages_dict = out_list[0]
@@ -543,11 +561,11 @@ stages_stats_xl_dict = out_list[1]
 max_stage = out_list[2]
 stats_table_location = out_list[3]
 
-stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False)
+stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=True)
 compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
 autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots=True)
 
-#Get power spectral density,autocorrelation, and runs test functions going
+#Get runs test going
 
 
 
