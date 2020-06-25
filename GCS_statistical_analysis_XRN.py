@@ -553,7 +553,10 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
 
 
 #INPUTS#
-table_directory = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17569535\LINEAR_DETREND\gcs_ready_tables" #A folder with stage csv files in it. Other files can occupy the directory as well.
+sc_class = 2
+comid = 17609015
+
+table_directory = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\gcs_ready_tables" % (sc_class,comid)) #A folder with stage csv files in it. Other files can occupy the directory as well.
 ##
 out_list = analysis_setup(table_directory)
 stages_dict = out_list[0]

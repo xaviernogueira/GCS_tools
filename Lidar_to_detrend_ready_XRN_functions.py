@@ -190,9 +190,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17585738]
-#[17563722,17594703,17570395,17585756,17611423,17610905,17611427]
-SCO = 3
+comids = [17610257]
+SCO = 2
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
     direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO, comid2)
@@ -219,10 +218,10 @@ for comid2 in comids:
     print("Imports ready, processing commencing...")
 
     ######## CALL FUNCTIONS ########
-    #lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
+    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
-    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
+    #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=True)
 
 
 
