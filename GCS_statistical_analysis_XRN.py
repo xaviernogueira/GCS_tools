@@ -555,18 +555,23 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
 #INPUTS#
 sc_class = 2
 comid = 17609015
+process_on=False
 
-table_directory = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\gcs_ready_tables" % (sc_class,comid)) #A folder with stage csv files in it. Other files can occupy the directory as well.
-##
-out_list = analysis_setup(table_directory)
-stages_dict = out_list[0]
-stages_stats_xl_dict = out_list[1]
-max_stage = out_list[2]
-stats_table_location = out_list[3]
+if process_on == True:
+    table_directory = (
+                r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\gcs_ready_tables" % (
+        sc_class, comid))  # A folder with stage csv files in it. Other files can occupy the directory as well.
+    ##
+    out_list = analysis_setup(table_directory)
+    stages_dict = out_list[0]
+    stages_stats_xl_dict = out_list[1]
+    max_stage = out_list[2]
+    stats_table_location = out_list[3]
 
-stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=True)
-compare_flows(stages_stats_xl_dict, max_stage,save_plots=True)
-autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots=True)
+    stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
+    compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+    autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+
 
 #Get runs test going
 

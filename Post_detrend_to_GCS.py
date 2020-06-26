@@ -26,6 +26,7 @@ import scipy
 from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import UnivariateSpline
+import GCS_statistical_analysis_XRN as stats
 
 
 def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[], step=1):
@@ -558,6 +559,16 @@ for comid in comid_list:
     tables = export_list[0]
     main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
     GCS_plotter(table_directory=table_location)
+
+    out_list = stats.analysis_setup(table_directory=table_location)
+    stages_dict = out_list[0]
+    stages_stats_xl_dict = out_list[1]
+    max_stage = out_list[2]
+    stats_table_location = out_list[3]
+
+    stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
+    stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+    stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
 
