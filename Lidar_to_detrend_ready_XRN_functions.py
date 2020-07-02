@@ -61,7 +61,13 @@ def define_ground_polygon(lidar_footprint, NAIP_imagery_folder, centerline_buff,
     COMMON ISSUES: Spatial extent file may cause issues, is so just use the NAIP as the extent object after projection'''
     arcpy.env.extent = lidar_footprint
     NAIP_imagery = [f for f in listdir(NAIP_imagery_folder) if isfile(join(NAIP_imagery_folder, f))] #Find NAIP imagery in folder
-    NAIP_imagery = (NAIP_imagery_folder + "\\%s" % NAIP_imagery[0])
+
+
+    if len(NAIP_imagery) > 1:
+        add_to_mosaic = [NAIP_imagery_folder + "\\" + f for f in NAIP_imagery]
+        NAIP_imagery = arcpy.MosaicToNewRaster_management(add_to_mosaic,output_location=direct,raster_dataset_name_with_extension=("NAIP_mos.tif"),number_of_bands=4)
+    else:
+        NAIP_imagery = (NAIP_imagery_folder + "\\%s" % NAIP_imagery[0])
 
     try:
         NAIP_imagery = arcpy.ProjectRaster_management(NAIP_imagery, direct + "\\NAIP_prj.tif", spatial_ref) #project the NAIP data and extract bands 1(red) and 4(NIR)
@@ -123,7 +129,7 @@ def lidar_to_raster(las_folder, spatial_ref, las_dataset_name, ft_spatial_ref, m
     return raster_name
 
 
-def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_spacing=3, centerline_verified=False):
+def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_spacing=3, use_filtered_ras=False, centerline_verified=False):
     '''This function takes the Lidar raster, creates a least-cost thalweg centerline from a smoothed raster. Station points are
     generated along the centerline at defined spacing (1/20th of channel width is a starting point) which are given the values of the lidar raster.
 
@@ -179,6 +185,9 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         station_points = arcpy.MultipartToSinglepart_management(station_points, (direct +"\\raw_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)))
         station_points = arcpy.AddXY_management(station_points)
         station_points = arcpy.Sort_management(station_points, out_dataset=(direct +"\\XYZ_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)), sort_field=[["LOCATION", "Ascending"]])
+
+        if use_filtered_ras==True:
+            raster_name = (raster_folder + "\\filt_ras.tif")
         elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
         station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
         elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
@@ -190,7 +199,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17610235]
+comids = [17607455]
 SCO = 3
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
@@ -219,9 +228,9 @@ for comid2 in comids:
 
     ######## CALL FUNCTIONS ########
     #lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
-    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, centerline_verified=False)
+    #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=1, use_filtered_ras=False, centerline_verified=True)
 
 
 

@@ -532,7 +532,7 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17595173]
+comid_list = [17585738,17586610,17595173]
 SCO_number = 3
 
 for comid in comid_list:
@@ -552,12 +552,12 @@ for comid in comid_list:
 
     #Call functions:
     #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-    width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[3,10], XS_lengths=[300,550],ft_smoothing_tolerance=75, clip_poly='')
-    z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[3,10], XS_lengths=[300,550],ft_smoothing_tolerance=75, clip_poly='')
+    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
     export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-    tables = export_list[0]
-    main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+    #tables = export_list[0]
+    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
     GCS_plotter(table_directory=table_location)
 
     out_list = stats.analysis_setup(table_directory=table_location)
