@@ -9,24 +9,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 import csv
 
-###### INPUTS ######
-# excel file containing xyz data for station points
-comid = 17569841
-SCO_number = 5
-
-direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 2+spaced to match code!
-centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
-DEM = direct + '\\las_files\\ls_nodt.tif'
-process_footprint = direct + '\\las_footprint.shp'
-detrend_workplace = direct + '\\LINEAR_DETREND'
-spatial_ref = arcpy.Describe(process_footprint).spatialReference
-listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
-######
-#Fill lists with necessary data
-
-
-
 
 def prep_xl_file(xyz_table_location, listofcolumn):
     #Import xl file
@@ -538,19 +520,44 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on=True
-breakpoints = []
-transform_value = () #Leave at 0.0
+detrend_or_diagnostic=False #False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+
+###### INPUTS ######
+# excel file containing xyz data for station points
+comid = 17610541
+SCO_number = 5
+
+direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 2+spaced to match code!
+centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
+DEM = direct + '\\las_files\\ls_nodt.tif'
+process_footprint = direct + '\\las_footprint.shp'
+detrend_workplace = direct + '\\LINEAR_DETREND'
+spatial_ref = arcpy.Describe(process_footprint).spatialReference
+listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
+######
+
+breakpoints = [0]
+transform_value = (0.0) #Leave at 0.0
 chosen_fit_index = [] #Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
-save_location = '' #direct #Leave empty to see plots, insert directory to save plots
+save_location = direct #direct #Leave empty to see plots, insert directory to save plots
 
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
-    diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
-    #fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
-    #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
-    #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location=save_location, transform=transform_value)
-    #make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location=save_location)
-    #detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=breakpoints)
+    if detrend_or_diagnostic==False:
+        save_location=''
+        diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
+        fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
+        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0,
+                             location=save_location, transform=transform_value)
+    else:
+        save_location=direct
+        fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints,
+                              transform=transform_value, chosen_fit_index=chosen_fit_index)
+        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0,
+                             location=save_location, transform=transform_value)
+        make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location=save_location)
+        detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=breakpoints)

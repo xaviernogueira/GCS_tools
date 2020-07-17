@@ -199,7 +199,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17569841]
+comids = [17563602,17610541,17610721,17610671]
 SCO = 5
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
