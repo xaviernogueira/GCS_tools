@@ -11,9 +11,9 @@ import csv
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17607455
+comid = 17569841
+SCO_number = 5
 
-SCO_number = 3
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 2+spaced to match code!
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
@@ -139,7 +139,7 @@ def quadratic_fit(location_np, location, z_np, ws):
 
     print("Excel file ready for Arc processing!")
 
-def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform=0):
+def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform=0, chosen_fit_index=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
     if xyz_table_location[-3:] == 'csv':
         xyz_table_location = (xyz_table_location[:-3] + "xlsx")
@@ -217,11 +217,14 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
         # Add fitted z's into a list
         print(list_of_lengths)
         i = 0
+
         while i < len(list_of_lengths):
-            print(i)
-            print(list_of_lengths[i])
+            if len(chosen_fit_index) == 0:
+                index = i
+            else:
+                index = int(chosen_fit_index[0])
             for j in range(list_of_lengths[i]):
-                z_fit_list.append((split_location_list[i][j] * fit_params[i][0] + fit_params[i][1]) + float(transform))
+                z_fit_list.append((split_location_list[i][j] * fit_params[index][0] + fit_params[index][1]) + float(transform))
             i += 1
 
         if len(z_fit_list) == len(z):
@@ -534,16 +537,18 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on=False
+process_on=True
 breakpoints = []
-transform_value = (0)
+transform_value = () #Leave at 0.0
+chosen_fit_index = [] #Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
 save_location = '' #direct #Leave empty to see plots, insert directory to save plots
+
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
     z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
     diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
-    #fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value)
+    #fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
     #moving_window_linear_fit(location=loc, z=z, xyz_table_location=xyz_table, window_size=500)
 
     #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0, location=save_location, transform=transform_value)

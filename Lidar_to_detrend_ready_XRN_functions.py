@@ -189,7 +189,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         if use_filtered_ras==True:
             raster_name = (raster_folder + "\\filt_ras.tif")
         elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
-        station_points = arcpy.JoinField_management(station_points, in_field="FID", join_table=elevation_table, join_field="OID", fields=["Value"])
+        station_points = arcpy.JoinField_management(station_points, in_field="ORIG_FID", join_table=elevation_table, join_field="SrcID_Feat", fields=["Value"])
         elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
 
         print("Station points shapefile at: " + str(station_points))
@@ -199,8 +199,8 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17607455]
-SCO = 3
+comids = [17569841]
+SCO = 5
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
     direct = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO, comid2)
@@ -228,9 +228,9 @@ for comid2 in comids:
 
     ######## CALL FUNCTIONS ########
     #lidar_footptint(direct=direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
-    #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=1, use_filtered_ras=False, centerline_verified=True)
+    detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, use_filtered_ras=False, centerline_verified=True)
 
 
 

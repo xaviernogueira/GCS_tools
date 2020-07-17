@@ -532,8 +532,10 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17585738,17586610,17595173]
-SCO_number = 3
+comid_list = [17611423]
+SCO_number = 4
+make_wetted_poly = False
+process_GCS = True
 
 for comid in comid_list:
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -544,31 +546,35 @@ for comid in comid_list:
     spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
     station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
     table_location = out_folder + "\\gcs_ready_tables"
-    channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
+    channel_clip_poly = ''
+        #out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
 
     arcpy.env.workplace = direct #Set arcpy environment
     arcpy.env.extent = detrended_dem_location
     arcpy.env.overwriteOutput = True
 
     #Call functions:
-    #detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
-    #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[3,10], XS_lengths=[300,550],ft_smoothing_tolerance=75, clip_poly='')
-    #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+    if make_wetted_poly == True:
+        detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
-    export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-    #tables = export_list[0]
-    #main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-    GCS_plotter(table_directory=table_location)
+    if process_GCS == True:
+        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[6], centerlines=[1,2,3,5,11,15], XS_lengths=[200,450,550,900,1200,1500],ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
+        z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-    out_list = stats.analysis_setup(table_directory=table_location)
-    stages_dict = out_list[0]
-    stages_stats_xl_dict = out_list[1]
-    max_stage = out_list[2]
-    stats_table_location = out_list[3]
+        export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+        tables = export_list[0]
+        main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+        GCS_plotter(table_directory=table_location)
 
-    stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
-    stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
-    stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+        out_list = stats.analysis_setup(table_directory=table_location)
+        stages_dict = out_list[0]
+        stages_stats_xl_dict = out_list[1]
+        max_stage = out_list[2]
+        stats_table_location = out_list[3]
+
+        stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
+        stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+        stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
 
