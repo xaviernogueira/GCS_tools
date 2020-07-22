@@ -456,7 +456,7 @@ def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
         plt.savefig((location + '\\Stage_%s_quadratic_detrend_plot' % stage), dpi=300, bbox_inches='tight')
         plt.cla()
 
-def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0, ymax=0, location='', transform=0):
+def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xmin=0, xmax=0, ymin=0, ymax=0, location='', transform=0):
     x_plot = location_np
     y1_plot = z_np
     y2_plots = []
@@ -476,8 +476,14 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0,
         plt.ylim(None,ymax)
     if ymax != 0 and ymin != 0:
         plt.ylim(ymin,ymax)
-    if xlim != 0:
-        plt.xlim(None,xlim)
+
+    if xmin != 0 and xmax == 0:
+        plt.xlim(xmin,None)
+    if xmax != 0 and xmin ==0:
+        plt.xlim(None,xmax)
+    if xmax != 0 and xmin != 0:
+        plt.xlim(xmin,xmax)
+
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -491,7 +497,7 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xlim=0, ymin=0,
         plt.savefig((location + '\\Stage_%sft_linear_detrend_plot' % stage), dpi=300, bbox_inches='tight')
         plt.cla()
 
-def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, location=''):
+def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0, location=''):
     '''Plot residuals across longitudinal profile, show R^2. Inputs are a numpy array of location, a list of residuals, and a float for R-squared'''
     x_plot = location_np
     y_plot = np.array(residual)
@@ -504,8 +510,14 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
     plt.ylabel("Residual")
     plt.title("Residuals: R^2 = %.4f" % R_squared)
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
-    if xlim != 0 :
-        plt.xlim(0,xlim)
+
+    if xmin != 0 and xmax == 0:
+        plt.xlim(xmin,None)
+    if xmax != 0 and xmin ==0:
+        plt.xlim(None,xmax)
+    if xmax != 0 and xmin != 0:
+        plt.xlim(xmin,xmax)
+
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 
@@ -519,13 +531,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xlim=0, locati
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on=True
-detrend_or_diagnostic=False #False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+process_on=False
+detrend_or_diagnostic=True #False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17610541
-SCO_number = 5
+comid = 17607455
+SCO_number = 3
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 2+spaced to match code!
@@ -537,10 +549,11 @@ spatial_ref = arcpy.Describe(process_footprint).spatialReference
 listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
 ######
 
-breakpoints = [0]
+breakpoints = [1300,1700,4600,5500]
 transform_value = (0.0) #Leave at 0.0
+xlimits=[1420,5000] #[xmin,xmax] default is 0
+ylimits=[540,590] #[ymin,ymax] default is 0
 chosen_fit_index = [] #Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
-save_location = direct #direct #Leave empty to see plots, insert directory to save plots
 
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
@@ -551,13 +564,13 @@ if process_on == True:
         save_location=''
         diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
         fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
-        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0,
+        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],
                              location=save_location, transform=transform_value)
     else:
         save_location=direct
         fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints,
                               transform=transform_value, chosen_fit_index=chosen_fit_index)
-        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xlim=0, ymin=0, ymax=0,
+        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],
                              location=save_location, transform=transform_value)
-        make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xlim=0, location=save_location)
+        make_residual_plot(location_np=loc, residual=fit_list[2], R_squared=fit_list[3], stage=0, xmin=xlimits[0], xmax=xlimits[1], location=save_location)
         detrend_that_raster(detrend_location=detrend_workplace, fit_z_xl_file=xyz_table, original_dem=DEM, stage=0, list_of_breakpoints=breakpoints)
