@@ -213,7 +213,7 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
                         shapefile_location + "\\clipped_station_lines1_%s" % file[-8:]))
 
             if clip_poly != '':
-                clipped_lines = arcpy.Clip_analysis(clipped_lines, file_location, out_feature_class=(shapefile_location + "\\clipped_station_lines2_%s" % file[-8:]))
+                clipped_lines = arcpy.Clip_analysis(clipped_lines, clip_poly, out_feature_class=(shapefile_location + "\\clipped_station_lines2_%s" % file[-8:]))
 
             rectangles = arcpy.Buffer_analysis(clipped_lines, out_feature_class=(
                         shapefile_location + "\\width_rectangles_%sft.shp" % stage),
@@ -532,10 +532,10 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17609707,17609017]
+comid_list = [17569535]
 SCO_number = 1
-make_wetted_poly = True
-process_GCS = False
+make_wetted_poly = False
+process_GCS = True
 
 for comid in comid_list:
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -557,7 +557,7 @@ for comid in comid_list:
         detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
     if process_GCS == True:
-        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[12], centerlines=[2,4,10], XS_lengths=[350,725,1800],ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
+        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[2,8,10], XS_lengths=[100,250,325], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
         z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
         export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
