@@ -552,12 +552,13 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
     print("Power spectral density plot created @ %s" % plot_dirs)
 
 
+
 #INPUTS#
 sc_class = 2
 comid = 17609015
-process_on=False
+GCS_process_on=False
 
-if process_on == True:
+if GCS_process_on == True:
     table_directory = (
                 r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\gcs_ready_tables" % (
         sc_class, comid))  # A folder with stage csv files in it. Other files can occupy the directory as well.

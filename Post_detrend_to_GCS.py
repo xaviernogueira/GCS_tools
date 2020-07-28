@@ -532,8 +532,8 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17569535]
-SCO_number = 1
+comid_list = [17569841]
+SCO_number = 5
 make_wetted_poly = False
 process_GCS = True
 
@@ -557,7 +557,7 @@ for comid in comid_list:
         detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
     if process_GCS == True:
-        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[2,8,10], XS_lengths=[100,250,325], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
+        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
         z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
         export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
