@@ -26,6 +26,7 @@ def prep_locations(detrend_location):
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
 
+    print('Begining centerline reconciliation process...')
     centerlines_nums = []
     centerlines = [f for f in listdir(centerline_folder) if isfile(join(centerline_folder, f)) and f[-5:] == 'S.shp']
     XS_files = [i for i in listdir(centerline_folder) if isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
@@ -36,6 +37,7 @@ def prep_locations(detrend_location):
         temp_location.append(int(row.getValue('LOCATION')))
     temp_location.sort()
     spacing = int(temp_location[1] - temp_location[0])
+    print('XS spacing is %sft...')
 
 
     min_num = 20
@@ -54,6 +56,8 @@ def prep_locations(detrend_location):
         station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing,
                                                                            xs_length=5, stage=[])
         station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num,spacing))
+        del_files.append(station_lines)
+
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % (num)), join_attributes="ALL", output_type="POINT")
 
     for num in centerlines_nums:
@@ -61,20 +65,29 @@ def prep_locations(detrend_location):
 
         if num == min_num:
             print("Extracting thalweg elevation for Caamano analysis...")
+            loc_field = 'SP_SG_%sFT' % num
 
-            single_station_points = centerline_folder + ("\\sp_sing_%sft.shp" % (num))
+            single_station_points = centerline_folder + ("\\%s.shp" % (loc_field))
             del_files.append(single_station_points)
 
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
             z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
+            del_files.append(z_table)
 
-            loc_field = 'SP_SING_%sFT' % num
             station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
-                                                    join_field=loc_field, fields=['RAS_DETREN',loc_field]) #Make sure join_field works
-            arcpy.AlterField_management(station_points,field='Value',new_field_name='thalweg_Z')
+                                                    join_field=loc_field, fields=['ras_detren',loc_field])
+            #ras_detren will be thalweg Z later, loc_field will change as well
+
         if num != min_num:
             arcpy.CreateThiessenPolygons_analysis(station_points, (centerline_folder + "\\thiessen_%sft.shp" % num), 'ALL')
 
+
+            #NEXT: Use identity to get the thiessen values on the min_num station points
+            #Make a list of fields to delete, many excess fields are created
+            #Use add field managment with the thiessen polygon before ID to make a new location field, and delete the old one
+            #Do the same for the min_num one with the SP_SING field
+            #Delete many, then turn to csv. Make old gsc csvs have a field name matching their centerline. Join csvs with pandas and delete all fields
+            #AND labeling the fields by stage. Print into csv. 
     for file in del_files:
         if os.path.exists(file):
             try:
