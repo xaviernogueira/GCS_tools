@@ -1,9 +1,14 @@
 import arcpy
+import csv
 import os
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
 import numpy as np
+import file_functions
+import GCS_statistical_analysis_XRN
+import create_station_lines
+from create_station_lines import *
 
 #Make a hypsograph function that plots a hypsograph including stage 0 and calculates autocorrelation value of width interatively with a parameter threshold
 #Plot the autocorrelation thresholds on the hypsograph.
@@ -13,30 +18,74 @@ def prep_locations(detrend_location):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
 
+    detrended_raster = detrend_location + "\\ras_detren.tif"
     landform_folder = detrend_location + '\\landform_analysis'#Make directory for landform analysis xl files and centerline adjusted GCS tables
-    centerline_folder = detrend_location + '\\analysis_centerline_and_XS'
+    centerline_folder = detrend_location + "\\analysis_centerline_and_XS"
+    del_files = []
 
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
 
     centerlines_nums = []
     centerlines = [f for f in listdir(centerline_folder) if isfile(join(centerline_folder, f)) and f[-5:] == 'S.shp']
+    XS_files = [i for i in listdir(centerline_folder) if isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
+
+    temp_location = []
+    cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % XS_files[0])
+    for row in cursor:
+        temp_location.append(int(row.getValue('LOCATION')))
+    temp_location.sort()
+    spacing = int(temp_location[1] - temp_location[0])
 
 
+    min_num = 20
     for line in centerlines:
         line_loc = ('%s\\%s' % (centerline_folder,line))
         if line[-11] == '_':
             num = int(line[-10])
-            centerlines_nums.append(num)
         else:
             num = int(line[-11:-9])
-            centerlines_nums.append(num)
+        centerlines_nums.append(num)
+
+        if num <= min_num:
+            min_num = num
+        centerlines_nums.sort()
 
         station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing,
                                                                            xs_length=5, stage=[])
+        station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num,spacing))
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % (num)), join_attributes="ALL", output_type="POINT")
 
-    #Make theissen rasters for all but the smallest stage centerline
+    for num in centerlines_nums:
+        station_points = centerline_folder + "\\station_points_%sft.shp" % (num)
+
+        if num == min_num:
+            print("Extracting thalweg elevation for Caamano analysis...")
+
+            single_station_points = centerline_folder + ("\\sp_sing_%sft.shp" % (num))
+            del_files.append(single_station_points)
+
+            arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
+            z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
+
+            loc_field = 'SP_SING_%sFT' % num
+            station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
+                                                    join_field=loc_field, fields=['RAS_DETREN',loc_field]) #Make sure join_field works
+            arcpy.AlterField_management(station_points,field='Value',new_field_name='thalweg_Z')
+        if num != min_num:
+            arcpy.CreateThiessenPolygons_analysis(station_points, (centerline_folder + "\\thiessen_%sft.shp" % num), 'ALL')
+
+    for file in del_files:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except:
+                print("Couldn't delete %s" % file)
+
+
+
+
+
     #Continue by getting  thalweg Z (from detrended DEM), location from the lowest stage stationpoints, and then the theis_raster value for each other centerline.
     #Width and landform code for each stage is joined. An algorithmic/interative field naming is required (like stage%s_W, stage%s_code). Have as csv for autocorrelation plotting.
     #Then we get occurences of nested landforms and mean Caamano Criterium values (both printed onto an xl sheet) and width for autocorrelation
@@ -99,7 +148,7 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
 
 
 
-comid_list = [17573045]
+comid_list = [17609015]
 SCO_number = 2
 
 for comid in comid_list:
@@ -110,6 +159,6 @@ for comid in comid_list:
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
 
-    arcpy.env.workplace = direct #Set arcpy environment
-    arcpy.env.extent = detrended_dem_location
     arcpy.env.overwriteOutput = True
+
+    prep_locations(detrend_location=out_folder)

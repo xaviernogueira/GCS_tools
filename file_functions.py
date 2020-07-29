@@ -10,6 +10,7 @@ from tkinter import filedialog
 import subprocess
 import logging
 import arcpy
+import csv
 
 arcpy.env.overwriteOutput = True
 arcpy.CheckOutExtension('Spatial')
@@ -270,3 +271,21 @@ def white_noise_acf_ci(series, maxlags=''):
     lower_lims, upper_lims = list(zip(*lims))
 
     return lags, lower_lims, upper_lims
+
+def tableToCSV(input_table, csv_filepath,fld_names_override=[]):
+    if len(fld_names_override) > 0:
+        fld_names=fld_names_override
+    else:
+        fld_list = arcpy.ListFields(input_table)
+        fld_names = [fld.name for fld in fld_list]
+    with open(csv_filepath, 'wb') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(fld_names)
+        with arcpy.da.SearchCursor(input_table, fld_names) as cursor:
+            for row in cursor:
+                writer.writerow(row)
+        print(csv_filepath + " CREATED")
+    csv_file.close()
+
+
+
