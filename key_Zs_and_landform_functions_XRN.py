@@ -37,8 +37,7 @@ def prep_locations(detrend_location):
         temp_location.append(int(row.getValue('LOCATION')))
     temp_location.sort()
     spacing = int(temp_location[1] - temp_location[0])
-    print('XS spacing is %sft...')
-
+    print('XS spacing is %sft...' % spacing)
 
     min_num = 20
     for line in centerlines:
@@ -75,17 +74,43 @@ def prep_locations(detrend_location):
             del_files.append(z_table)
 
             station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
-                                                    join_field=loc_field, fields=['ras_detren',loc_field])
-            #ras_detren will be thalweg Z later, loc_field will change as well
+                                                    join_field=loc_field, fields=['ras_detren'])
+            arcpy.AddField_management(station_points, ('loc_%sft' % num), 'SHORT')
+            arcpy.AddField_management(station_points, 'thwg_z', 'FLOAT')
+            arcpy.CalculateField_management(station_points, ('loc_%sft' % num), expression=('!LOCATION!'),
+                                            expression_type='PYTHON3')
+            arcpy.CalculateField_management(station_points, 'thwg_z', expression=('!ras_detren!'),
+                                            expression_type='PYTHON3')
+            fields = [f.name for f in arcpy.ListFields(station_points)]
+            print(fields)
+            del_fields = [f for f in fields if f != (('loc_%sft') % num) or f != 'FID' or f != 'thwg_z']
+            print(del_fields)
+            arcpy.DeleteField_management(station_points, del_fields)
 
         if num != min_num:
-            arcpy.CreateThiessenPolygons_analysis(station_points, (centerline_folder + "\\thiessen_%sft.shp" % num), 'ALL')
+            theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
+            arcpy.CreateThiessenPolygons_analysis(station_points, theis_loc, 'ALL')
+            arcpy.AddField_management(theis_loc,('loc_%sft' % num),'SHORT')
+            arcpy.CalculateField_management(theis_loc,('loc_%sft' % num),expression=('!LOCATION!'),expression_type='PYTHON3')
+            del_fields = [f for f in arcpy.ListFields(theis_loc) if f != (('loc_%sft') % num) or f !='FID']
+            arcpy.DeleteField_management(theis_loc,del_fields)
+
+    max_count = 0
+    for counter, num in enumerate(centerlines_nums):
+        theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
+        out_points = centerline_folder + ("\\align_points%s.shp" % counter)
+        if counter >= max_count:
+            max_count = counter
+        if counter == 1:
+            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min_num, theis_loc, out_feature_class=out_points,join_attributes='ALL', )
+        elif counter > 1:
+            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc,out_feature_class=out_points, join_attributes='ALL', )
+
+    del_files.append([(centerline_folder + ("\\align_points%s.shp" % f)) for f in range(1,max_count)])
 
 
-            #NEXT: Use identity to get the thiessen values on the min_num station points
-            #Make a list of fields to delete, many excess fields are created
-            #Use add field managment with the thiessen polygon before ID to make a new location field, and delete the old one
-            #Do the same for the min_num one with the SP_SING field
+
+
             #Delete many, then turn to csv. Make old gsc csvs have a field name matching their centerline. Join csvs with pandas and delete all fields
             #AND labeling the fields by stage. Print into csv. 
     for file in del_files:
