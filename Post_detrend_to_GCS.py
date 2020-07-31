@@ -412,7 +412,11 @@ def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
             csv_file = table_location + ("\\%s_WD_analysis_table.csv" % file[-7:-4])
         else:
             csv_file = table_location + ("\\%s_WD_analysis_table.csv" % file[-8:-4])
-        if ws["H1"].value == "MEAN" and ws["C1"].value == "LOCATION" and ws["F1"].value == "Width":
+
+        if ws["H1"].value == "Z" and ws["F1"].value == "W" and ws["C1"].value == "dist_down":
+            print('CSV already formatted...')
+            wb.save(str(analysis_xlsx))
+        elif ws["H1"].value == "MEAN" and ws["C1"].value == "LOCATION" and ws["F1"].value == "Width":
             ws["H1"].value = "Z"
             ws["F1"].value = "W"
             ws["C1"].value = "dist_down"
@@ -532,8 +536,8 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17569841]
-SCO_number = 5
+comid_list = [22514218,17607553,17609707,17609017,17610661]
+SCO_number = 1
 make_wetted_poly = False
 process_GCS = True
 
@@ -557,8 +561,8 @@ for comid in comid_list:
         detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
     if process_GCS == True:
-        width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
-        z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+        #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
+        #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
         export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
         tables = export_list[0]

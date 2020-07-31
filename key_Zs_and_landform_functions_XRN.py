@@ -14,7 +14,7 @@ from create_station_lines import *
 #Plot the autocorrelation thresholds on the hypsograph.
 #Have a following function that takes three chosen stages, prints a map document showing the stages
 #Have another function that does the nested landform analysis, printing results into an xl file
-def prep_locations(detrend_location):
+def prep_locations(detrend_location,max_stage=20):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
 
@@ -59,6 +59,7 @@ def prep_locations(detrend_location):
 
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % (num)), join_attributes="ALL", output_type="POINT")
 
+    print('Using centerlines: %s' % centerlines_nums)
     for num in centerlines_nums:
         station_points = centerline_folder + "\\station_points_%sft.shp" % (num)
 
@@ -71,7 +72,7 @@ def prep_locations(detrend_location):
 
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
             z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
-            del_files.append(z_table)
+            del_files.append(centerline_folder + "\\thalweg_Z.dbf")
 
             station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
                                                     join_field=loc_field, fields=['ras_detren'])
@@ -81,10 +82,13 @@ def prep_locations(detrend_location):
                                             expression_type='PYTHON3')
             arcpy.CalculateField_management(station_points, 'thwg_z', expression=('!ras_detren!'),
                                             expression_type='PYTHON3')
-            fields = [f.name for f in arcpy.ListFields(station_points)]
-            print(fields)
-            del_fields = [f for f in fields if f != (('loc_%sft') % num) or f != 'FID' or f != 'thwg_z']
-            print(del_fields)
+            del_fields = [f.name for f in arcpy.ListFields(station_points)]
+            for field in [(('loc_%sft') % num),'FID','thwg_z','Shape']:
+                try:
+                    del_fields.remove(field)
+                except:
+                    "Can't delete field: %s" % field
+            print('Deleting fields: %s' % del_fields)
             arcpy.DeleteField_management(station_points, del_fields)
 
         if num != min_num:
@@ -92,13 +96,19 @@ def prep_locations(detrend_location):
             arcpy.CreateThiessenPolygons_analysis(station_points, theis_loc, 'ALL')
             arcpy.AddField_management(theis_loc,('loc_%sft' % num),'SHORT')
             arcpy.CalculateField_management(theis_loc,('loc_%sft' % num),expression=('!LOCATION!'),expression_type='PYTHON3')
-            del_fields = [f for f in arcpy.ListFields(theis_loc) if f != (('loc_%sft') % num) or f !='FID']
+            del_fields = [f.name for f in arcpy.ListFields(theis_loc)]
+            for field in [(('loc_%sft') % num), 'FID', 'Shape']:
+                try:
+                    del_fields.remove(field)
+                except:
+                    "Can't delete field: %s" % field
             arcpy.DeleteField_management(theis_loc,del_fields)
 
     max_count = 0
     for counter, num in enumerate(centerlines_nums):
         theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
         out_points = centerline_folder + ("\\align_points%s.shp" % counter)
+        #del_files.append(out_points,theis_loc)
         if counter >= max_count:
             max_count = counter
         if counter == 1:
@@ -106,13 +116,40 @@ def prep_locations(detrend_location):
         elif counter > 1:
             arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc,out_feature_class=out_points, join_attributes='ALL', )
 
-    del_files.append([(centerline_folder + ("\\align_points%s.shp" % f)) for f in range(1,max_count)])
+    for stage in range(1,max_stage+1):
+        gcs_csv = detrend_location + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
 
 
+        if int(stage) > centerlines_nums[-1]:
+            loc_stage = centerlines_nums[-1]
+        elif int(stage) <= centerlines_nums[0]:
+            loc_stage = centerlines_nums[0]
+        else:
+            index = 0
+            while int(stage) > centerlines_nums[index]:
+                index +=1
+            loc_stage = centerlines_nums[index]
+
+        j_loc_field = 'loc_%sft' % loc_stage
+
+        arcpy.JoinField_management(out_points, j_loc_field, gcs_csv, join_field='dist_down', fields=['code','W'])
+        arcpy.AddField_management(out_points,('code_%sft' % stage), 'SHORT')
+        arcpy.AddField_management(out_points, ('W_%sft' % stage), 'FLOAT')
+        arcpy.AddField_management(out_points, ('Dz_%sft' % stage), 'FLOAT')
+        arcpy.CalculateField_management(out_points, ('code_%sft' % stage), expression=('!code!'),
+                                        expression_type='PYTHON3')
+        arcpy.CalculateField_management(out_points, ('W_%sft' % stage), expression=('!W!'),
+                                        expression_type='PYTHON3')
+        arcpy.CalculateField_management(out_points, ('Dz_%sft' % stage), expression=('float(%d - float(!W!))' % float(stage)),
+                                        expression_type='PYTHON3')
+        arcpy.DeleteField_management(out_points,['code', 'W'])
 
 
-            #Delete many, then turn to csv. Make old gsc csvs have a field name matching their centerline. Join csvs with pandas and delete all fields
-            #AND labeling the fields by stage. Print into csv. 
+    code_csv_loc = landform_folder + '\\code_table.csv'
+    file_functions.tableToCSV(out_points, csv_filepath=code_csv_loc, fld_to_remove_override=['FID_statio','FID_thiess'])
+    #Maybe split into multiple dfs with some rule based thing based on field names
+
+    print('Deleting files: %s' % del_files)
     for file in del_files:
         if os.path.exists(file):
             try:
@@ -120,18 +157,16 @@ def prep_locations(detrend_location):
             except:
                 print("Couldn't delete %s" % file)
 
+    print('Analysis csv located @ %s' % code_csv_loc)
+    return[code_csv_loc]
 
-
-
-
-    #Continue by getting  thalweg Z (from detrended DEM), location from the lowest stage stationpoints, and then the theis_raster value for each other centerline.
-    #Width and landform code for each stage is joined. An algorithmic/interative field naming is required (like stage%s_W, stage%s_code). Have as csv for autocorrelation plotting.
-    #Then we get occurences of nested landforms and mean Caamano Criterium values (both printed onto an xl sheet) and width for autocorrelation
 
 
 def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
     #In addition make it so width by adjusted location correlation coefficients will be calculated between each stage and reported in an array that is plotted as a heatmap
     clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
+    del_files = []
+
     if not os.path.exists(clipped_wetted_folder):
         os.makedirs(clipped_wetted_folder)
 
@@ -146,11 +181,12 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
             stage = int(poly[27:29])
         if stage <= max_stage:
             clip_poly = arcpy.Clip_analysis(poly_loc,channel_clip_poly,out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)))
+            del_files.append('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage))
             geometries = arcpy.CopyFeatures_management(clip_poly,arcpy.Geometry())
             poly_area = 0
             for geometry in geometries:
                 poly_area += float(geometry.area)
-            wetted_areas[stage] = poly_area
+            wetted_areas[stage] = float(poly_area)
 
     d_area = []
     for count, area in enumerate(wetted_areas):
@@ -184,8 +220,16 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
     plt.show()
     plt.cla()
 
+    print('Deleting files: %s' % del_files)
+    for file in del_files:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except:
+                print("Couldn't delete %s" % file)
 
 
+###### INPUTS ######
 comid_list = [17609015]
 SCO_number = 2
 
@@ -199,4 +243,4 @@ for comid in comid_list:
 
     arcpy.env.overwriteOutput = True
 
-    prep_locations(detrend_location=out_folder)
+    prep_locations(detrend_location=out_folder,max_stage=20)

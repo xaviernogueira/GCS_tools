@@ -272,13 +272,17 @@ def white_noise_acf_ci(series, maxlags=''):
 
     return lags, lower_lims, upper_lims
 
-def tableToCSV(input_table, csv_filepath,fld_names_override=[]):
-    if len(fld_names_override) > 0:
-        fld_names=fld_names_override
-    else:
-        fld_list = arcpy.ListFields(input_table)
-        fld_names = [fld.name for fld in fld_list]
-    with open(csv_filepath, 'wb') as csv_file:
+def tableToCSV(input_table, csv_filepath,fld_to_remove_override=[]):
+    fld_list = arcpy.ListFields(input_table)
+    fld_names = [str(fld.name) for fld in fld_list]
+    if len(fld_to_remove_override) > 0:
+        for field in fld_to_remove_override:
+            try:
+                fld_names.remove(field)
+            except:
+                "Can't delete field: %s" % field
+
+    with open(csv_filepath, 'w') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(fld_names)
         with arcpy.da.SearchCursor(input_table, fld_names) as cursor:
