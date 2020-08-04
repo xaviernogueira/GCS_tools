@@ -14,7 +14,8 @@ from create_station_lines import create_station_lines_function
 from os.path import isfile, join
 from GCS_analysis import *
 #from Lidar_to_detrend_ready_XRN_functions import *
-#from classify_landforms_GUI import *
+import classify_landforms_GUI
+from classify_landforms_GUI import *
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from matplotlib import pyplot as plt
@@ -564,8 +565,9 @@ for comid in comid_list:
         #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
         #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-        export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-        tables = export_list[0]
+        #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+        #tables = export_list[0]
+        tables = [(table_location + '\\%s' % f) for f in listdir(table_location) if f[-4:] == '.csv']
         main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
         GCS_plotter(table_directory=table_location)
 

@@ -61,6 +61,7 @@ def landforms(table, zs_field='Z_s', ws_field='W_s', na=-9999):
     '''Classifies each row by corresponding landform type:
         oversized, nozzle, constricted pool, wide bar, normal channel
         Adds columns to input table'''
+
     check_use(table)
     df = pd.read_csv(table)
 
