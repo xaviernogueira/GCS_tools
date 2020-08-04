@@ -65,7 +65,7 @@ def landforms(table, zs_field='Z_s', ws_field='W_s', na=-9999):
     check_use(table)
     df = pd.read_csv(table)
 
-    df['normal'] = [zs * ws if (abs(zs) <= 0.5 or abs(ws) <= 0.5) else na for zs, ws in zip(df[zs_field], df[ws_field])]
+    df['normal'] = [zs * ws if abs(zs) <= 0.5 or abs(ws) <= 0.5 else na for zs, ws in zip(df[zs_field], df[ws_field])]
     df['wide_bar'] = [zs * ws if (zs > 0.5 and ws > 0.5) else na for zs, ws in
                       zip(df[zs_field], df[ws_field])]
     df['const_pool'] = [zs * ws if (zs < -0.5 and ws < -0.5) else na for zs, ws in
@@ -83,7 +83,7 @@ def landforms(table, zs_field='Z_s', ws_field='W_s', na=-9999):
                   else 0 #Was na, but since for whatever reason normal channel is not mutually exlcusive, we are going to hard code this as 0
                   for i in range(len(df))
                   ]
-
+    df["code"].fillna(0, inplace=True)
     df.to_csv(table, index=False)
     return df
 
@@ -124,8 +124,8 @@ def landform_polygons(table, wetted_XS_polygon):
                         row.setValue(col, new_val)
                 # index will be out of range if we removed upstream and downstream sections
                 except IndexError:
-                    # set 'code' to -9999 instead of 0 for removed sections so it is not mistaken for normal channel
-                    row.setValue('code', -9999)
+                    # set 'code' to -9999 instead of 0 for removed sections so it is not mistaken for normal channel.
+                    row.setValue('code', 0) #Change back to -9999
                     pass
 
         rows.updateRow(row)

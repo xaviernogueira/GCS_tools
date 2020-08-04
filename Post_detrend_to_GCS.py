@@ -461,6 +461,8 @@ def GCS_plotter(table_directory):
 
         table_df = pandas.read_csv(table_location + "\\%s" % table)
         print(table_df)
+        table_df["code"].fillna(0, inplace=True)
+
         zs_plot_name = ("%s_Zs_plot" % stage)
         ws_plot_name = ("%s_Ws_plot" % stage)
         zs_ws_plot_name = ("%s_ZsWs_plot" % stage)
@@ -537,8 +539,8 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [22514218,17607553,17609707,17609017,17610661]
-SCO_number = 1
+comid_list = [17586504,17610257,17573013,17573045,17586810,17609015]
+SCO_number = 2
 make_wetted_poly = False
 process_GCS = True
 

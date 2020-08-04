@@ -51,7 +51,7 @@ def analysis_setup(table_directory):
         wb.save(stage_stats_xl_name)
         wb.close()
 
-        stage_df = pd.read_csv(table)
+        stage_df = pd.read_csv(table,na_values=[-9999])
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
     print("Max stage is %sft" % max_stage)
@@ -65,6 +65,8 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         print("Writing descriptive stats for stage %sft" % stage)
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+
+
 
         list_of_fields = ['W', 'Z', 'W_s_Z_s','W_s','Z_s']
         means = []

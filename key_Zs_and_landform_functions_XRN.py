@@ -61,7 +61,7 @@ def prep_locations(detrend_location,max_stage=20):
 
     print('Using centerlines: %s' % centerlines_nums)
     for num in centerlines_nums:
-        station_points = centerline_folder + "\\station_points_%sft.shp" % (num)
+        station_points = centerline_folder + "\\station_points_%sft.shp" % num
 
         if num == min_num:
             print("Extracting thalweg elevation for Caamano analysis...")
@@ -73,6 +73,10 @@ def prep_locations(detrend_location,max_stage=20):
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
             z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
             del_files.append(centerline_folder + "\\thalweg_Z.dbf")
+
+            centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num #csv with XY coordinates of the centerlines made
+            arcpy.AddXY_management(single_station_points)
+            file_functions.tableToCSV(single_station_points, csv_filepath=centerline_XY_loc, fld_to_remove_override=[])
 
             station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
                                                     join_field=loc_field, fields=['ras_detren'])
@@ -162,7 +166,7 @@ def prep_locations(detrend_location,max_stage=20):
 
 
 
-def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
+def key_z_finder(out_folder, channel_clip_poly,max_stage=20):
     #In addition make it so width by adjusted location correlation coefficients will be calculated between each stage and reported in an array that is plotted as a heatmap
     clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
     del_files = []
@@ -181,7 +185,7 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
             stage = int(poly[27:29])
         if stage <= max_stage:
             clip_poly = arcpy.Clip_analysis(poly_loc,channel_clip_poly,out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)))
-            del_files.append('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage))
+            #del_files.append('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)) Maybe keep for making figures
             geometries = arcpy.CopyFeatures_management(clip_poly,arcpy.Geometry())
             poly_area = 0
             for geometry in geometries:
@@ -193,15 +197,15 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
         if count==0:
             d_area.append(area)
         else:
-            d_area.append(area-wetted_areas[count])
+            d_area.append(float(area-wetted_areas[count-1]))
 
     max_area = 0
     max_stage_area = arcpy.CopyFeatures_management(('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,max_stage)),arcpy.Geometry)
-    for geometry in max_stage:
+    for geometry in max_stage_area:
         max_area += float(geometry.area)
 
-    x1 = np.array(range(0,21))
-    y1 = np.array([(f/max_area)*100 for f in wetted_areas])
+    x1 = np.array(range(0,max_stage+1))
+    y1 = np.array([(float(f/max_area))*100 for f in wetted_areas])
     plt.figure()
     plt.plot(x1,y1)
     plt.xlabel('Flood stage height (ft)')
@@ -210,7 +214,7 @@ def key_z_finder(out_folder, channel_clip_poly,auto_threshold,max_stage=20):
     plt.show()
     plt.cla()
 
-    x2 = np.array(range(0,21)) #Add saving optionality
+    x2 = np.array(range(0,max_stage+1)) #Add saving optionality
     y2 = np.array(d_area)
     plt.figure()
     plt.plot(x2,y2)
@@ -242,5 +246,7 @@ for comid in comid_list:
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
 
     arcpy.env.overwriteOutput = True
+    #prep_locations(detrend_location=out_folder,max_stage=20)
+    key_z_finder(out_folder, channel_clip_poly, max_stage=20) #Add autocorrelation threshold term
 
-    prep_locations(detrend_location=out_folder,max_stage=20)
+
