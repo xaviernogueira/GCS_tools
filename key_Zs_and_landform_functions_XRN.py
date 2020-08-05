@@ -187,8 +187,9 @@ def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=
         row_data = analysis_df['Ws_%sft' % num]
         for num in range(1, max_stage + 1):
             col_data = analysis_df['Ws_%sft' % num]
-            corr_array = np.correlate(row_data, col_data, mode='valid')
-            row_list.append(np.mean(corr_array))
+            #corr_array = np.correlate(row_data, col_data, mode='valid')
+            #row_list.append(np.mean(corr_array))
+            row_list.append(np.corrcoef(row_data,col_data)[0,1])
         cross_corrs.append(row_list)
 
     fig, ax = plt.subplots()
@@ -201,13 +202,13 @@ def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=
     for i in range(len(col_row_heads)):
         for j in range(len(col_row_heads)):
             text = ax.text(j, i, round(cross_corrs[i][j],2),
-                           ha="center", va="center", fontsize=6,color="w")
+                           ha="center", va="center", fontsize=6,color="r")
 
     ax.set_title("Cross-correlation of stage width series")
     fig.tight_layout()
     fig.set_size_inches(20, 10)
     plt.show()
-    plt.savefig((landform_folder + 'cross_corrs_table.png'), dpi=300, bbox_inches='tight')
+    plt.savefig((landform_folder + '\\cross_corrs_table.png'), dpi=300, bbox_inches='tight')
     plt.cla()
 
     key_zs = []
