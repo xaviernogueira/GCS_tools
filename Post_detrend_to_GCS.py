@@ -459,7 +459,7 @@ def GCS_plotter(table_directory):
         else:
             stage = table[:2]
 
-        table_df = pandas.read_csv(table_location + "\\%s" % table)
+        table_df = pandas.read_csv(table_location + "\\%s" % table,na_values=[-9999])
         print(table_df)
         table_df["code"].fillna(0, inplace=True)
 
@@ -530,7 +530,6 @@ def GCS_plotter(table_directory):
             plt.minorticks_on()
             plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
             plt.legend(('Gaussian filter, sigma=3', 'Gaussian filter, sigma=10'), loc=1)
-            #plt.show()
             fig = plt.gcf()
             fig.set_size_inches(12, 6)
             plt.savefig((figure_output + '\\Stage_%s_%s_filtering_plot' % (stage, i)), dpi=300, bbox_inches='tight')
@@ -539,8 +538,14 @@ def GCS_plotter(table_directory):
 
 
 ##### INPUTS #####
-comid_list = [17586504,17610257,17573013,17573045,17586810,17609015]
-SCO_number = 2
+comid_list = [17563722,17594703,17609699,17570395,17585756,17611423]
+#[17569535,22514218,17607553,17609707,17609017,17610661] class 1
+#[17586504,17610257,17573013,17573045,17586810,17609015] class 2
+#[17585738,17586610,17610235,17595173,17607455,17586760] class 3
+#[17563722,17594703,17609699,17570395,17585756,17611423] class 4
+
+
+SCO_number = 3
 make_wetted_poly = False
 process_GCS = True
 

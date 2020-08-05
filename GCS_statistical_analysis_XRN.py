@@ -52,6 +52,7 @@ def analysis_setup(table_directory):
         wb.close()
 
         stage_df = pd.read_csv(table,na_values=[-9999])
+        stage_df['code'].fillna(0,inplace=True)
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
     print("Max stage is %sft" % max_stage)

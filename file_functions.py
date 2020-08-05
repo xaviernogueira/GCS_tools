@@ -282,7 +282,7 @@ def tableToCSV(input_table, csv_filepath,fld_to_remove_override=[]):
             except:
                 "Can't delete field: %s" % field
 
-    with open(csv_filepath, 'w') as csv_file:
+    with open(csv_filepath, 'w',newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(fld_names)
         with arcpy.da.SearchCursor(input_table, fld_names) as cursor:
