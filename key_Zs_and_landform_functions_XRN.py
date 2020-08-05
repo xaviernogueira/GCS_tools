@@ -205,9 +205,9 @@ Used to guide key Z selection for the following nested landform analysis'''
 
     ax.set_title("Cross-correlation of stage width series")
     fig.tight_layout()
-    fig.set_size_inches(20, 10)
-    plt.show()
+    fig.set_size_inches(16, 8)
     plt.savefig((landform_folder + '\\cross_corrs_table.png'), dpi=300, bbox_inches='tight')
+    plt.show()
     plt.cla()
 
     key_zs = []
@@ -267,6 +267,7 @@ Used to guide key Z selection for the following nested landform analysis'''
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.xlim(0,max_stage)
     plt.ylim(0,max(y1))
+    plt.xticks(np.arange(0, (max_stage+1), step=1))
     title = (out_folder + '\\CDF_plot.png')
     if cross_corr_threshold != 0:
         for stage in key_zs:
@@ -284,10 +285,11 @@ Used to guide key Z selection for the following nested landform analysis'''
     plt.plot(x2,y2)
     plt.xlabel('Flood stage height (ft)')
     plt.ylabel('Change in area (sq ft)')
-    plt.title('\\PDF chart')
+    plt.title('PDF chart')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.xlim(0, max_stage)
     plt.ylim(0, None)
+    plt.xticks(np.arange(0, (max_stage+1), step=1))
     title = (out_folder + '\\PDF_plot.png')
     if cross_corr_threshold != 0:
         for stage in key_zs:

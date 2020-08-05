@@ -544,7 +544,6 @@ comid_list = [17563722,17594703,17609699,17570395,17585756,17611423]
 #[17585738,17586610,17610235,17595173,17607455,17586760] class 3
 #[17563722,17594703,17609699,17570395,17585756,17611423] class 4
 
-
 SCO_number = 3
 make_wetted_poly = False
 process_GCS = True
@@ -555,7 +554,7 @@ for comid in comid_list:
     original_dem_location = direct + '\\las_files\\ls_nodt.tif'
     detrended_dem_location = out_folder + "\\ras_detren.tif" #change back
     process_footprint = direct + '\\las_footprint.shp'
-    spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
+    #spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
     station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
