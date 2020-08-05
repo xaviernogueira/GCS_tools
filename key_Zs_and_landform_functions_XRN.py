@@ -168,14 +168,13 @@ def prep_locations(detrend_location,max_stage=20):
                 print("Couldn't delete %s" % file)
 
     print('All stages csv csv located @ %s' % code_csv_loc)
+
     return[code_csv_loc]
 
-
-
 def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=20):
-    #In addition make it so width by adjusted location correlation coefficients will be calculated between each stage and reported in an array that is plotted as a heatmap
-    del_files = []
-
+'''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
+RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas.
+Used to guide key Z selection for the following nested landform analysis'''
     print('Calculating cross-correlation matrix...')
     landform_folder = out_folder + '\\landform_analysis'
 
@@ -299,15 +298,6 @@ def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.cla()
     plt.cla()
-
-
-    print('Deleting files: %s' % del_files)
-    for file in del_files:
-        if os.path.exists(file):
-            try:
-                os.remove(file)
-            except:
-                print("Couldn't delete %s" % file)
 
 
 
