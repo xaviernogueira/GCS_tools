@@ -24,7 +24,8 @@ def loc_stage_finder(stage, centerlines_nums):
             index += 1
         loc_stage = centerlines_nums[index]
 
-    return loc_stage
+    count = centerlines_nums.index(loc_stage)
+    return [loc_stage,count]
 
 
 def prep_locations(detrend_location,max_stage=20, skip=False):
@@ -170,7 +171,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
 
         gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
 
-        loc_stage = loc_stage_finder(stage,centerlines_nums)
+        loc_stage = loc_stage_finder(stage,centerlines_nums)[0]
         j_loc_field = 'loc_%sft' % loc_stage
 
         temp_df = pd.read_csv(gcs_csv)
@@ -200,7 +201,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
         cross_corrs.append(row_list)
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.squeeze(np.array(cross_corrs)))
+    im = ax.imshow(np.array(cross_corrs,dtype=float))
     ax.set_xticks(np.arange(len(col_row_heads)))
     ax.set_yticks(np.arange(len(col_row_heads)))
     ax.set_xticklabels(col_row_heads)
@@ -240,7 +241,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     wetted_polys = [f for f in listdir(out_folder+'\\wetted_polygons') if f[:26]=='flood_stage_poly_dissolved' and f[-3:]=='shp']
 
     print('Calculating wetted areas...')
-    wetted_areas = [None]*len(wetted_polys) #A list storing the wetted area for each stage ranging 0-maxstage
+    wetted_areas = [None]*len(wetted_polys)
     for poly in wetted_polys:
         poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder,poly))
         if poly[28] == 'f':
@@ -254,6 +255,23 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
             for geometry in geometries:
                 poly_area += float(geometry.area)
             wetted_areas[stage] = poly_area
+
+    print('Calculating centerline lengths...')
+    centerline_lengths = [None]*len(centerlines_nums)
+
+    for count, line in enumerate(centerlines_nums):
+        line_loc = ('%s\\analysis_centerline_and_XS\\stage_centerline_%sft_DS.shp' % (out_folder,line))
+        geometries = arcpy.CopyFeatures_management(line_loc, arcpy.Geometry())
+        poly_length = 0
+        for geometry in geometries:
+            poly_length += float(geometry.length)
+        centerline_lengths[count] = poly_length
+
+    mean_XS_length = []
+    for area, count in enumerate(wetted_areas):
+        index = loc_stage_finder(count,centerlines_nums)[1]
+        length = centerline_lengths[index]
+        mean_XS_length.append(float(area/length))
 
     d_area = []
     wetted_areas = [i for i in wetted_areas if i != None]
@@ -314,7 +332,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.plot(x3, y3)
     plt.xlabel('Flood stage height (ft)')
     plt.ylabel('Wetted area (sq ft)')
-    plt.title('Cumulative wetted areas chart')
+    plt.title('Cumulative wetted area chart')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.xlim(0, max_stage)
     plt.ylim(0, None)
@@ -323,7 +341,28 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     if cross_corr_threshold != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\wetted_areas_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + ('\\wetted_area_plot_%s_corr_thresh.png' % cross_corr_threshold))
+    fig = plt.gcf()
+    fig.set_size_inches(12, 6)
+    plt.savefig(title, dpi=300, bbox_inches='tight')
+    plt.cla()
+
+    x4 = np.array(mean_XS_length)
+    y4 = np.array(range(0, max_stage + 1))
+    plt.figure()
+    plt.plot(x4, y4)
+    plt.xlabel('Mean XS length')
+    plt.ylabel('Flood stage height (ft)')
+    plt.title('Mean XS length chart')
+    plt.grid(b=True, which='major', color='#666666', linestyle='-')
+    plt.xlim(0, max_stage)
+    plt.ylim(0, max(y1))
+    plt.xticks(np.arange(0, (max_stage + 1), step=1))
+    title = (out_folder + '\\XS_length_plot.png')
+    if cross_corr_threshold != 0:
+        for stage in key_zs:
+            plt.axvline(x=stage, color='r', linestyle='--')
+            title = (out_folder + ('\\XS_length_plot_%s_corr_thresh.png' % cross_corr_threshold))
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -349,5 +388,5 @@ for count, comid in enumerate(comid_list):
 
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
     key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20) #Set centerlines to out_list[1] and code_csv to out_list[0]
-
+    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
 
