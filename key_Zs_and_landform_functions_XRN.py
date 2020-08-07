@@ -15,6 +15,21 @@ import pandas
 #Plot the autocorrelation thresholds on the hypsograph.
 #Have a following function that takes three chosen stages, prints a map document showing the stages
 #Have another function that does the nested landform analysis, printing results into an xl file
+def loc_stage_finder(stage, centerlines_nums):
+    '''Useful function to find the centerline associated with a given stage'''
+    if int(stage) > centerlines_nums[-1]:
+        loc_stage = centerlines_nums[-1]
+    elif int(stage) <= centerlines_nums[0]:
+        loc_stage = centerlines_nums[0]
+    else:
+        index = 0
+        while int(stage) > centerlines_nums[index]:
+            index += 1
+        loc_stage = centerlines_nums[index]
+
+    return loc_stage
+
+
 def prep_locations(detrend_location,max_stage=20, skip=False):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
@@ -173,33 +188,31 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
         temp_df = pd.read_csv(gcs_csv)
         temp_df.sort_values(by=['dist_down'],inplace=True)
         temp_df_mini = temp_df.loc[:, ['dist_down','code','W','W_s']]
-        #temp_df_mini.columns = [j_loc_field,('code_%sft' % stage),('W_%sft' % stage),('Ws_%sft' % stage)]
         temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W':('W_%sft' % stage), 'W_s':('Ws_%sft' % stage)}, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field],inplace=True)
-        result = out_points_df.merge(temp_df_mini, on=j_loc_field, how='left')
+        result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field,how='left')
         result = result.replace(np.nan,0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
         result.to_csv(code_csv_loc)
         print('Stage %sft added to the all stages csv' % stage)
 
-
     print('Stage alignment completed...')
 
-    #analysis_df = pd.read_csv(landform_folder + '\\all_stages_table.csv', na_values=-9999)
     col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
+    col_list = [('Ws_%sft_x') % f for f in range(1, max_stage + 1)]
+
     cross_corrs = []
+    in_data = result.loc[:, col_list]
+    cross_corrs_df = in_data.corr()
+
     for num in range(1, max_stage + 1):
-        row_list = []
-        row_data = result.loc[:, ['Ws_%sft' % num]]
-        row_data = row_data.replace(0,0.001)
-        for num in range(1, max_stage + 1):
-            col_data = result.loc[:, ['Ws_%sft' % num]]
-            col_data = col_data.replace(0, 0.1)
-            row_list.append(np.corrcoef(row_data,col_data)[0,1])
+        row_data = cross_corrs_df.loc[:, ['Ws_%sft_x' % num]]
+        row_data = row_data.squeeze()
+        row_list = row_data.values.tolist()
         cross_corrs.append(row_list)
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.array(cross_corrs))
+    im = ax.imshow(np.squeeze(np.array(cross_corrs)))
     ax.set_xticks(np.arange(len(col_row_heads)))
     ax.set_yticks(np.arange(len(col_row_heads)))
     ax.set_xticklabels(col_row_heads)
@@ -307,6 +320,26 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.cla()
 
+    x3 = np.array(range(0, max_stage + 1))  # Add saving optionality
+    y3 = np.array(wetted_areas)
+    plt.figure()
+    plt.plot(x3, y3)
+    plt.xlabel('Flood stage height (ft)')
+    plt.ylabel('Wetted area (sq ft)')
+    plt.title('Cumulative wetted areas chart')
+    plt.grid(b=True, which='major', color='#666666', linestyle='-')
+    plt.xlim(0, max_stage)
+    plt.ylim(0, None)
+    plt.xticks(np.arange(0, (max_stage + 1), step=1))
+    title = (out_folder + '\\wetted_areas_plot.png')
+    if cross_corr_threshold != 0:
+        for stage in key_zs:
+            plt.axvline(x=stage, color='r', linestyle='--')
+            title = (out_folder + ('\\wetted_areas_plot_%s_corr_thresh.png' % cross_corr_threshold))
+    fig = plt.gcf()
+    fig.set_size_inches(12, 6)
+    plt.savefig(title, dpi=300, bbox_inches='tight')
+    plt.cla()
 
 
 ###### INPUTS ######
