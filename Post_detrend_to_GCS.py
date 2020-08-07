@@ -535,26 +535,21 @@ def GCS_plotter(table_directory):
             plt.savefig((figure_output + '\\Stage_%s_%s_filtering_plot' % (stage, i)), dpi=300, bbox_inches='tight')
             plt.cla()
 
-
-
 ##### INPUTS #####
-comid_list = [17563722,17594703,17609699,17570395,17585756,17611423]
-#[17569535,22514218,17607553,17609707,17609017,17610661] class 1
-#[17586504,17610257,17573013,17573045,17586810,17609015] class 2
-#[17585738,17586610,17610235,17595173,17607455,17586760] class 3
-#[17563722,17594703,17609699,17570395,17585756,17611423] class 4
+comid_list = [17609755,17569841,17563602,17610541,17610721,17610671]
+SCO_number = 5
 
-SCO_number = 3
 make_wetted_poly = False
 process_GCS = True
 
 for comid in comid_list:
+    print(comid)
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
     out_folder = direct + '\\LINEAR_DETREND'
     original_dem_location = direct + '\\las_files\\ls_nodt.tif'
     detrended_dem_location = out_folder + "\\ras_detren.tif" #change back
     process_footprint = direct + '\\las_footprint.shp'
-    #spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
+    spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
     station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
@@ -563,7 +558,6 @@ for comid in comid_list:
     arcpy.env.extent = detrended_dem_location
     arcpy.env.overwriteOutput = True
 
-    #Call functions:
     if make_wetted_poly == True:
         detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
@@ -574,6 +568,7 @@ for comid in comid_list:
         #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
         #tables = export_list[0]
         tables = [(table_location + '\\%s' % f) for f in listdir(table_location) if f[-4:] == '.csv']
+        print(tables)
         main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
         GCS_plotter(table_directory=table_location)
 
@@ -586,6 +581,13 @@ for comid in comid_list:
         stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
         stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
         stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+
+
+#[17569535,22514218,17607553,17609707,17609017,17610661] class 1
+#[17586504,17610257,17573013,17573045,17586810,17609015] class 2
+#[17585738,17586610,17610235,17595173,17607455,17586760] class 3
+#[17563722,17594703,17609699,17570395,17585756,17611423] class 4
+#[17609755,17569841,17563602,17610541,17610721,17610671] class 5
 
 
 

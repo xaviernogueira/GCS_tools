@@ -108,7 +108,7 @@ def landform_polygons(table, wetted_XS_polygon):
                                           )
             else:
                 arcpy.AddField_management(in_table=wetted_XS_polygon,
-                                          field_name=col,
+                                          field_name=col[:9],
                                           field_type='FLOAT'
                                           )
     # fill each new column with values using join_on column name
@@ -122,7 +122,7 @@ def landform_polygons(table, wetted_XS_polygon):
                     if col == 'OID':
                         row.setValue('OID_', new_val)
                     else:
-                        row.setValue(col, new_val)
+                        row.setValue(col[:9], new_val)
                 # index will be out of range if we removed upstream and downstream sections
                 except IndexError:
                     # set 'code' to -9999 instead of 0 for removed sections so it is not mistaken for normal channel.
@@ -188,8 +188,6 @@ def GCS_plot(table, units='m'):
 
     plt.show()
 
-
-@err_info
 def main_classify_landforms(tables, w_field, z_field, dist_field, out_folder, make_plots=True):
     '''Classifies river segments as normal, wide bar, constricted pool, oversized, or nozzle
 
@@ -205,6 +203,7 @@ def main_classify_landforms(tables, w_field, z_field, dist_field, out_folder, ma
             a .csv containing dist_down, W, Z, W_s, Z_s, W_s*Z_s, and landform classification/code fields
             adds these computed values to attribute tables of corresponding wetted polygon rectangular XS's
     '''
+    print('Classifying landforms...')
     out_polys = []
     fields = [w_field, z_field]
     std_fields = [field + '_s' for field in fields]
@@ -224,7 +223,7 @@ def main_classify_landforms(tables, w_field, z_field, dist_field, out_folder, ma
         for std_pair in std_pairs:
             std_covar_series(table, std_pair[0], std_pair[1])
         df = landforms(table)
-        df = landform_polygons(table, width_dir + "\\" + width_files[i])
+        #df = landform_polygons(table, width_dir + "\\" + width_files[i])
         #table.replace('.csv', '.shp')
         out_polys.append(width_dir + "\\" + width_files[i])
         if make_plots == True:
