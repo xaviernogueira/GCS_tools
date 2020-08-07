@@ -12,11 +12,8 @@ from create_station_lines import *
 import pandas
 
 
-#Plot the autocorrelation thresholds on the hypsograph.
-#Have a following function that takes three chosen stages, prints a map document showing the stages
-#Have another function that does the nested landform analysis, printing results into an xl file
 def loc_stage_finder(stage, centerlines_nums):
-    '''Useful function to find the centerline associated with a given stage'''
+    '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
     if int(stage) > centerlines_nums[-1]:
         loc_stage = centerlines_nums[-1]
     elif int(stage) <= centerlines_nums[0]:
@@ -173,16 +170,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
 
         gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
 
-        if int(stage) > centerlines_nums[-1]:
-            loc_stage = centerlines_nums[-1]
-        elif int(stage) <= centerlines_nums[0]:
-            loc_stage = centerlines_nums[0]
-        else:
-            index = 0
-            while int(stage) > centerlines_nums[index]:
-                index +=1
-            loc_stage = centerlines_nums[index]
-
+        loc_stage = loc_stage_finder(stage,centerlines_nums)
         j_loc_field = 'loc_%sft' % loc_stage
 
         temp_df = pd.read_csv(gcs_csv)
