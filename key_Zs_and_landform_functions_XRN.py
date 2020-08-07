@@ -15,7 +15,7 @@ import pandas
 #Plot the autocorrelation thresholds on the hypsograph.
 #Have a following function that takes three chosen stages, prints a map document showing the stages
 #Have another function that does the nested landform analysis, printing results into an xl file
-def prep_locations(detrend_location,max_stage=20):
+def prep_locations(detrend_location,max_stage=20, skip=False):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
 
@@ -133,11 +133,30 @@ def prep_locations(detrend_location,max_stage=20):
     file_functions.tableToCSV(out_points, csv_filepath=code_csv_loc,
                               fld_to_remove_override=['FID_statio', 'FID_thiess'])
 
-    print('All stages csv created @ %s' % code_csv_loc)
+    print('Empty stages csv created @ %s' % code_csv_loc)
+
+    print('Deleting files: %s' % del_files)
+    for file in del_files:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except:
+                print("Couldn't delete %s" % file)
+
+    return[code_csv_loc,centerlines_nums]
+
+def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cross_corr_threshold=0,max_stage=20):
+    '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
+    RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
+    Used to guide key Z selection for the following nested landform analysis'''
+    print('Calculating cross-correlation matrix...')
+    landform_folder = out_folder + '\\landform_analysis'
 
     for stage in range(1,max_stage+1):
         out_points_df = pd.read_csv(code_csv_loc, na_values=-9999)
-        gcs_csv = detrend_location + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
+        out_points_df.sort_values(by=['loc_%sft' % centerlines_nums[0]],inplace=True)
+
+        gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
 
         if int(stage) > centerlines_nums[-1]:
             loc_stage = centerlines_nums[-1]
@@ -152,42 +171,30 @@ def prep_locations(detrend_location,max_stage=20):
         j_loc_field = 'loc_%sft' % loc_stage
 
         temp_df = pd.read_csv(gcs_csv)
+        temp_df.sort_values(by=['dist_down'],inplace=True)
         temp_df_mini = temp_df.loc[:, ['dist_down','code','W','W_s']]
-        temp_df_mini.columns = [j_loc_field,('code_%sft' % stage),('W_%sft' % stage),('Ws_%sft' % stage)]
-        temp_df_mini.set_index(j_loc_field)
-        result = out_points_df.join(temp_df_mini, on=j_loc_field)
+        #temp_df_mini.columns = [j_loc_field,('code_%sft' % stage),('W_%sft' % stage),('Ws_%sft' % stage)]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W':('W_%sft' % stage), 'W_s':('Ws_%sft' % stage)}, axis=1, inplace=True)
+        temp_df_mini.sort_values(by=[j_loc_field],inplace=True)
+        result = out_points_df.merge(temp_df_mini, on=j_loc_field, how='left')
+        result = result.replace(np.nan,0)
+        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
         result.to_csv(code_csv_loc)
         print('Stage %sft added to the all stages csv' % stage)
 
+
     print('Stage alignment completed...')
 
-    print('Deleting files: %s' % del_files)
-    for file in del_files:
-        if os.path.exists(file):
-            try:
-                os.remove(file)
-            except:
-                print("Couldn't delete %s" % file)
-
-    print('All stages csv csv located @ %s' % code_csv_loc)
-
-    return[code_csv_loc]
-
-def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=20):
-    '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
-    RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
-    Used to guide key Z selection for the following nested landform analysis'''
-    print('Calculating cross-correlation matrix...')
-    landform_folder = out_folder + '\\landform_analysis'
-
-    analysis_df = pd.read_csv(landform_folder + '\\all_stages_table.csv', na_values=-9999)
+    #analysis_df = pd.read_csv(landform_folder + '\\all_stages_table.csv', na_values=-9999)
     col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
     cross_corrs = []
     for num in range(1, max_stage + 1):
         row_list = []
-        row_data = analysis_df.loc[:, ['Ws_%sft' % num]]
+        row_data = result.loc[:, ['Ws_%sft' % num]]
+        row_data = row_data.replace(0,0.001)
         for num in range(1, max_stage + 1):
-            col_data = analysis_df.loc[:, ['Ws_%sft' % num]]
+            col_data = result.loc[:, ['Ws_%sft' % num]]
+            col_data = col_data.replace(0, 0.1)
             row_list.append(np.corrcoef(row_data,col_data)[0,1])
         cross_corrs.append(row_list)
 
@@ -303,8 +310,10 @@ def key_z_finder(out_folder, channel_clip_poly,cross_corr_threshold=0,max_stage=
 
 
 ###### INPUTS ######
-comid_list = [17607553,17609707,17609017,17610661,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1,1,1,1,1,1,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+comid_list = [17585738]
+#[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
+SCO_list = [3]
+#[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
@@ -312,11 +321,12 @@ for count, comid in enumerate(comid_list):
     out_folder = direct + '\\LINEAR_DETREND'
     process_footprint = direct + '\\las_footprint.shp'
     table_location = out_folder + "\\gcs_ready_tables"
-    channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
+    channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
+    code_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
 
     arcpy.env.overwriteOutput = True
 
-    prepped_csv = prep_locations(detrend_location=out_folder,max_stage=20)
-    key_z_finder(out_folder, channel_clip_poly, cross_corr_threshold=0,max_stage=20) #Add autocorrelation threshold term
+    #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
+    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20) #Set centerlines to out_list[1] and code_csv to out_list[0]
 
 
