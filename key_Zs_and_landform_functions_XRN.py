@@ -194,14 +194,20 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     in_data = result.loc[:, col_list]
     cross_corrs_df = in_data.corr()
 
-    for num in range(1, max_stage + 1):
-        row_data = cross_corrs_df.loc[:, ['Ws_%sft_x' % num]]
+    for num in range(1, max_stage + 1): #Putting cross correlation dataframe in a maptplot format
+        row_data = cross_corrs_df.loc[:, ['Ws_%sft_x' % num]].astype(float)
         row_data = row_data.squeeze()
         row_list = row_data.values.tolist()
-        #row_list = [float(i) for i in row_list] #Possibly necessary to avoid error in ax.imshow()
         cross_corrs.append(row_list)
 
-    fig, ax = plt.subplots()
+    for list in cross_corrs: #Making sure all lists in cross_corrs are the same length to avoid plotting error
+        if len(list) != len(col_row_heads):
+            print('Error found. Repairing a coefficient list...')
+            gap = int(len(col_row_heads) - len(list))
+            for g in range(len(gap)):
+                list.append(0.0)
+
+    fig, ax = plt.subplots() #Plotting cross-correlation matrix
     im = ax.imshow(np.array(cross_corrs, dtype=float))
     ax.set_xticks(np.arange(len(col_row_heads)))
     ax.set_yticks(np.arange(len(col_row_heads)))
@@ -221,7 +227,6 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png') )
 
     key_zs = []
-
     i = 0
     j = 0
     switch = False
@@ -417,6 +422,6 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
 
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20) #Set centerlines to out_list[1] and code_csv to out_list[0]
+    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20)
     #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
 
