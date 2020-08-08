@@ -198,10 +198,11 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
         row_data = cross_corrs_df.loc[:, ['Ws_%sft_x' % num]]
         row_data = row_data.squeeze()
         row_list = row_data.values.tolist()
+        #row_list = [float(i) for i in row_list] #Possibly necessary to avoid error in ax.imshow()
         cross_corrs.append(row_list)
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.array(cross_corrs,dtype=float))
+    im = ax.imshow(np.array(cross_corrs, dtype=float))
     ax.set_xticks(np.arange(len(col_row_heads)))
     ax.set_yticks(np.arange(len(col_row_heads)))
     ax.set_xticklabels(col_row_heads)
@@ -210,7 +211,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     for i in range(len(col_row_heads)):
         for j in range(len(col_row_heads)):
             text = ax.text(j, i, round(cross_corrs[i][j],2),
-                           ha="center", va="center", fontsize=6,color="r")
+                           ha="center", va="center", fontsize=6, color="r")
 
     ax.set_title("Cross-correlation of stage width series")
     fig.tight_layout()
@@ -256,7 +257,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
                 poly_area += float(geometry.area)
             wetted_areas[stage] = poly_area
 
-    print('Calculating centerline lengths...')
+    print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
     centerline_lengths = [None]*len(centerlines_nums)
 
     for count, line in enumerate(centerlines_nums):
@@ -268,7 +269,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
         centerline_lengths[count] = poly_length
 
     mean_XS_length = []
-    for area, count in enumerate(wetted_areas):
+    for count, area in enumerate(wetted_areas):
         index = loc_stage_finder(count,centerlines_nums)[1]
         length = centerline_lengths[index]
         mean_XS_length.append(float(area/length))
@@ -280,6 +281,14 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
             d_area.append(area)
         else:
             d_area.append(float(area-wetted_areas[count-1]))
+
+    d_XS_length = []
+    mean_XS_length = [i for i in mean_XS_length if i != None]
+    for count, length in enumerate(mean_XS_length):
+        if count == 0:
+            d_XS_length.append(length)
+        else:
+            d_XS_length.append(float(length - mean_XS_length[count - 1]))
 
     max_area = wetted_areas[-1]
     print('Plotting CDF and PDF plots')
@@ -326,7 +335,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.cla()
 
-    x3 = np.array(range(0, max_stage + 1))  # Add saving optionality
+    x3 = np.array(range(0, max_stage + 1))
     y3 = np.array(wetted_areas)
     plt.figure()
     plt.plot(x3, y3)
@@ -355,14 +364,35 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylabel('Flood stage height (ft)')
     plt.title('Mean XS length chart')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
-    plt.xlim(0, max_stage)
-    plt.ylim(0, max(y1))
+    plt.xlim(0, max(y4))
+    plt.ylim(0, max_stage)
     plt.xticks(np.arange(0, (max_stage + 1), step=1))
     title = (out_folder + '\\XS_length_plot.png')
     if cross_corr_threshold != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
             title = (out_folder + ('\\XS_length_plot_%s_corr_thresh.png' % cross_corr_threshold))
+    fig = plt.gcf()
+    fig.set_size_inches(12, 6)
+    plt.savefig(title, dpi=300, bbox_inches='tight')
+    plt.cla()
+
+    x5 = np.array(range(0, max_stage + 1))  # Add saving optionality
+    y5 = np.array(d_XS_length)
+    plt.figure()
+    plt.plot(x2, y2)
+    plt.xlabel('Flood stage height (ft)')
+    plt.ylabel('Change in mean XS length (ft)')
+    plt.title('PDF XS chart')
+    plt.grid(b=True, which='major', color='#666666', linestyle='-')
+    plt.xlim(0, max_stage)
+    plt.ylim(0, None)
+    plt.xticks(np.arange(0, (max_stage + 1), step=1))
+    title = (out_folder + '\\PDF_XS_plot.png')
+    if cross_corr_threshold != 0:
+        for stage in key_zs:
+            plt.axvline(x=stage, color='r', linestyle='--')
+            title = (out_folder + ('\\PDF_XS_plot_%s_corr_thresh.png' % cross_corr_threshold))
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
