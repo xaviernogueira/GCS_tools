@@ -199,14 +199,14 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     print('Stage alignment completed...')
 
     col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
-    col_list = [('Ws_%sft_x') % f for f in range(1, max_stage + 1)]
+    col_list = [('Ws_%sft') % f for f in range(1, max_stage + 1)]
 
     cross_corrs = []
     in_data = result.loc[:, col_list]
     cross_corrs_df = in_data.corr()
 
     for num in range(1, max_stage + 1): #Putting cross correlation dataframe in a maptplot format
-        row_data = cross_corrs_df.loc[:, ['Ws_%sft_x' % num]].astype(float)
+        row_data = cross_corrs_df.loc[:, ['Ws_%sft' % num]].astype(float)
         row_data = row_data.squeeze()
         row_list = row_data.values.tolist()
         cross_corrs.append(row_list)
@@ -382,7 +382,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.xlim(0, max(x4))
     plt.ylim(0, max_stage)
-    plt.xticks(np.arange(0, int(max(x4)), step=1))
+    plt.xticks(np.arange(0, int(max(x4)), step=20))
     title = (out_folder + '\\XS_length_plot.png')
     if cross_corr_threshold != 0:
         for stage in key_zs:
@@ -396,7 +396,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     x5 = np.array(range(0, max_stage + 1))  # Add saving optionality
     y5 = np.array(d_XS_length)
     plt.figure()
-    plt.plot(x2, y2)
+    plt.plot(x5, y5)
     plt.xlabel('Flood stage height (ft)')
     plt.ylabel('Change in mean XS length (ft)')
     plt.title('PDF XS chart')
