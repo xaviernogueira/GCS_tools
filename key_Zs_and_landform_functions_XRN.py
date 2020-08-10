@@ -36,6 +36,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     landform_folder = detrend_location + '\\landform_analysis'#Make directory for landform analysis xl files and centerline adjusted GCS tables
     centerline_folder = detrend_location + "\\analysis_centerline_and_XS"
     del_files = []
+    del_suffix = ['.shp', '.cpg','.dbf','.prj','.sbn','.sbx','.shp.xlm','shx']
 
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
@@ -69,7 +70,9 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
         station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing,
                                                                            xs_length=5, stage=[])
         station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num,spacing))
-        del_files.append(station_lines)
+
+        for suffix in del_suffix:
+            del_files.append(station_lines[:-4] + suffix)
 
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % (num)), join_attributes="ALL", output_type="POINT")
 
@@ -86,7 +89,12 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
 
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
             z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
-            del_files.append(centerline_folder + "\\thalweg_Z.dbf")
+
+            for suffix in ['.dbf','.cpg','.dbf.xml']:
+                del_files.append(centerline_folder + "\\thalweg_Z%s" % suffix)
+            for suffix in del_suffix:
+                del_files.append(station_points[:-4] + suffix)
+                del_files.append(single_station_points[:-4] + suffix)
 
             centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num #csv with XY coordinates of the centerlines made
             arcpy.AddXY_management(single_station_points)
@@ -133,8 +141,11 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     for counter, num in enumerate(centerlines_nums):
         theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
         out_points = centerline_folder + ("\\align_points%s.shp" % counter)
-        del_files.append(out_points)
-        del_files.append(theis_loc)
+
+        for suffix in del_suffix:
+            del_files.append(theis_loc[:-4] + suffix)
+            del_files.append(out_points[:-4] + suffix)
+
         if counter >= max_count:
             max_count = counter
         if counter == 1:
@@ -204,7 +215,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
         if len(list) != len(col_row_heads):
             print('Error found. Repairing a coefficient list...')
             gap = int(len(col_row_heads) - len(list))
-            for g in range(len(gap)):
+            for g in range(gap):
                 list.append(0.0)
 
     fig, ax = plt.subplots() #Plotting cross-correlation matrix
@@ -369,9 +380,9 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylabel('Flood stage height (ft)')
     plt.title('Mean XS length chart')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
-    plt.xlim(0, max(y4))
+    plt.xlim(0, max(x4))
     plt.ylim(0, max_stage)
-    plt.xticks(np.arange(0, (max_stage + 1), step=1))
+    plt.xticks(np.arange(0, int(max(x4)), step=1))
     title = (out_folder + '\\XS_length_plot.png')
     if cross_corr_threshold != 0:
         for stage in key_zs:
@@ -405,9 +416,9 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
 
 
 ###### INPUTS ######
-comid_list = [17585738]
+comid_list = [17586504,17610257,17573013,17573045,17586810,17609015]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [3]
+SCO_list = [2,2,2,2,2,2]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -421,7 +432,7 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20)
-    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
+    out_list = prep_locations(detrend_location=out_folder,max_stage=20)
+    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20)
+    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
 
