@@ -100,6 +100,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             arcpy.AddXY_management(single_station_points)
             file_functions.tableToCSV(single_station_points, csv_filepath=centerline_XY_loc, fld_to_remove_override=[])
 
+
             station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
                                                     join_field=loc_field, fields=['ras_detren'])
             arcpy.AddField_management(station_points, ('loc_%sft' % num), 'SHORT')
@@ -284,21 +285,23 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
             poly_length += float(geometry.length)
         centerline_lengths[count] = poly_length
 
-    mean_XS_length = []
+    wetted_areas = [i for i in wetted_areas if i != None]
+
+    mean_XS_length = [] #Calculates mean width per stage as wetted area / centerline length
     for count, area in enumerate(wetted_areas):
         index = loc_stage_finder(count,centerlines_nums)[1]
         length = centerline_lengths[index]
-        mean_XS_length.append(float(area/length))
+        if length != None:
+            mean_XS_length.append(float(area/length))
 
-    d_area = []
-    wetted_areas = [i for i in wetted_areas if i != None]
+    d_area = [] #Calculates the change in wetted area between stages
     for count, area in enumerate(wetted_areas):
         if count==0:
             d_area.append(area)
         else:
             d_area.append(float(area-wetted_areas[count-1]))
 
-    d_XS_length = []
+    d_XS_length = [] #Calculates the change in mean width between stages
     mean_XS_length = [i for i in mean_XS_length if i != None]
     for count, length in enumerate(mean_XS_length):
         if count == 0:
@@ -309,7 +312,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     max_area = wetted_areas[-1]
     print('Plotting CDF and PDF plots')
 
-    x1 = np.array(range(0,max_stage+1))
+    x1 = np.array(range(0,len(wetted_areas)))
     y1 = np.array([(float(f/max_area))*100 for f in wetted_areas])
     plt.figure()
     plt.plot(x1,y1)
@@ -328,9 +331,9 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.cla()
+    plt.clf()
 
-    x2 = np.array(range(0,max_stage+1)) #Add saving optionality
+    x2 = np.array(range(0,len(d_area))) #Add saving optionality
     y2 = np.array(d_area)
     plt.figure()
     plt.plot(x2,y2)
@@ -349,9 +352,9 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.cla()
+    plt.clf()
 
-    x3 = np.array(range(0, max_stage + 1))
+    x3 = np.array(range(0,len(wetted_areas)))
     y3 = np.array(wetted_areas)
     plt.figure()
     plt.plot(x3, y3)
@@ -370,10 +373,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.cla()
+    plt.clf()
 
     x4 = np.array(mean_XS_length)
-    y4 = np.array(range(0, max_stage + 1))
+    y4 = np.array(range(0,len(mean_XS_length)))
     plt.figure()
     plt.plot(x4, y4)
     plt.xlabel('Mean XS length')
@@ -391,9 +394,9 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.cla()
+    plt.clf()
 
-    x5 = np.array(range(0, max_stage + 1))  # Add saving optionality
+    x5 = np.array(range(0,len(d_XS_length)))  # Add saving optionality
     y5 = np.array(d_XS_length)
     plt.figure()
     plt.plot(x5, y5)
@@ -412,11 +415,11 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.cla()
+    plt.clf()
 
 
 ###### INPUTS ######
-comid_list = [17586504,17610257,17573013,17573045,17586810,17609015]
+comid_list = [17609015]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 SCO_list = [2,2,2,2,2,2]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
@@ -433,6 +436,5 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
 
     out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=code_csv_loc,centerlines_nums=[3, 10, 19],cross_corr_threshold=0,max_stage=20)
     key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
 
