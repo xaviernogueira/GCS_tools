@@ -189,8 +189,8 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
 
         temp_df = pd.read_csv(gcs_csv)
         temp_df.sort_values(by=['dist_down'],inplace=True)
-        temp_df_mini = temp_df.loc[:, ['dist_down','code','W','W_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W':('W_%sft' % stage), 'W_s':('Ws_%sft' % stage)}, axis=1, inplace=True)
+        temp_df_mini = temp_df.loc[:, ['dist_down','code','W','W_s','Z_s']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W':('W_%sft' % stage), 'W_s':('Ws_%sft' % stage), 'Z_s':('Zs_%sft' % stage),}, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field],inplace=True)
         result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field,how='left')
         result = result.replace(np.nan,0)
@@ -482,18 +482,15 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
         print('Making hexagaon heatplot for geomorphic class %s' % geo_class)
         seed_land_loc = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
         data = pd.read_csv(seed_land_loc + '\\all_stages_table.csv')
+        data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
 
         for comid in comids:
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
             data_temp = pd.read_csv(landform_folder + '\\all_stages_table.csv')
+            data_temp = data_temp.loc[:, ~data.columns.str.contains('^Unnamed')]
             data = data.append(data_temp, ignore_index=True)
 
         save_title_full_class = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % geo_class #FIGURE OUT THIS PART< HOW TO AVERAGE ACROSS A KEY Z
-
-    else:
-        print('Making hexagon heatplot for comid %s, geomorphic class %s' % (comids,geo_class))
-        landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
-        data = pd.read_csv(landform_folder + '\\all_stages_table.csv')
 
     titles = []
 
@@ -510,17 +507,18 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
                 comids, geo_class, z))
 
         for count, ax in enumerate(axs):
-            x = data.loc[:, [('Ws_%sft' % z)]].toarray()
-            y = data.loc[:, [('Zs_%sft' % z)]].toarray()
+            x = data.loc[:, [('Ws_%sft' % z)]].to_numpy()
+            y = data.loc[:, [('Zs_%sft' % z)]].to_numpy()
 
-            if x.max >= x.min and x.max >= xmax:
-                xmax = abs(x.max)
-            elif abs(x.min) >= xmax:
-                xmax = abs.xmin
-            if y.max >= y.min and y.max >= ymax:
-                ymax = abs(y.max)
-            elif abs(x.min) >= ymax:
-                ymax = abs(y.min)
+            if np.abs(np.max(x)) >= np.abs(np.min(x)) and np.max(x) >= xmax:
+                xmax = np.abs(float(np.max(x)))
+            elif np.abs(np.min(x)) >= xmax:
+                xmax = np.abs(float(np.min(x)))
+
+            if np.abs(np.max(y)) >= np.abs(np.min(y)) and np.max(y) >= ymax:
+                ymax = np.abs(float(np.max(y)))
+            elif np.abs(np.min(y)) >= ymax:
+                ymax = np.abs(float(np.min(y)))
 
             hb = ax.hexbin(x, y, gridsize=50, cmap='rainbow')
             ax.set(xlim=(-xmax, xmax), ylim=(-ymax, ymax))
@@ -535,36 +533,38 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
 
     else:
         for stage in range(1, max_stage + 1):
-            x = data.loc[:, [('Ws_%sft' % stage)]].toarray()
-            y = data.loc[:, [('Zs_%sft' % stage)]].toarray()
+            print('Making hexagon heatplot for comid %s, geomorphic class %s, stage %sft...' % (comids, geo_class,stage))
+            landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
+            data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % stage)
+            data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
 
-            if abs(x.max) >= abs(x.min):
-                xmax = float(abs(x.max))
-            else:
-                xmax = float(abs(x.min))
+            x = data.loc[:, ['W_s']].to_numpy()
+            y = data.loc[:, ['Z_s']].to_numpy()
 
-            if abs(y.max) >= abs(y.min):
-                ymax = float(abs(y.max))
-            else:
-                ymax = float(abs(y.min))
+            #xmax = (float(np.max(x)))
+            #xmin = (float(np.min(x)))
+            #ymax = (float(np.max(y)))
+            #ymin = (float(np.min(y)))
+            xmax = float(np.percentile(x,97))
+            ymax = float(np.percentile(y, 97))
+            xmin = float(np.percentile(x, 3))
+            ymin = float(np.percentile(y, 3))
 
-            fig, axs = plt.subplots(ncols=1, sharey=True, figsize=(7, 7))
-            save_title = landform_folder = '\\comid%s_stage%sft_heatplot.png' % (comids, stage)
-            titles.append('COMID%s, class %s: Standardized channel Ws and detrended Zs heatplot' % (comids, geo_class))
+            save_title = landform_folder + '\\comid%s_stage%sft_heatplot.png' % (comids[0], stage)
+            titles.append('COMID%s, class %s: Standardized channel Ws and detrended Zs heatplot' % (comids[0], geo_class))
 
-        for count, ax in enumerate(axs):
-            hb = ax.hexbin(x, y, gridsize=50, cmap='rainbow')
-            ax.set(xlim=(-xmax, xmax), ylim=(-ymax, ymax))
-            ax.set_title(titles[count])
-            ax.set_ylabel('Standardized detrended elevation (Zs)')
-            ax.set_ylabel('Standardized width (Ws)')
+            plt.hexbin(x, y, gridsize=50, cmap='YlOrRd')
+            plt.axis([xmin, xmax, ymin, ymax])
+            plt.title(titles[stage-1])
+            plt.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
+            plt.xlabel('Standardized width (Ws)')
+            plt.ylabel('Standardized detrended elevation (Zs)')
 
-        plt.savefig(save_title, dpi=300, bbox_inches='tight')
-        plt.clf()
-        plt.close('all')
+            plt.savefig(save_title, dpi=300, bbox_inches='tight')
+            plt.clf()
+            plt.close('all')
 
-
-
+    print('Plots completed')
 
 
 def caamano_analysis(aligned_csv):
@@ -574,7 +574,7 @@ def caamano_analysis(aligned_csv):
 ###### INPUTS ######
 comid_list = [17610235]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1,1,1,1,1,1,2,2,2,2,2,2,2]
+SCO_list = [3]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -591,6 +591,6 @@ for count, comid in enumerate(comid_list):
 
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
     #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
-    nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[])
+    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[])
     heat_plotter(comids=comid_list, geo_class=3, key_zs=[], max_stage=20)
 
