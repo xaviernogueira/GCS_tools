@@ -486,19 +486,13 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
         x_list_of_arrays = [[],[],[]] #Initialize list containing [baseflow, bankful, flood] values
         y_list_of_arrays = [[],[],[]]
 
-        seed_land_loc = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
-        data = pd.read_csv(seed_land_loc + '\\all_stages_table.csv')
-        data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
-
         for count, comid in enumerate(comids):
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
-            data_temp = pd.read_csv(landform_folder + '\\all_stages_table.csv')
-            data_temp = data_temp.loc[:, ~data.columns.str.contains('^Unnamed')]
-            data = data.append(data_temp, ignore_index=True)
 
             for index, z in enumerate(key_zs[count]):
-                x_temp = data.loc[:, [('Ws_%sft' % z)]].squeeze().to_list()
-                y_temp = data.loc[:, [('Zs_%sft' % z)]].squeeze().to_list()
+                data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
+                x_temp = data.loc[:, [('W_s')]].squeeze().to_list()
+                y_temp = data.loc[:, [('Z_s')]].squeeze().to_list()
                 for value in range(len(x_temp)):
                     x_list_of_arrays[index].append(x_temp[value])
                     y_list_of_arrays[index].append(y_temp[value])
@@ -534,14 +528,14 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
             x = np.asarray(x_list_of_arrays[count])
             y = np.asarray(y_list_of_arrays[count])
 
-            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd')
+            hb = ax.hexbin(x, y, gridsize=40, cmap='YlOrRd')
             ax.set(xlim=(xmin, xmax), ylim=(xmin, ymax))
             ax.set_title(titles[count])
             ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
-        save_title = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % geo_class) + '\\class%s_keyZs_heatplot.png'
+        save_title = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % geo_class) + ('\\class%s_keyZs_heatplot.png' % geo_class)
         fig = plt.gcf()
         fig.set_size_inches(16, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
@@ -550,8 +544,7 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
         plt.close('all')
         print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (geo_class, save_title))
 
-
-    if len(key_zs) != 0:
+    elif len(key_zs) != 0:
         fig, axs = plt.subplots(ncols=int(len(key_zs)), sharey=True, figsize=(7, 7))
         fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
 
