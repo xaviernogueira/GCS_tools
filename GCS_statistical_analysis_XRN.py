@@ -554,6 +554,14 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
         plt.cla()
     print("Power spectral density plot created @ %s" % plot_dirs)
 
+def landform_following_and_size(aligned_csv,plotting=True):
+    '''IN: Staged df. This function finds the mean and SD size of a contigous landform (exlcluding normal) as well as the
+    frequency in which each landform (w/ and w/o normal channel) follows each other landform.
+    RETURNS: A xl file with a sheet for each stage following %s and size metrics.
+    If plotting=True, a plot for each landform showing change in following %s with flood stage. Plot showing mean landform size w/ SD error bars vs stage.
+    '''
+
+
 
 
 #INPUTS#

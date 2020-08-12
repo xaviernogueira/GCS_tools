@@ -10,6 +10,7 @@ import GCS_statistical_analysis_XRN
 import create_station_lines
 from create_station_lines import *
 import pandas
+import openpyxl as xl
 
 
 def loc_stage_finder(stage, centerlines_nums):
@@ -332,6 +333,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
+    plt.close('all')
 
     x2 = np.array(range(0,len(d_area))) #Add saving optionality
     y2 = np.array(d_area)
@@ -353,6 +355,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
+    plt.close('all')
 
     x3 = np.array(range(0,len(wetted_areas)))
     y3 = np.array(wetted_areas)
@@ -374,6 +377,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
+    plt.close('all')
 
     x4 = np.array(mean_XS_length)
     y4 = np.array(range(0,len(mean_XS_length)))
@@ -395,6 +399,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
+    plt.close('all')
 
     x5 = np.array(range(0,len(d_XS_length)))  # Add saving optionality
     y5 = np.array(d_XS_length)
@@ -416,12 +421,72 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
+    plt.close('all')
 
+def nested_landform_analysis(aligned_csv,key_zs):
+    '''IN: Aligned csv with landform codes for each XS. A list (key_zs) containing three stages
+    RETURNS: A xl table containing the abundance of each unique nested landform set'''
+    landform_folder = str(os.path.dirname(aligned_csv))
+    # code number and corresponding MU
+    code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}
+    print('Starting nested landform analysis...')
+
+    if len(key_zs) == 0:
+        return print('No key Zs selected, please add parameters')
+
+    key_zs.sort()
+    aligned_df = pd.read_csv(aligned_csv)
+
+    code_df_list = [] # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
+    for key_z in key_zs:
+        code_df_temp = aligned_df.loc[:, [('code_%sft' % key_z)]].squeeze()
+        code_df_list.append(code_df_temp.values.tolist())
+
+    nested_landforms = list(zip(code_df_list[0], code_df_list[1], code_df_list[2]))
+    unique_nests = list(set(nested_landforms))
+
+    unique_nest_counts = list(np.zeros(len(unique_nests), dtype=int)) # initialize list of lists to count abundance
+
+    for nest in nested_landforms:
+        i = unique_nests.index(nest)
+        unique_nest_counts[i] += 1
+
+    nest_abundances = list(zip(unique_nests, unique_nest_counts))
+    nest_abundances.sort(key=lambda x: x[1], reverse=True)
+
+    nested_analysis_xl = (landform_folder + '\\nested_landforms.xlsx' )
+    wb = xl.Workbook()
+    wb.save(nested_analysis_xl)
+    ws = wb.active
+    ws.title = 'Nested landforms abundances'
+    ws.cell(row=1, column=1).value = 'Nested landform set [baseflow, BF, flood]'
+    ws.cell(row=1, column=2).value = 'Abundances'
+    ws.cell(row=1, column=3).value = '% of unique sets'
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 16
+
+    for count,unique_set in enumerate(nest_abundances):
+        string = '%s, %s, %s' % (code_dict[unique_set[0][0]],code_dict[unique_set[0][1]],code_dict[unique_set[0][2]])
+        ws.cell(row=2 + count, column=1).value = str(string)
+        ws.cell(row=2 + count,column=2).value = unique_set[1]
+        ws.cell(row=2 + count, column=3).value = round((unique_set[1] / len(nested_landforms)) * 100, 2)
+
+    wb.save(nested_analysis_xl)
+    wb.close()
+    print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
+
+
+
+
+
+def caamano_analysis(aligned_csv):
+    '''IN: Aligned csv with landform codes for each XS.
+    OUT:'''
 
 ###### INPUTS ######
-comid_list = [17609015]
+comid_list = [17610671]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [2,2,2,2,2,2]
+SCO_list = [5]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -432,9 +497,11 @@ for count, comid in enumerate(comid_list):
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
     code_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
+    aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
 
     arcpy.env.overwriteOutput = True
 
-    out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
+    #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
+    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
+    nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[2,4,8])
 
