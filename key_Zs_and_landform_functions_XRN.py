@@ -175,7 +175,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
     RETURNS: None. This function creates a folder containing wetted polygons for a 0.1ft increments as well as a clippped detrended DEM and contours.'''
     del_files = []
-    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', '.shx', '.tif', '.tif.aux.xml', '.tfw', '.tif.ovr']
+    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xml', '.shx', '.tif', '.tif.aux.xml', '.tfw', '.tif.ovr', '.tif.vat.cpg', '.tif.vat.dbf']
     channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
     small_wetted_poly_loc = detrend_folder + '\\wetted_polygons\\small_increments'
 
@@ -335,7 +335,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     else:
         print('Making small increment plots...')
         wetted_areas = []
-        wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-3:] == 'shp']
+        wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-6:] == 'ft.shp']
         flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).tolist() # A list storing all small flood stage increments
 
         print('Calculating wetted areas...')
@@ -577,7 +577,7 @@ def nested_landform_analysis(aligned_csv,key_zs):
     wb.close()
     print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
 
-def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
+def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
     '''IN: a list with either one or multiple comids. Key_zs list if filled makes subplots, if not a plot for each stage is made.
     If multiple comids are present, key_zs list structure is important. EXAMPLE: comids= [123,456,789], key_zs = [[baseflow, BF, flood],[baseflow, BF, flood],[baseflow, BF, flood]
     Heatmaps plotted and saved in landform folder, or new folder for class averaged figures'''
@@ -592,6 +592,12 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
 
             for index, z in enumerate(key_zs[count]):
+                if isinstance(z, float) ==  True:
+                    if z >= 10.0:
+                        z = (str(z)[0:2] + 'p' + str(z)[3])
+                    else:
+                        z = (str(z)[0] + 'p' + str(z)[2])
+
                 data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
                 x_temp = data.loc[:, [('W_s')]].squeeze().to_list()
                 y_temp = data.loc[:, [('Z_s')]].squeeze().to_list()
@@ -654,6 +660,12 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
         ymax = 0
 
         for count, z in enumerate(key_zs):
+            if isinstance(z, float) == True:
+                if z >= 10.0:
+                    z = (str(z)[0:2] + 'p' + str(z)[3])
+                else:
+                    z = (str(z)[0] + 'p' + str(z)[2])
+
             titles.append('COMID%s, class %s, stage %sft' % (comids[0], geo_class, z))
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
             data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
@@ -679,6 +691,11 @@ def heat_plotter(comids,geo_class,key_zs=[],max_stage=20):
 
         for count, ax in enumerate(axs):
             key_z = key_zs[count]
+            if isinstance(key_z, float) == True:
+                if key_z >= 10.0:
+                    key_z = (str(key_z)[0:2] + 'p' + str(key_z)[3])
+                else:
+                    key_z = (str(key_z)[0] + 'p' + str(key_z)[2])
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
             data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % key_z)
             data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
@@ -741,11 +758,13 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
+comid_list = [17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
+              #17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 #[17569535,22514218,17607553,17609707,17609017,17610661]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
-#[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+SCO_list = [1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+            #2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+
 
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
@@ -759,10 +778,10 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches
-    #out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
-    #align_csv(code_csv_loc, centerlines_nums=out_list[1], key_zs=[], max_stage=20)
-    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=aligned_csv_loc,centerlines_nums=[2,8,10],key_zs=[], max_stage=20, small_increments=0)
+    #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
+    out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
+    align_csv(code_csv_loc, centerlines_nums=out_list[1], max_stage=20)
+    key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=out_list[1], key_zs=[], max_stage=20, small_increments=0.1)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
-    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Update so a float as a key z can refer to the float to string system
+    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
 
