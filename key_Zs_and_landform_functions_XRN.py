@@ -223,9 +223,41 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
                 except:
                     print("Couldn't delete %s" % prefix + suffix)
 
-def gcs_and_align_key_zs():
-    '''This function does a full GCS analysis using three specific key Zs that can include any float. Results are apended to the aligned csv and saved
-    to the gcs_ready_tables, as well as plotted.'''
+
+def align_csv(code_csv_loc, centerlines_nums, max_stage=20):
+    '''IN: Aligned csv location, list of used centerline nums, key Zs (optional)
+    RETURNS: An aligned csv containing all stages at 1ft increments is returned as a dataframe. '''
+    print('Calculating cross-correlation matrix...')
+    landform_folder = out_folder + '\\landform_analysis'
+
+    for stage in range(1, max_stage + 1):
+        out_points_df = pd.read_csv(code_csv_loc, na_values=-9999)
+        out_points_df.sort_values(by=['loc_%sft' % centerlines_nums[0]], inplace=True)
+
+        gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
+
+        loc_stage = loc_stage_finder(stage, centerlines_nums)[0]
+        j_loc_field = 'loc_%sft' % loc_stage
+
+        temp_df = pd.read_csv(gcs_csv)
+        temp_df.sort_values(by=['dist_down'], inplace=True)
+        temp_df_mini = temp_df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W': ('W_%sft' % stage),
+                             'W_s': ('Ws_%sft' % stage), 'Z_s': ('Zs_%sft' % stage), }, axis=1, inplace=True)
+        temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
+        result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
+        result = result.replace(np.nan, 0)
+        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
+        result.to_csv(code_csv_loc)
+        print('Stage %sft added to the all stages csv' % stage)
+
+    print('Stage alignment completed...')
+
+    return result
+
+def key_zs_gcs(code_csv_loc, key_zs=[]):
+    '''This function does a full GCS analysis using three specific key Zs that can include any float. Results saved
+    to the gcs_ready_tables, as well as plotted. Results are aligned to the existing csv to facilitate landform analysis'''
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
@@ -234,28 +266,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     Used to guide key Z selection for the following nested landform analysis'''
     print('Calculating cross-correlation matrix...')
     landform_folder = out_folder + '\\landform_analysis'
-
-    for stage in range(1,max_stage+1):
-        out_points_df = pd.read_csv(code_csv_loc, na_values=-9999)
-        out_points_df.sort_values(by=['loc_%sft' % centerlines_nums[0]],inplace=True)
-
-        gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
-
-        loc_stage = loc_stage_finder(stage,centerlines_nums)[0]
-        j_loc_field = 'loc_%sft' % loc_stage
-
-        temp_df = pd.read_csv(gcs_csv)
-        temp_df.sort_values(by=['dist_down'],inplace=True)
-        temp_df_mini = temp_df.loc[:, ['dist_down','code','W','W_s','Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W':('W_%sft' % stage), 'W_s':('Ws_%sft' % stage), 'Z_s':('Zs_%sft' % stage),}, axis=1, inplace=True)
-        temp_df_mini.sort_values(by=[j_loc_field],inplace=True)
-        result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field,how='left')
-        result = result.replace(np.nan,0)
-        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-        result.to_csv(code_csv_loc)
-        print('Stage %sft added to the all stages csv' % stage)
-
-    print('Stage alignment completed...')
+    result = pd.read_csv(code_csv_loc)
 
     col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
     col_list = [('Ws_%sft') % f for f in range(1, max_stage + 1)]
@@ -321,27 +332,23 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
                     poly_area += float(geometry.area)
                 wetted_areas[stage] = poly_area
 
-        else:
-            print('Making small increment plots...')
-            wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-3:] == 'shp']
-            flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).to_list() # A list storing all small flood stage increments
+    else:
+        print('Making small increment plots...')
+        wetted_areas = []
+        wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-3:] == 'shp']
+        flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).tolist() # A list storing all small flood stage increments
 
-            for poly in wetted_polys:
-                poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
-                geometries = arcpy.CopyFeatures_management(poly_loc, arcpy.Geometry())
-                poly_area = 0
-                for geometry in geometries:
-                    poly_area += float(geometry.area)
-                wetted_areas.append = poly_area
+        print('Calculating wetted areas...')
+        for poly in wetted_polys:
+            poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
+            geometries = arcpy.CopyFeatures_management(poly_loc, arcpy.Geometry())
+            poly_area = 0
+            for geometry in geometries:
+                poly_area += float(geometry.area)
+            wetted_areas.append(poly_area)
 
-            centerline_index_list = []
-            for count, num in enumerate(centerlines_nums):
-                if count == 0:
-                    start = 0
-                else:
-                    start = centerlines_nums[count-1]
-
-        wetted_areas = [i for i in wetted_areas if i != None]
+    wetted_areas = [i for i in wetted_areas if i != None]
+    wetted_areas.sort()
 
 
     print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
@@ -367,6 +374,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
         if length != None:
             mean_XS_length.append(float(area/length))
     mean_XS_length = [i for i in mean_XS_length if i != None]
+
 
     d_area = [] #Calculates the change in wetted area between stages
     for count, area in enumerate(wetted_areas):
@@ -413,8 +421,8 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     if small_increments == 0:
         x2 = np.array(range(0, len(d_area))) #Add saving optionality
     else:
-        x2 = np.arange(0, max_stage + small_increments, small_increments)
-    y2 = np.array(d_area)
+        x2 = np.arange(small_increments, max_stage + small_increments, small_increments)
+    y2 = np.array(d_area[1:])
     plt.figure()
     plt.plot(x2,y2)
     plt.xlabel('Flood stage height (ft)')
@@ -488,8 +496,8 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     if small_increments == 0:
         x5 = np.array(range(0, len(d_XS_length)))
     else:
-        x5 = np.arange(0, max_stage + small_increments, small_increments)
-    y5 = np.array(d_XS_length)
+        x5 = np.arange(small_increments, max_stage + small_increments, small_increments)
+    y5 = np.array(d_XS_length[1:])
     plt.figure()
     plt.plot(x5, y5)
     plt.xlabel('Flood stage height (ft)')
@@ -726,9 +734,10 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17569535,22514218,17607553,17609707,17609017,17610661]
+comid_list = [17569535]
+#[17569535,22514218,17607553,17609707,17609017,17610661]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1,1,1,1,1,1]
+SCO_list = [1]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -743,9 +752,10 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with SC1 so far
-    #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],key_zs=[], max_stage=20, small_increments=0)
+    #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with first two SC1 reaches
+    #out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
+    #align_csv(code_csv_loc, centerlines_nums=out_list[1], key_zs=[], max_stage=20)
+    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=aligned_csv_loc,centerlines_nums=[2,8,10],key_zs=[], max_stage=20, small_increments=0.1)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
     #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Update so a float as a key z can refer to the float to string system
 
