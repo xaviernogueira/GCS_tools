@@ -224,8 +224,6 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
             expression = ("(float(!Shape.area!)) / %d" % spacing[0])
             arcpy.CalculateField_management(rectangles, "Width", expression, "PYTHON3")
 
-            #print((shapefile_location + "\\stats_table_%s.dbf" % stage))
-
             rectangles = (shapefile_location + "\\width_rectangles_%s" % file[-8:])
 
     except arcpy.ExecuteError:
@@ -262,7 +260,7 @@ def z_value_analysis1(out_folder, detrended_DEM):
                                                       out_table=(
                                                                   width_series_shapefile_folder + "\\stats_table_%s.dbf" % stage),
                                                       statistics_type="MEAN")
-        rectangles = arcpy.JoinField_management(width_series_shapefile_folder + "\\" + file, in_field="loc_id",
+        rectangles = arcpy.JoinField_management(width_file, in_field="loc_id",
                                                 join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
 
         print("Z statistics added for stage %s" % stage)
@@ -434,9 +432,6 @@ def export_to_gcs_ready(out_folder, list_of_error_locations=[]):
 
     print("DBF and CSV tables of width/Z analysis at %s" % table_location)
     print("List of csv tables: %s" % list_of_csv_tables)
-
-    print("Landform classification is underway..")
-    main_classify_landforms(list_of_csv_tables, w_field='W', z_field='Z', dist_field='dist_down', make_plots=False)
 
     return [list_of_csv_tables, width_rectangles]
 
