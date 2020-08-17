@@ -395,8 +395,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     if small_increments == 0:
         x1 = np.array(range(0, len(wetted_areas)))
+        title = (out_folder + '\\CDF_plot.png')
     else:
         x1 = np.arange(0, max_stage+small_increments, small_increments)
+        title = (out_folder + '\\CDF_plot_small_inc.png')
     y1 = np.array([(float(f/max_area))*100 for f in wetted_areas])
     plt.figure()
     plt.plot(x1,y1)
@@ -407,7 +409,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.xlim(0,max_stage)
     plt.ylim(0,max(y1))
     plt.xticks(np.arange(0, (max_stage+1), step=1))
-    title = (out_folder + '\\CDF_plot.png')
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
@@ -420,11 +421,14 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     if small_increments == 0:
         x2 = np.array(range(0, len(d_area))) #Add saving optionality
+        y2 = np.array(d_area)
+        title = (out_folder + '\\PDF_plot.png')
     else:
         x2 = np.arange(small_increments, max_stage + small_increments, small_increments)
-    y2 = np.array(d_area[1:])
+        y2 = np.array(d_area[1:])
+        title = (out_folder + '\\PDF_plot_small_inc.png')
     plt.figure()
-    plt.plot(x2,y2)
+    plt.plot(x2, y2)
     plt.xlabel('Flood stage height (ft)')
     plt.ylabel('Change in area (sq ft)')
     plt.title('PDF chart')
@@ -432,7 +436,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.xlim(0, max_stage)
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage+1), step=1))
-    title = (out_folder + '\\PDF_plot.png')
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
@@ -445,8 +448,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     if small_increments == 0:
         x3 = np.array(range(0, len(wetted_areas)))
+        title = (out_folder + '\\wetted_areas_plot.png')
     else:
         x3 = np.arange(0, max_stage + small_increments, small_increments)
+        title = (out_folder + '\\wetted_areas_plot_small_inc.png')
     y3 = np.array(wetted_areas)
     plt.figure()
     plt.plot(x3, y3)
@@ -457,7 +462,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.xlim(0, max_stage)
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage + 1), step=1))
-    title = (out_folder + '\\wetted_areas_plot.png')
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
@@ -471,8 +475,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     x4 = np.array(mean_XS_length)
     if small_increments == 0:
         y4 = np.array(range(0, len(mean_XS_length)))
+        title = (out_folder + '\\XS_length_plot.png')
     else:
         y4 = np.arange(0, max_stage+small_increments, small_increments)
+        title = (out_folder + '\\XS_length_plot_small_inc.png')
     plt.figure()
     plt.plot(x4, y4)
     plt.xlabel('Mean XS length')
@@ -482,7 +488,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.xlim(0, max(x4))
     plt.ylim(0, max_stage)
     plt.xticks(np.arange(0, int(max(x4)), step=20))
-    title = (out_folder + '\\XS_length_plot.png')
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
@@ -495,9 +500,12 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     if small_increments == 0:
         x5 = np.array(range(0, len(d_XS_length)))
+        y5 = np.array(d_XS_length)
+        title = (out_folder + '\\PDF_XS_plot.png')
     else:
         x5 = np.arange(small_increments, max_stage + small_increments, small_increments)
-    y5 = np.array(d_XS_length[1:])
+        y5 = np.array(d_XS_length[1:])
+        title = (out_folder + '\\PDF_XS_plot_small_inc.png')
     plt.figure()
     plt.plot(x5, y5)
     plt.xlabel('Flood stage height (ft)')
@@ -507,7 +515,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.xlim(0, max_stage)
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage + 1), step=1))
-    title = (out_folder + '\\PDF_XS_plot.png')
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
@@ -734,10 +741,10 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17569535]
+comid_list = [17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 #[17569535,22514218,17607553,17609707,17609017,17610661]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1]
+SCO_list = [1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -752,10 +759,10 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with first two SC1 reaches
+    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches
     #out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
     #align_csv(code_csv_loc, centerlines_nums=out_list[1], key_zs=[], max_stage=20)
-    key_z_finder(out_folder, channel_clip_poly,code_csv_loc=aligned_csv_loc,centerlines_nums=[2,8,10],key_zs=[], max_stage=20, small_increments=0.1)
+    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=aligned_csv_loc,centerlines_nums=[2,8,10],key_zs=[], max_stage=20, small_increments=0)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
     #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Update so a float as a key z can refer to the float to string system
 
