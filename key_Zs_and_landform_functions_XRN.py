@@ -15,18 +15,18 @@ import openpyxl as xl
 
 def loc_stage_finder(stage, centerlines_nums):
     '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
-    if int(stage) > centerlines_nums[-1]:
+    if float(stage) > float(centerlines_nums[-1]):
         loc_stage = centerlines_nums[-1]
-    elif int(stage) <= centerlines_nums[0]:
+    elif float(stage) <= float(centerlines_nums[0]):
         loc_stage = centerlines_nums[0]
     else:
         index = 0
-        while int(stage) > centerlines_nums[index]:
+        while float(stage) > float(centerlines_nums[index]):
             index += 1
         loc_stage = centerlines_nums[index]
 
     count = centerlines_nums.index(loc_stage)
-    return [loc_stage,count]
+    return [loc_stage, count]
 
 
 def prep_locations(detrend_location,max_stage=20, skip=False):
@@ -184,7 +184,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
 
     in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
     print('Making wetted polygons...')
-    for inc in np.arange(interval,max_stage+interval,float(interval)): # Create a polygon representing the portion of the detrended DEM below a stage height interval
+    for inc in np.arange(0, max_stage+interval, float(interval)): # Create a polygon representing the portion of the detrended DEM below a stage height interval
         if inc >= 10.0:
             inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
         else:
@@ -216,11 +216,16 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     print('Deleting files: %s' % del_files)
     for prefix in del_files:
         for suffix in del_suffix:
-            if os.path.exists(prefix + suffix):
+            path = prefix + suffix
+            if os.path.exists(path):
                 try:
-                    os.remove(prefix + suffix)
+                    os.remove(path)
                 except:
                     print("Couldn't delete %s" % prefix + suffix)
+
+def gcs_and_align_key_zs():
+    '''This function does a full GCS analysis using three specific key Zs that can include any float. Results are apended to the aligned csv and saved
+    to the gcs_ready_tables, as well as plotted.'''
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
@@ -291,10 +296,9 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.cla()
     print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png') )
 
-
     print('CDF and PDF wetted area analysis initiated...')
-
     if small_increments == 0:
+        print('Making 1ft flood stage height interval plots...')
         clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
         if not os.path.exists(clipped_wetted_folder):
             os.makedirs(clipped_wetted_folder)
@@ -320,6 +324,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
         else:
             print('Making small increment plots...')
             wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-3:] == 'shp']
+            flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).to_list() # A list storing all small flood stage increments
 
             for poly in wetted_polys:
                 poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
@@ -336,12 +341,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
                 else:
                     start = centerlines_nums[count-1]
 
-
-
         wetted_areas = [i for i in wetted_areas if i != None]
-        wetted_areas.sort()
-
-
 
 
     print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
@@ -358,10 +358,15 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     mean_XS_length = [] #Calculates mean width per stage as wetted area / centerline length
     for count, area in enumerate(wetted_areas):
-        index = loc_stage_finder(count,centerlines_nums)[1]
+        if small_increments != 0:
+            stage = flood_stage_incs[count]
+        else:
+            stage = count
+        index = loc_stage_finder(stage,centerlines_nums)[1]
         length = centerline_lengths[index]
         if length != None:
             mean_XS_length.append(float(area/length))
+    mean_XS_length = [i for i in mean_XS_length if i != None]
 
     d_area = [] #Calculates the change in wetted area between stages
     for count, area in enumerate(wetted_areas):
@@ -371,7 +376,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
             d_area.append(float(area-wetted_areas[count-1]))
 
     d_XS_length = [] #Calculates the change in mean width between stages
-    mean_XS_length = [i for i in mean_XS_length if i != None]
     for count, length in enumerate(mean_XS_length):
         if count == 0:
             d_XS_length.append(length)
@@ -381,7 +385,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     max_area = wetted_areas[-1]
     print('Plotting CDF and PDF plots')
 
-    x1 = np.array(range(0,len(wetted_areas)))
+    if small_increments == 0:
+        x1 = np.array(range(0, len(wetted_areas)))
+    else:
+        x1 = np.arange(0, max_stage+small_increments, small_increments)
     y1 = np.array([(float(f/max_area))*100 for f in wetted_areas])
     plt.figure()
     plt.plot(x1,y1)
@@ -403,7 +410,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.clf()
     plt.close('all')
 
-    x2 = np.array(range(0,len(d_area))) #Add saving optionality
+    if small_increments == 0:
+        x2 = np.array(range(0, len(d_area))) #Add saving optionality
+    else:
+        x2 = np.arange(0, max_stage + small_increments, small_increments)
     y2 = np.array(d_area)
     plt.figure()
     plt.plot(x2,y2)
@@ -425,7 +435,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.clf()
     plt.close('all')
 
-    x3 = np.array(range(0,len(wetted_areas)))
+    if small_increments == 0:
+        x3 = np.array(range(0, len(wetted_areas)))
+    else:
+        x3 = np.arange(0, max_stage + small_increments, small_increments)
     y3 = np.array(wetted_areas)
     plt.figure()
     plt.plot(x3, y3)
@@ -448,7 +461,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.close('all')
 
     x4 = np.array(mean_XS_length)
-    y4 = np.array(range(0,len(mean_XS_length)))
+    if small_increments == 0:
+        y4 = np.array(range(0, len(mean_XS_length)))
+    else:
+        y4 = np.arange(0, max_stage+small_increments, small_increments)
     plt.figure()
     plt.plot(x4, y4)
     plt.xlabel('Mean XS length')
@@ -469,7 +485,10 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.clf()
     plt.close('all')
 
-    x5 = np.array(range(0,len(d_XS_length)))  # Add saving optionality
+    if small_increments == 0:
+        x5 = np.array(range(0, len(d_XS_length)))
+    else:
+        x5 = np.arange(0, max_stage + small_increments, small_increments)
     y5 = np.array(d_XS_length)
     plt.figure()
     plt.plot(x5, y5)
@@ -727,6 +746,6 @@ for count, comid in enumerate(comid_list):
     prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with SC1 so far
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
     #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],key_zs=[], max_stage=20, small_increments=0)
-    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[])
-    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20)
+    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
+    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Update so a float as a key z can refer to the float to string system
 
