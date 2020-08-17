@@ -183,16 +183,16 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
 
     in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
     print('Making wetted polygons...')
-    for inc in np.arange(0.1,max_stage,float(interval)):
-        if inc > 10.0:
+    for inc in np.arange(interval,max_stage,float(interval)):
+        if inc >= 10.0:
             inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
         else:
             inc_str = (str(inc)[0] + 'p' + str(inc)[2])
         names = [('\\wt_rs_%sft.tif' % inc_str), ('\\wetted_poly_%sft_noclip.shp' % inc_str)]
-        wetted_ras = arcpy.sa.Con(in_ras <= inc,1)
+        wetted_ras = arcpy.sa.Con(in_ras <= inc, 1)
         wetted_ras.save(small_wetted_poly_loc + names[0])
-        arcpy.RasterToPolygon_conversion(in_raster=wetted_ras,out_polygon_features=(small_wetted_poly_loc + names[1]),simplify=False)
-        arcpy.Clip_analysis(small_wetted_poly_loc + names[1],channel_clip_poly,out_feature_class=(small_wetted_poly_loc + 'wetted_poly_%sft.shp' % inc_str))
+        arcpy.RasterToPolygon_conversion(in_raster=wetted_ras, out_polygon_features=(small_wetted_poly_loc + names[1]), simplify=False)
+        arcpy.Clip_analysis(small_wetted_poly_loc + names[1], channel_clip_poly, out_feature_class=(small_wetted_poly_loc + '\\wetted_poly_%sft.shp' % inc_str))
 
         for name in names:
             del_files.append(small_wetted_poly_loc + name[:-4])
@@ -218,7 +218,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
                     print("Couldn't delete %s" % prefix + suffix)
 
 
-def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cross_corr_threshold=0,max_stage=20):
+def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,key_zs=[],max_stage=20,small_increments=0):
     '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
     Used to guide key Z selection for the following nested landform analysis'''
@@ -286,41 +286,47 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.cla()
     print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png') )
 
-    key_zs = []
-    i = 0
-    j = 0
-    switch = False
-    if cross_corr_threshold != 0:
-        while switch == False:
-            while cross_corrs[i][j] < cross_corr_threshold:
-                j += 1
-                if j == (len(col_row_heads)-1):
-                    switch = True
-            key_zs.append(j+1)
-            i = j
 
     print('CDF and PDF wetted area analysis initiated...')
-    clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
-    if not os.path.exists(clipped_wetted_folder):
-        os.makedirs(clipped_wetted_folder)
 
-    wetted_polys = [f for f in listdir(out_folder+'\\wetted_polygons') if f[:26]=='flood_stage_poly_dissolved' and f[-3:]=='shp']
+    if small_increments == 0:
+        clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
+        if not os.path.exists(clipped_wetted_folder):
+            os.makedirs(clipped_wetted_folder)
 
-    print('Calculating wetted areas...')
-    wetted_areas = [None]*len(wetted_polys)
-    for poly in wetted_polys:
-        poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder,poly))
-        if poly[28] == 'f':
-            stage = int(poly[27])
+        wetted_polys = [f for f in listdir(out_folder+'\\wetted_polygons') if f[:26]=='flood_stage_poly_dissolved' and f[-3:]=='shp']
+
+        print('Calculating wetted areas...')
+        wetted_areas = [None]*len(wetted_polys)
+        for poly in wetted_polys:
+            poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder,poly))
+            if poly[28] == 'f':
+                stage = int(poly[27])
+            else:
+                stage = int(poly[27:29])
+            if stage <= max_stage:
+                clip_poly = arcpy.Clip_analysis(poly_loc,channel_clip_poly,out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)))
+                geometries = arcpy.CopyFeatures_management(clip_poly,arcpy.Geometry())
+                poly_area = 0
+                for geometry in geometries:
+                    poly_area += float(geometry.area)
+                wetted_areas[stage] = poly_area
+
         else:
-            stage = int(poly[27:29])
-        if stage <= max_stage:
-            clip_poly = arcpy.Clip_analysis(poly_loc,channel_clip_poly,out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)))
-            geometries = arcpy.CopyFeatures_management(clip_poly,arcpy.Geometry())
-            poly_area = 0
-            for geometry in geometries:
-                poly_area += float(geometry.area)
-            wetted_areas[stage] = poly_area
+            print('Making small increment plots...')
+            wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-3:] == 'shp']
+
+            for poly in wetted_polys:
+                poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
+                geometries = arcpy.CopyFeatures_management(poly_loc, arcpy.Geometry())
+                poly_area = 0
+                for geometry in geometries:
+                    poly_area += float(geometry.area)
+                wetted_areas.append = poly_area
+
+        wetted_areas = [i for i in wetted_areas if i != None]
+        wetted_areas.sort()
+
 
     print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
     centerline_lengths = [None]*len(centerlines_nums)
@@ -333,8 +339,7 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
             poly_length += float(geometry.length)
         centerline_lengths[count] = poly_length
 
-    wetted_areas = [i for i in wetted_areas if i != None]
-
+    
     mean_XS_length = [] #Calculates mean width per stage as wetted area / centerline length
     for count, area in enumerate(wetted_areas):
         index = loc_stage_finder(count,centerlines_nums)[1]
@@ -372,10 +377,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylim(0,max(y1))
     plt.xticks(np.arange(0, (max_stage+1), step=1))
     title = (out_folder + '\\CDF_plot.png')
-    if cross_corr_threshold != 0:
+    if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\CDF_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + '\\CDF_plot_with_Zs.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -394,10 +399,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage+1), step=1))
     title = (out_folder + '\\PDF_plot.png')
-    if cross_corr_threshold != 0:
+    if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\PDF_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + '\\PDF_plot_with_Zs.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -416,10 +421,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage + 1), step=1))
     title = (out_folder + '\\wetted_areas_plot.png')
-    if cross_corr_threshold != 0:
+    if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\wetted_area_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + '\\wetted_area_plot_with_Zs.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -438,10 +443,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylim(0, max_stage)
     plt.xticks(np.arange(0, int(max(x4)), step=20))
     title = (out_folder + '\\XS_length_plot.png')
-    if cross_corr_threshold != 0:
+    if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\XS_length_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + '\\XS_length_plot_with_Zs.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -460,10 +465,10 @@ def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cro
     plt.ylim(0, None)
     plt.xticks(np.arange(0, (max_stage + 1), step=1))
     title = (out_folder + '\\PDF_XS_plot.png')
-    if cross_corr_threshold != 0:
+    if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + ('\\PDF_XS_plot_%s_corr_thresh.png' % cross_corr_threshold))
+            title = (out_folder + '\\PDF_XS_plot_with_Zs.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
