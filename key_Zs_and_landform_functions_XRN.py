@@ -172,7 +172,8 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     return[code_csv_loc,centerlines_nums]
 
 def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
-    '''This function creates a a folder containing wetted polygons for a 0.1ft increments.'''
+    '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
+    RETURNS: None. This function creates a folder containing wetted polygons for a 0.1ft increments as well as a clippped detrended DEM and contours.'''
     del_files = []
     del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', '.shx', '.tif', '.tif.aux.xml', '.tfw', '.tif.ovr']
     channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
@@ -183,7 +184,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
 
     in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
     print('Making wetted polygons...')
-    for inc in np.arange(interval,max_stage+interval,float(interval)):
+    for inc in np.arange(interval,max_stage+interval,float(interval)): # Create a polygon representing the portion of the detrended DEM below a stage height interval
         if inc >= 10.0:
             inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
         else:
@@ -201,7 +202,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     contour_loc = detrend_folder + '\\detrended_contours.shp'
     clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif' # Clipped to channel clip poly
 
-    if not os.path.isfile(contour_loc):
+    if not os.path.isfile(contour_loc): # Create a clipped detrended DEM to the max stage height value, and the channel_clip_poly file
         print('Making contours...')
         max_stage_ras = arcpy.sa.Con(in_ras <= float(max_stage), in_ras)
         max_stage_ras.save(detrend_folder + '\\rs_dt_clip1.tif')
@@ -222,7 +223,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
                     print("Couldn't delete %s" % prefix + suffix)
 
 
-def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,key_zs=[],max_stage=20,small_increments=0):
+def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
     '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
     Used to guide key Z selection for the following nested landform analysis'''
@@ -706,9 +707,9 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17586610]
+comid_list = [17569535,22514218,17607553,17609707,17609017,17610661]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [3]
+SCO_list = [1,1,1,1,1,1]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 for count, comid in enumerate(comid_list):
@@ -723,9 +724,9 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
+    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with SC1 so far
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
-    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
+    #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],key_zs=[], max_stage=20, small_increments=0)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[])
     #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20)
 
