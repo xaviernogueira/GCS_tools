@@ -183,15 +183,19 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
 
     in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
     print('Making wetted polygons...')
-    for inc in range(0,max_stage,float(interval)):
-        names = [('wt_rs_%sft' % inc), ('wetted_poly_%sft_noclip' % inc)]
+    for inc in np.arange(0.1,max_stage,float(interval)):
+        if inc > 10.0:
+            inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
+        else:
+            inc_str = (str(inc)[0] + 'p' + str(inc)[2])
+        names = [('\\wt_rs_%sft.tif' % inc_str), ('\\wetted_poly_%sft_noclip.shp' % inc_str)]
         wetted_ras = arcpy.sa.Con(in_ras <= inc,1)
-        wetted_ras.save(small_wetted_poly_loc + '\\wt_rs_%sft.tif' % inc)
-        wetted_poly = arcpy.RasterToPolygon_conversion(in_raster=wetted_ras,out_polygon_features=(small_wetted_poly_loc + 'wetted_poly_%sft_noclip.shp' % inc),simplify=False)
-        wetted_poly = arcpy.Clip_analysis(wetted_poly,channel_clip_poly,out_feature_class=(small_wetted_poly_loc + 'wetted_poly_%sft.shp' % inc))
+        wetted_ras.save(small_wetted_poly_loc + names[0])
+        arcpy.RasterToPolygon_conversion(in_raster=wetted_ras,out_polygon_features=(small_wetted_poly_loc + names[1]),simplify=False)
+        arcpy.Clip_analysis(small_wetted_poly_loc + names[1],channel_clip_poly,out_feature_class=(small_wetted_poly_loc + 'wetted_poly_%sft.shp' % inc_str))
 
         for name in names:
-            del_files.append(name)
+            del_files.append(small_wetted_poly_loc + name[:-4])
     print('Wetted polygons located @ %s' % small_wetted_poly_loc)
 
     contour_loc = detrend_folder + '\\detrended_contours.shp'
@@ -203,7 +207,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
         print('Contour file and clipped detrended raster made @' % detrend_folder)
     else:
         'Contour file already made @ %s' % contour_loc
-    
+
     print('Deleting files: %s' % del_files)
     for prefix in del_files:
         for suffix in del_suffix:
