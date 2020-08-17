@@ -171,6 +171,49 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
 
     return[code_csv_loc,centerlines_nums]
 
+def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
+    '''This function creates a a folder containing wetted polygons for a 0.1ft increments.'''
+    del_files = []
+    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', '.shx', '.tif', '.tif.aux.xml', '.tfw', '.tif.ovr']
+    channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
+    small_wetted_poly_loc = detrend_folder + '\\wetted_polygons\\small_increments'
+
+    if not os.path.exists(small_wetted_poly_loc): #Make a new folder for the 0.1ft increment wetted polygons
+        os.makedirs(small_wetted_poly_loc)
+
+    in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
+    print('Making wetted polygons...')
+    for inc in range(0,max_stage,float(interval)):
+        names = [('wt_rs_%sft' % inc), ('wetted_poly_%sft_noclip' % inc)]
+        wetted_ras = arcpy.sa.Con(in_ras <= inc,1)
+        wetted_ras.save(small_wetted_poly_loc + '\\wt_rs_%sft.tif' % inc)
+        wetted_poly = arcpy.RasterToPolygon_conversion(in_raster=wetted_ras,out_polygon_features=(small_wetted_poly_loc + 'wetted_poly_%sft_noclip.shp' % inc),simplify=False)
+        wetted_poly = arcpy.Clip_analysis(wetted_poly,channel_clip_poly,out_feature_class=(small_wetted_poly_loc + 'wetted_poly_%sft.shp' % inc))
+
+        for name in names:
+            del_files.append(name)
+    print('Wetted polygons located @ %s' % small_wetted_poly_loc)
+
+    contour_loc = detrend_folder + '\\detrended_contours.shp'
+    clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif'
+    if not os.path.isfile(contour_loc):
+        print('Making contours...')
+        clip_in_ras = arcpy.Clip_management((detrend_folder + '\\ras_detren.tif'),rectangle=channel_clip_poly,out_raster=clipped_ras_loc,clipping_geometry='ClippingGeometry',maintain_clipping_extent='NO_MAINTAIN_EXTENT')
+        contour_ras = arcpy.sa.Contour(clip_in_ras,contour_loc,contour_interval=interval)
+        print('Contour file and clipped detrended raster made @' % detrend_folder)
+    else:
+        'Contour file already made @ %s' % contour_loc
+    
+    print('Deleting files: %s' % del_files)
+    for prefix in del_files:
+        for suffix in del_suffix:
+            if os.path.exists(prefix + suffix):
+                try:
+                    os.remove(prefix + suffix)
+                except:
+                    print("Couldn't delete %s" % prefix + suffix)
+
+
 def key_z_finder(out_folder, channel_clip_poly,code_csv_loc,centerlines_nums,cross_corr_threshold=0,max_stage=20):
     '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
@@ -639,7 +682,7 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17586610,17610235]
+comid_list = [17586610]
 #[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 SCO_list = [3]
 #[3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
@@ -656,8 +699,9 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
+    prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
     #out_list = prep_locations(detrend_location=out_folder,max_stage=20)
     #key_z_finder(out_folder, channel_clip_poly,code_csv_loc=out_list[0],centerlines_nums=out_list[1],cross_corr_threshold=0,max_stage=20)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[])
-    heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20)
+    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20)
 
