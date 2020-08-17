@@ -34,10 +34,10 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     arcpy.env.overwriteOutput = True
 
     detrended_raster = detrend_location + "\\ras_detren.tif"
-    landform_folder = detrend_location + '\\landform_analysis'#Make directory for landform analysis xl files and centerline adjusted GCS tables
+    landform_folder = detrend_location + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
     centerline_folder = detrend_location + "\\analysis_centerline_and_XS"
     del_files = []
-    del_suffix = ['.shp', '.cpg','.dbf','.prj','.sbn','.sbx','.shp.xlm','shx']
+    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', 'shx']
 
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
@@ -57,7 +57,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
 
     min_num = 20
     for line in centerlines:
-        line_loc = ('%s\\%s' % (centerline_folder,line))
+        line_loc = ('%s\\%s' % (centerline_folder, line))
         if line[-11] == '_':
             num = int(line[-10])
         else:
@@ -68,15 +68,13 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             min_num = num
         centerlines_nums.sort()
 
-        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing,
-                                                                           xs_length=5, stage=[])
-        station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num,spacing))
+        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5, stage=[])
+        station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num, spacing))
 
         for suffix in del_suffix:
             del_files.append(station_lines[:-4] + suffix)
 
-        station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % (num)), join_attributes="ALL", output_type="POINT")
-
+        station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % num), join_attributes="ALL", output_type="POINT")
 
     print('Using centerlines: %s' % centerlines_nums)
     for num in centerlines_nums:
@@ -86,38 +84,34 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             print("Extracting thalweg elevation for Caamano analysis...")
             loc_field = 'SP_SG_%sFT' % num
 
-            single_station_points = centerline_folder + ("\\%s.shp" % (loc_field))
+            single_station_points = centerline_folder + ("\\%s.shp" % loc_field)
 
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
-            z_table = arcpy.sa.Sample(detrended_raster,single_station_points,out_table=(centerline_folder + "\\thalweg_Z.dbf"),unique_id_field='LOCATION')
+            z_table = arcpy.sa.Sample(detrended_raster, single_station_points, out_table=(centerline_folder + "\\thalweg_Z.dbf"), unique_id_field='LOCATION')
 
-            for suffix in ['.dbf','.cpg','.dbf.xml']:
+            for suffix in ['.dbf', '.cpg', '.dbf.xml']:
                 del_files.append(centerline_folder + "\\thalweg_Z%s" % suffix)
             for suffix in del_suffix:
                 del_files.append(station_points[:-4] + suffix)
                 del_files.append(single_station_points[:-4] + suffix)
 
-            centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num #csv with XY coordinates of the centerlines made
+            centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num  # csv with XY coordinates of the centerlines made
             arcpy.AddXY_management(single_station_points)
             file_functions.tableToCSV(single_station_points, csv_filepath=centerline_XY_loc, fld_to_remove_override=[])
 
-
-            station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table,
-                                                    join_field=loc_field, fields=['ras_detren'])
+            station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table, join_field=loc_field, fields=['ras_detren'])
             arcpy.AddField_management(station_points, ('loc_%sft' % num), 'SHORT')
             arcpy.AddField_management(station_points, 'thwg_z', 'FLOAT')
-            arcpy.CalculateField_management(station_points, ('loc_%sft' % num), expression=('!LOCATION!'),
-                                            expression_type='PYTHON3')
-            arcpy.CalculateField_management(station_points, 'thwg_z', expression=('!ras_detren!'),
-                                            expression_type='PYTHON3')
-            for stage in range(0,max_stage+1):
+            arcpy.CalculateField_management(station_points, 'loc_%sft' % num, expression='!LOCATION!', expression_type='PYTHON3')
+            arcpy.CalculateField_management(station_points, 'thwg_z', expression='!ras_detren!', expression_type='PYTHON3')
+
+            for stage in range(0, max_stage+1):
                 stage_f = float(stage)
                 arcpy.AddField_management(station_points, ('Dz_%sft' % stage), 'FLOAT')
-                arcpy.CalculateField_management(station_points, ('Dz_%sft' % stage), expression=('%s - !thwg_z!' % stage_f),
-                                                expression_type='PYTHON3')
+                arcpy.CalculateField_management(station_points, ('Dz_%sft' % stage), expression=('%s - !thwg_z!' % stage_f), expression_type='PYTHON3')
 
             del_fields = [f.name for f in arcpy.ListFields(station_points) if f.name[:2] != 'Dz']
-            for field in [(('loc_%sft') % num),'FID','thwg_z','Shape']:
+            for field in [('loc_%sft' % num), 'FID', 'thwg_z', 'Shape']:
                 try:
                     del_fields.remove(field)
                 except:
@@ -129,10 +123,10 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
         if num != min_num:
             theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
             arcpy.CreateThiessenPolygons_analysis(station_points, theis_loc, 'ALL')
-            arcpy.AddField_management(theis_loc,('loc_%sft' % num),'SHORT')
-            arcpy.CalculateField_management(theis_loc,('loc_%sft' % num),expression=('!LOCATION!'),expression_type='PYTHON3')
+            arcpy.AddField_management(theis_loc, ('loc_%sft' % num), 'SHORT')
+            arcpy.CalculateField_management(theis_loc, ('loc_%sft' % num), expression='!LOCATION!', expression_type='PYTHON3')
             del_fields = [f.name for f in arcpy.ListFields(theis_loc)]
-            for field in [(('loc_%sft') % num), 'FID', 'Shape']:
+            for field in [('loc_%sft' % num), 'FID', 'Shape']:
                 try:
                     del_fields.remove(field)
                 except:
@@ -151,14 +145,12 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
         if counter >= max_count:
             max_count = counter
         if counter == 1:
-            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min_num, theis_loc, out_feature_class=out_points,join_attributes='ALL', )
+            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min_num, theis_loc, out_feature_class=out_points, join_attributes='ALL', )
         elif counter > 1:
-            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc,out_feature_class=out_points, join_attributes='ALL', )
+            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc, out_feature_class=out_points, join_attributes='ALL', )
 
     code_csv_loc = landform_folder + '\\all_stages_table.csv'
-    file_functions.tableToCSV(out_points, csv_filepath=code_csv_loc,
-                              fld_to_remove_override=['FID_statio', 'FID_thiess'])
-
+    file_functions.tableToCSV(out_points, csv_filepath=code_csv_loc, fld_to_remove_override=['FID_statio', 'FID_thiess'])
     print('Empty stages csv created @ %s' % code_csv_loc)
 
     print('Deleting files: %s' % del_files)
@@ -179,12 +171,12 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
     small_wetted_poly_loc = detrend_folder + '\\wetted_polygons\\small_increments'
 
-    if not os.path.exists(small_wetted_poly_loc): #Make a new folder for the 0.1ft increment wetted polygons
+    if not os.path.exists(small_wetted_poly_loc):  # Make a new folder for the 0.1ft increment wetted polygons
         os.makedirs(small_wetted_poly_loc)
 
     in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
     print('Making wetted polygons...')
-    for inc in np.arange(0, max_stage+interval, float(interval)): # Create a polygon representing the portion of the detrended DEM below a stage height interval
+    for inc in np.arange(0, max_stage+interval, float(interval)):  # Create a polygon representing the portion of the detrended DEM below a stage height interval
         if inc >= 10.0:
             inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
         else:
@@ -200,9 +192,9 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     print('Wetted polygons located @ %s' % small_wetted_poly_loc)
 
     contour_loc = detrend_folder + '\\detrended_contours.shp'
-    clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif' # Clipped to channel clip poly
+    clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif'  # Clipped to channel clip poly
 
-    if not os.path.isfile(contour_loc): # Create a clipped detrended DEM to the max stage height value, and the channel_clip_poly file
+    if not os.path.isfile(contour_loc):  # Create a clipped detrended DEM to the max stage height value, and the channel_clip_poly file
         print('Making contours...')
         max_stage_ras = arcpy.sa.Con(in_ras <= float(max_stage), in_ras)
         max_stage_ras.save(detrend_folder + '\\rs_dt_clip1.tif')
@@ -275,20 +267,20 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     in_data = result.loc[:, col_list]
     cross_corrs_df = in_data.corr()
 
-    for num in range(1, max_stage + 1): #Putting cross correlation dataframe in a maptplot format
+    for num in range(1, max_stage + 1):  # Putting cross correlation dataframe in a maptplot format
         row_data = cross_corrs_df.loc[:, ['Ws_%sft' % num]].astype(float)
         row_data = row_data.squeeze()
         row_list = row_data.values.tolist()
         cross_corrs.append(row_list)
 
-    for list in cross_corrs: #Making sure all lists in cross_corrs are the same length to avoid plotting error
+    for list in cross_corrs:  # Making sure all lists in cross_corrs are the same length to avoid plotting error
         if len(list) != len(col_row_heads):
             print('Error found. Repairing a coefficient list...')
             gap = int(len(col_row_heads) - len(list))
             for g in range(gap):
                 list.append(0.0)
 
-    fig, ax = plt.subplots() #Plotting cross-correlation matrix
+    fig, ax = plt.subplots()  # Plotting cross-correlation matrix
     im = ax.imshow(np.array(cross_corrs, dtype=float))
     ax.set_xticks(np.arange(len(col_row_heads)))
     ax.set_yticks(np.arange(len(col_row_heads)))
@@ -305,7 +297,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     fig.set_size_inches(16, 8)
     plt.savefig((landform_folder + '\\cross_corrs_table.png'), dpi=300, bbox_inches='tight')
     plt.cla()
-    print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png') )
+    print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png'))
 
     print('CDF and PDF wetted area analysis initiated...')
     if small_increments == 0:
@@ -319,14 +311,14 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
         print('Calculating wetted areas...')
         wetted_areas = [None]*len(wetted_polys)
         for poly in wetted_polys:
-            poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder,poly))
+            poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder, poly))
             if poly[28] == 'f':
                 stage = int(poly[27])
             else:
                 stage = int(poly[27:29])
             if stage <= max_stage:
-                clip_poly = arcpy.Clip_analysis(poly_loc,channel_clip_poly,out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder,stage)))
-                geometries = arcpy.CopyFeatures_management(clip_poly,arcpy.Geometry())
+                clip_poly = arcpy.Clip_analysis(poly_loc, channel_clip_poly, out_feature_class=('%s\\clipped_wetted_poly_%sft' % (clipped_wetted_folder, stage)))
+                geometries = arcpy.CopyFeatures_management(clip_poly, arcpy.Geometry())
                 poly_area = 0
                 for geometry in geometries:
                     poly_area += float(geometry.area)
@@ -350,7 +342,6 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     wetted_areas = [i for i in wetted_areas if i != None]
     wetted_areas.sort()
 
-
     print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
     centerline_lengths = [None]*len(centerlines_nums)
 
@@ -362,8 +353,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
             poly_length += float(geometry.length)
         centerline_lengths[count] = poly_length
 
-
-    mean_XS_length = [] #Calculates mean width per stage as wetted area / centerline length
+    mean_XS_length = []  # Calculates mean width per stage as wetted area / centerline length
     for count, area in enumerate(wetted_areas):
         if small_increments != 0:
             stage = flood_stage_incs[count]
@@ -375,15 +365,14 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
             mean_XS_length.append(float(area/length))
     mean_XS_length = [i for i in mean_XS_length if i != None]
 
-
-    d_area = [] #Calculates the change in wetted area between stages
+    d_area = []  # Calculates the change in wetted area between stages
     for count, area in enumerate(wetted_areas):
-        if count==0:
+        if count == 0:
             d_area.append(area)
         else:
             d_area.append(float(area-wetted_areas[count-1]))
 
-    d_XS_length = [] #Calculates the change in mean width between stages
+    d_XS_length = []  # Calculates the change in mean width between stages
     for count, length in enumerate(mean_XS_length):
         if count == 0:
             d_XS_length.append(length)
@@ -525,12 +514,11 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.clf()
     plt.close('all')
 
-def nested_landform_analysis(aligned_csv,key_zs):
+def nested_landform_analysis(aligned_csv, key_zs):
     '''IN: Aligned csv with landform codes for each XS. A list (key_zs) containing three stages
     RETURNS: A xl table containing the abundance of each unique nested landform set'''
     landform_folder = str(os.path.dirname(aligned_csv))
-    # code number and corresponding MU
-    code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}
+    code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}  # code number and corresponding MU
     print('Starting nested landform analysis...')
 
     if len(key_zs) == 0:
@@ -539,15 +527,20 @@ def nested_landform_analysis(aligned_csv,key_zs):
     key_zs.sort()
     aligned_df = pd.read_csv(aligned_csv)
 
-    code_df_list = [] # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
+    code_df_list = []  # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
     for key_z in key_zs:
+        if isinstance(key_z, float) == True:
+            if key_z >= 10.0:
+                key_z = (str(key_z)[0:2] + 'p' + str(key_z)[3])
+            else:
+                key_z = (str(key_z)[0] + 'p' + str(key_z)[2])
         code_df_temp = aligned_df.loc[:, [('code_%sft' % key_z)]].squeeze()
         code_df_list.append(code_df_temp.values.tolist())
 
     nested_landforms = list(zip(code_df_list[0], code_df_list[1], code_df_list[2]))
     unique_nests = list(set(nested_landforms))
 
-    unique_nest_counts = list(np.zeros(len(unique_nests), dtype=int)) # initialize list of lists to count abundance
+    unique_nest_counts = list(np.zeros(len(unique_nests), dtype=int))  # initialize list of lists to count abundance
 
     for nest in nested_landforms:
         i = unique_nests.index(nest)
@@ -556,7 +549,7 @@ def nested_landform_analysis(aligned_csv,key_zs):
     nest_abundances = list(zip(unique_nests, unique_nest_counts))
     nest_abundances.sort(key=lambda x: x[1], reverse=True)
 
-    nested_analysis_xl = (landform_folder + '\\nested_landforms.xlsx' )
+    nested_analysis_xl = (landform_folder + '\\nested_landforms.xlsx')
     wb = xl.Workbook()
     wb.save(nested_analysis_xl)
     ws = wb.active
@@ -567,10 +560,10 @@ def nested_landform_analysis(aligned_csv,key_zs):
     ws.column_dimensions['A'].width = 25
     ws.column_dimensions['B'].width = 16
 
-    for count,unique_set in enumerate(nest_abundances):
+    for count, unique_set in enumerate(nest_abundances):
         string = '%s, %s, %s' % (code_dict[unique_set[0][0]],code_dict[unique_set[0][1]],code_dict[unique_set[0][2]])
         ws.cell(row=2 + count, column=1).value = str(string)
-        ws.cell(row=2 + count,column=2).value = unique_set[1]
+        ws.cell(row=2 + count, column=2).value = unique_set[1]
         ws.cell(row=2 + count, column=3).value = round((unique_set[1] / len(nested_landforms)) * 100, 2)
 
     wb.save(nested_analysis_xl)
