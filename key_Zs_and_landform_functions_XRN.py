@@ -9,6 +9,7 @@ import file_functions
 import GCS_statistical_analysis_XRN
 import create_station_lines
 from create_station_lines import *
+import GCS_analysis
 import pandas
 import openpyxl as xl
 import Post_detrend_to_GCS
@@ -322,16 +323,15 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         aligned_df = pd.read_csv(aligned_csv_loc)
         gcs_df.sort_values(by=['dist_down'], inplace=True)
         temp_df_mini = df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str),
-                             'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str),'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
-        result['Dz_%sft' % z_str] = float(z - result['thwg_z'])
         result = result.replace(np.nan, 0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
+        result['Dz_%sft' % z_str] = float(z) - result['thwg_z']
         result.to_csv(aligned_csv_loc)
 
-        print('%sft stage GCS completed and merged to @ %s' % (z_str, aligned_csv_loc))
+        print('%sft stage GCS completed and merged to @ %s' % (z, aligned_csv_loc))
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
@@ -827,13 +827,53 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
 
     print('Plots completed')
 
+def ww_runs_test(detrend_folder, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s']):
+    '''INPUTS: Main directory (LINEAR_DETREND folder).
+            A list of float or int stage heights for the runs test to be run on.
+            A list of fields to do the WW runs test on.
+    RETURNS: A xlxs file containing the following for each field (separated in sheets):
+            number of runs
+            number of expected runs (if random)
+            expected standard deviation of number of runs (if random)
+            Z: number of standard deviations difference between actual and expected number of run (standard deviation of num. of runs if random)'''
+
+    gcs_folder = detrend_folder + '\\gcs_ready_tables'
+    out_folder = detrend_folder + '\\gcs_ready_tables\\GCS_stat_tables_and_plots\\WW_runs_test'
+
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+
+    for z in key_zs:
+        print('Runs test with values %s being ran for a %sft stage' % (key_zs, z))
+        if isinstance(z, float) == True:
+            if z >= 10.0:
+                z_str = (str(z)[0:2] + 'p' + str(z)[3])
+            else:
+                z_str = (str(z)[0] + 'p' + str(z)[2])
+        else:
+            z_str = str(z)
+
+        out_xl = out_folder + '\\%sft_WW_runs_tests.xlsx'
+        data_csv = gcs_folder + '\\%sft_WD_analysis_table.csv' % z_str
+        data_df = pd.read_csv(data_csv)
+        data_df.sort_values(by=['dist_down'], inplace=True)
+
+        for field in fields:
+            series = data_df.loc[:, [field]].squeeze()
+            out_df = GCS_analysis.runs_test(series)
+            writer = pd.ExcelWriter(out_xl)
+            out_df.to_excel(writer, '%s runs' % field)
+            writer.save()
+
+
+
 
 def caamano_analysis(aligned_csv):
     '''IN: Aligned csv with landform codes for each XS.
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17607553]
+comid_list = [17609707]
 # [17569535,22514218,17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 SCO_list = [1]
 # [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
@@ -852,8 +892,8 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
 
     #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
-    #out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
-    #align_csv(code_csv_loc, centerlines_nums=out_list[1], max_stage=20)
+    prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
+    align_csv(aligned_csv_loc, centerlines_nums=[1,2,3,5,7,8], max_stage=20)
     key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
     #key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
