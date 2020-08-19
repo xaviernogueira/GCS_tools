@@ -205,7 +205,6 @@ def width_series_analysis(out_folder, float_detrended_DEM, raster_units, biggest
                 centerline = (lines_location + "\\stage_centerline_%sft_DS.shp" % centerlines[centerline_number])
                 station_lines = lines_location + ("\\stage_centerline_%sft_DS_XS_%sft.shp" % (centerlines[centerline_number], spacing[0]))
 
-
             print('Using station lines found @ %s' % station_lines) #XS station lines are assigned to the stage
 
             spacing_half = float(spacing[0] / 2)
@@ -449,10 +448,14 @@ def GCS_plotter(table_directory):
     numpy_columns = ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']
 
     for table in list_of_csv_tables:
-        if table[1] == "f":
+        if table[1] == 'f':
             stage = table[0]
-        else:
+        elif table[2] == 'f':
             stage = table[:2]
+        elif table[1] == 'p':
+            stage = round(float('%s.%s' % (table[0], table[2]), 1))
+        elif table[2] == 'p':
+            stage = round(float('%s.%s' % (table[0:2], table[3]), 1))
 
         table_df = pandas.read_csv(table_location + "\\%s" % table,na_values=[-9999])
         print(table_df)
@@ -462,13 +465,11 @@ def GCS_plotter(table_directory):
         ws_plot_name = ("%s_Ws_plot" % stage)
         zs_ws_plot_name = ("%s_ZsWs_plot" % stage)
 
-        #Make data frames for each landform type
-        wide_bar_df = table_df.loc[table_df['code'] == 1, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
+        wide_bar_df = table_df.loc[table_df['code'] == 1, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]  # Landform type data frames
         nozzle_df = table_df.loc[table_df['code'] == 2, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
         normal_df = table_df.loc[table_df['code'] == 0, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
         pool_df = table_df.loc[table_df['code'] == -1, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
         oversized_df = table_df.loc[table_df['code'] == -2, ['dist_down', 'W_s', 'Z_s', 'W_s_Z_s']]
-
 
         for i in numpy_columns[1:]:
             plot_1 = wide_bar_df[['dist_down', ('%s' % i)]].to_numpy()
@@ -478,14 +479,14 @@ def GCS_plotter(table_directory):
             plot_5 = oversized_df[['dist_down', ('%s' % i)]].to_numpy()
             plot_6 = table_df[['dist_down', ('%s' % i)]].to_numpy()
 
-            plt.scatter(plot_1[:,0], plot_1[:,1], c='orange', s=0.75, label="Wide bar")
-            plt.scatter(plot_2[:,0], plot_2[:,1], c='gold', s=0.75, label="Nozzle")
-            plt.scatter(plot_3[:,0], plot_3[:,1], c='c', s=0.75, label="Normal")
-            plt.scatter(plot_4[:,0], plot_4[:,1], c='grey', s=0.75, label="Const. Pool")
-            plt.scatter(plot_5[:,0], plot_5[:,1], c='navy', s=0.75, label="Oversized")
+            plt.scatter(plot_1[:, 0], plot_1[:, 1], c='orange', s=0.75, label="Wide bar") # Landform color coded Ws, zs, and C(Ws,Zs) scatter plots
+            plt.scatter(plot_2[:, 0], plot_2[:, 1], c='gold', s=0.75, label="Nozzle")
+            plt.scatter(plot_3[:, 0], plot_3[:, 1], c='c', s=0.75, label="Normal")
+            plt.scatter(plot_4[:, 0], plot_4[:, 1], c='grey', s=0.75, label="Const. Pool")
+            plt.scatter(plot_5[:, 0], plot_5[:, 1], c='navy', s=0.75, label="Oversized")
 
-            t1 = plot_5[:,0]
-            t2 = plot_5[:,1]
+            t1 = plot_5[:, 0]
+            t2 = plot_5[:, 1]
 
             plt.xlabel("Thalweg distance downstream (ft)")
             plt.ylabel("%s" % i)
@@ -508,19 +509,17 @@ def GCS_plotter(table_directory):
             plt.savefig((figure_output + '\\Stage_%s_%s_plot' % (stage, i)), dpi=300, bbox_inches='tight')
             plt.cla()
 
-            #Now plot Gaussian filter plot and spine plot with parameters
-            plot_6_sorted = plot_6[plot_6[:, 0].argsort()]
-            dist_points = plot_6_sorted[:,0]
-            attribute_points = plot_6_sorted[:,1]
-            gaussian_sigma3 = gaussian_filter1d(attribute_points, 3,axis=0)
-            gaussian_sigma6 = gaussian_filter1d(attribute_points, 10,axis=0)
+            plot_6_sorted = plot_6[plot_6[:, 0].argsort()]  # Gaussian filter plotting
+            dist_points = plot_6_sorted[:, 0]
+            attribute_points = plot_6_sorted[:, 1]
+            gaussian_sigma3 = gaussian_filter1d(attribute_points, 3, axis=0)
+            gaussian_sigma6 = gaussian_filter1d(attribute_points, 10, axis=0)
 
-            plt.scatter(dist_points, attribute_points,c='black',s=0.75,ls='--',label=("%s points" % i))
-            plt.plot(dist_points,gaussian_sigma3,c='red',ls='-',label="Gaussian filter, sigma=3")
-            plt.plot(dist_points,gaussian_sigma6,c='green',ls='-',label="Gaussian filter, sigma=10")
-            #plt.plot(x_linespace,spline(x_linespace),c='blue',ls='-',label=("Spline ft with coefficients %s" % spline_coeff))
+            plt.scatter(dist_points, attribute_points, c='black', s=0.75, ls='--', label=("%s points" % i))
+            plt.plot(dist_points, gaussian_sigma3, c='red', ls='-', label="Gaussian filter, sigma=3")
+            plt.plot(dist_points, gaussian_sigma6, c='green', ls='-', label="Gaussian filter, sigma=10")
             axes.set_xlim([0, max(table_df['dist_down'])])
-            plt.title("Data filtering plot for %s at stage %sft" % (i,stage))
+            plt.title("Data filtering plot for %s at stage %sft" % (i, stage))
             plt.grid(b=True, which='major', color='#666666', linestyle='-')
             plt.minorticks_on()
             plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -534,55 +533,58 @@ def GCS_plotter(table_directory):
 comid_list = [17609755,17569841,17563602,17610541,17610721,17610671]
 SCO_number = 5
 
+PROCESS = False
 make_wetted_poly = False
-process_GCS = True
+process_GCS = False
 
-for comid in comid_list:
-    print(comid)
-    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-    out_folder = direct + '\\LINEAR_DETREND'
-    original_dem_location = direct + '\\las_files\\ls_nodt.tif'
-    detrended_dem_location = out_folder + "\\ras_detren.tif" #change back
-    process_footprint = direct + '\\las_footprint.shp'
-    spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
-    station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
-    table_location = out_folder + "\\gcs_ready_tables"
-    channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
+if PROCESS == True:
+    for comid in comid_list:
+        #print(comid)
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+        out_folder = direct + '\\LINEAR_DETREND'
+        original_dem_location = direct + '\\las_files\\ls_nodt.tif'
+        detrended_dem_location = out_folder + "\\ras_detren.tif" #change back
+        process_footprint = direct + '\\las_footprint.shp'
+        spatial_ref = arcpy.Describe(detrended_dem_location).spatialReference
+        station_lines = direct + "\\las_files\\centerline\\smooth_centerline_XS_3x5ft"
+        table_location = out_folder + "\\gcs_ready_tables"
+        channel_clip_poly = out_folder + '\\raster_clip_poly.shp' #optional paramter for width_series_analysis
 
-    arcpy.env.workplace = direct #Set arcpy environment
-    arcpy.env.extent = detrended_dem_location
-    arcpy.env.overwriteOutput = True
+        arcpy.env.workplace = direct  # Set arcpy environment
+        arcpy.env.extent = detrended_dem_location
+        arcpy.env.overwriteOutput = True
 
-    if make_wetted_poly == True:
-        detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
+        if make_wetted_poly == True:
 
-    if process_GCS == True:
-        #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
-        #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
+            detrend_to_wetted_poly(detrended_dem=detrended_dem_location, out_folder=out_folder, raster_units="ft", max_stage=[20], step=1)
 
-        #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
-        #tables = export_list[0]
-        tables = [(table_location + '\\%s' % f) for f in listdir(table_location) if f[-4:] == '.csv']
-        print(tables)
-        main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
-        GCS_plotter(table_directory=table_location)
+        if process_GCS == True:
+            #width_series_analysis(out_folder, float_detrended_DEM=detrended_dem_location, raster_units="ft",biggest_stage=20, spacing=[3], centerlines=[1,3,6,12,16], XS_lengths=[180,420,600,1000,1500], ft_smoothing_tolerance=75, clip_poly=channel_clip_poly)
+            #z_value_analysis1(out_folder=out_folder, detrended_DEM=detrended_dem_location)
 
-        out_list = stats.analysis_setup(table_directory=table_location)
-        stages_dict = out_list[0]
-        stages_stats_xl_dict = out_list[1]
-        max_stage = out_list[2]
-        stats_table_location = out_list[3]
+            #export_list = export_to_gcs_ready(out_folder=out_folder, list_of_error_locations=[])
+            #tables = export_list[0]
+            tables = [(table_location + '\\%s' % f) for f in listdir(table_location) if f[-4:] == '.csv']
+            main_classify_landforms(tables, w_field='W', z_field='Z', dist_field='dist_down', out_folder=out_folder, make_plots=False)
+            GCS_plotter(table_directory=table_location)
 
-        stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
-        stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
-        stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+            out_list = stats.analysis_setup(table_directory=table_location)
+            stages_dict = out_list[0]
+            stages_stats_xl_dict = out_list[1]
+            max_stage = out_list[2]
+            stats_table_location = out_list[3]
+            stages = out_list[4]
+
+            stats.stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages, box_and_whisker=True)
+            stats.compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+            stats.autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
-#[17569535,22514218,17607553,17609707,17609017,17610661] class 1
-#[17586504,17610257,17573013,17573045,17586810,17609015] class 2
-#[17585738,17586610,17610235,17595173,17607455,17586760] class 3
-#[17563722,17594703,17609699,17570395,17585756,17611423] class 4
-#[17609755,17569841,17563602,17610541,17610721,17610671] class 5
+    #[17569535,22514218,17607553,17609707,17609017,17610661] class 1
+    #[17586504,17610257,17573013,17573045,17586810,17609015] class 2
+    #[17585738,17586610,17610235,17595173,17607455,17586760] class 3
+    #[17563722,17594703,17609699,17570395,17585756,17611423] class 4
+    #[17609755,17569841,17563602,17610541,17610721,17610671] class 5
 
 
 

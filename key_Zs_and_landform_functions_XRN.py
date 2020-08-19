@@ -273,10 +273,16 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
     wetted_folder = detrend_folder + '\\wetted_polygons\\small_increments'
     centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
     width_poly_folder = detrend_folder + '\\analysis_shapefiles'
-    out_folder = detrend_folder + '\\gcs_ready_tables'
+    gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
+    aligned_csv_loc = detrend_folder + '\\landform_analysis\\all_stages_table.csv'
 
-    table_list = []
+    xs_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
+    if xs_list[0][-8] == '_':
+        spacing = int(xs_list[0][-7])
+    elif xs_list[0][-9] == '_':
+        spacing = int(xs_list[0][-8:-6])
+    print('XS spacing is %sft...' % spacing)
 
     for z in key_zs:
         if isinstance(z, float) == False:
@@ -287,42 +293,45 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         else:
             z_str = (str(z)[0] + 'p' + str(z)[2])
 
-        wetted_loc = wetted_folder + '\\wetted_poly_%sft.shp' % z_str
-        cross_sections = centerline_folder + '\\stage_centerline_2ft_DS_XS_%sft.shp' % loc_stage
+        in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), wetted_folder + '\\wetted_poly_%sft_ds.shp' % z_str]
 
-        temp_location = []
-        cursor = arcpy.SearchCursor(cross_sections)
-        for row in cursor:
-            temp_location.append(int(row.getValue('LOCATION')))
-        temp_location.sort()
-        spacing = int(temp_location[1] - temp_location[0])
-        print('XS spacing is %sft...' % spacing)
-
-        clipped_XS = arcpy.Clip_analysis(cross_sections,wetted_loc,out_feature_class=width_poly_folder + 'clipped_station_lines_%sft.shp' % z_str)
-        width_poly = arcpy.Buffer_analysis(clipped_XS, width_poly_folder + 'width_rectangles_%sft.shp' % z_str, spacing / 2, line_side='FULL', line_end_type='FLAT')
-        arcpy.AddField_management(width_poly, "Width", field_type="FLOAT")
+        clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
+        width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
+        arcpy.AddField_management(width_poly_loc, "Width", field_type="FLOAT")
         expression = ("(float(!Shape.area!)) / %d" % spacing)
-        arcpy.CalculateField_management(width_poly, "Width", expression, "PYTHON3")
+        arcpy.CalculateField_management(width_poly_loc, "Width", expression, "PYTHON3")
         print('Width polygons for %sft stage created...' % z)
 
-        arcpy.AddField_management(width_poly, field_name="loc_id", field_type="SHORT")
+        arcpy.AddField_management(width_poly_loc, field_name="loc_id", field_type="SHORT")
         field_calc = "(int(!LOCATION!))"
-        arcpy.CalculateField_management(width_poly, field="loc_id", expression=field_calc, expression_type="PYTHON3")
-        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_poly, "loc_id", detrended_DEM, out_table=(width_poly_folder + '\\stats_table_%s.dbf' % z_str), statistics_type="MEAN")
-        width_poly = arcpy.JoinField_management(width_poly, "loc_id",  join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
+        arcpy.CalculateField_management(width_poly_loc, field="loc_id", expression=field_calc, expression_type="PYTHON3")
+        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_poly_loc, "loc_id", detrended_DEM, out_table=(width_poly_folder + '\\stats_table_%s.dbf' % z_str), statistics_type="MEAN")
+        width_poly = arcpy.JoinField_management(width_poly_loc, "loc_id",  join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
 
-        csv_loc = "WD_analysis_table_%s.csv" % z_str
+        csv_loc = gcs_folder + "\\%sft_WD_analysis_table.csv" % z_str
         #analysis_table = arcpy.TableToTable_conversion(width_poly, out_path=table_location, out_name=("WD_analysis_table_%s.dbf" % z_str))
         #analysis_xlsx = arcpy.TableToExcel_conversion(Input_Table=width_poly, Output_Excel_File=table_location + ("\\WD_analysis_table_%s.xlsx" % z_str))
         tableToCSV(width_poly, csv_filepath=csv_loc, fld_to_remove_override=[])
         df = pd.read_csv(csv_loc)
-        df.sort_values(by=['dist_down'], inplace=True)
         df.rename({'LOCATION': 'dist_down', 'Width': 'W', 'MEAN': 'Z'}, axis=1, inplace=True)
+        df.sort_values(by=['dist_down'], inplace=True)
         df.to_csv(csv_loc)
-        table_list.append(csv_loc)
 
-    classify_landforms_GUI.main_classify_landforms(table_list, w_field='W', z_field='Z', dist_field='dist_down', out_folder=detrend_folder, make_plots=False)
+        classify_landforms_GUI.main_classify_landforms(tables=[csv_loc], w_field='W', z_field='Z', dist_field='dist_down', out_folder=detrend_folder, make_plots=False)
 
+        j_loc_field = 'loc_%sft' % loc_stage
+        aligned_df = pd.read_csv(aligned_csv_loc)
+        df.sort_values(by=['dist_down'], inplace=True)
+        temp_df_mini = df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str),
+                             'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
+        temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
+        result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
+        result = result.replace(np.nan, 0)
+        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
+        result.to_csv(aligned_csv_loc)
+
+        print('%sft stage GCS completed and merged to @s' % (z_str, aligned_csv_loc))
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
@@ -406,10 +415,9 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
         print('Calculating wetted areas...')
         for poly in wetted_polys:
             poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
-            geometries = arcpy.CopyFeatures_management(poly_loc, arcpy.Geometry())
             poly_area = 0
-            for geometry in geometries:
-                poly_area += float(geometry.area)
+            for row in arcpy.da.SearchCursor(poly_loc, ["SHAPE@AREA"]):
+                poly_area += float(row[0])
             wetted_areas.append(poly_area)
 
     wetted_areas = [i for i in wetted_areas if i != None]
@@ -417,14 +425,13 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
 
     print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
     centerline_lengths = [None]*len(centerlines_nums)
-
     for count, line in enumerate(centerlines_nums):
-        line_loc = ('%s\\analysis_centerline_and_XS\\stage_centerline_%sft_DS.shp' % (out_folder,line))
-        geometries = arcpy.CopyFeatures_management(line_loc, arcpy.Geometry())
+        line_loc = ('%s\\analysis_centerline_and_XS\\stage_centerline_%sft_DS.shp' % (out_folder, line))
         poly_length = 0
-        for geometry in geometries:
-            poly_length += float(geometry.length)
+        for row in arcpy.da.SearchCursor(line_loc, ["SHAPE@LENGTH"]):
+            poly_length += float(row[0])
         centerline_lengths[count] = poly_length
+    centerline_lengths = [i for i in centerline_lengths if i != None]
 
     mean_XS_length = []  # Calculates mean width per stage as wetted area / centerline length
     for count, area in enumerate(wetted_areas):
@@ -434,7 +441,7 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
             stage = count
         index = loc_stage_finder(stage,centerlines_nums)[1]
         length = centerline_lengths[index]
-        if length != None:
+        if length != None and length != 0:
             mean_XS_length.append(float(area/length))
     mean_XS_length = [i for i in mean_XS_length if i != None]
 
@@ -463,13 +470,13 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
         title = (out_folder + '\\CDF_plot_small_inc.png')
     y1 = np.array([(float(f/max_area))*100 for f in wetted_areas])
     plt.figure()
-    plt.plot(x1,y1)
+    plt.plot(x1, y1)
     plt.xlabel('Flood stage height (ft)')
     plt.ylabel('Percent of %sft stage area' % max_stage)
     plt.title('CDF chart')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
-    plt.xlim(0,max_stage)
-    plt.ylim(0,max(y1))
+    plt.xlim(0, max_stage)
+    plt.ylim(0, max(y1))
     plt.xticks(np.arange(0, (max_stage+1), step=1))
     if len(key_zs) != 0:
         for stage in key_zs:
@@ -826,22 +833,20 @@ def caamano_analysis(aligned_csv):
     OUT:'''
 
 ###### INPUTS ######
-comid_list = [17569535,22514218,17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-              #17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-#[17569535,22514218,17607553,17609707,17609017,17610661]
-#[17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
-SCO_list = [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
-            #2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+comid_list = [17607553]
+# [17569535,22514218,17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
+SCO_list = [1]
+# [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+
 
 
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-    out_folder = direct + '\\LINEAR_DETREND'
+    out_folder = direct + r'\LINEAR_DETREND'
     process_footprint = direct + '\\las_footprint.shp'
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
-    code_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
     aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
 
     arcpy.env.overwriteOutput = True
@@ -849,8 +854,8 @@ for count, comid in enumerate(comid_list):
     #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
     #out_list = prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
     #align_csv(code_csv_loc, centerlines_nums=out_list[1], max_stage=20)
-
-    key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
+    key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
+    #key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
     #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
 

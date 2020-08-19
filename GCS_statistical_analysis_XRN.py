@@ -37,37 +37,44 @@ def analysis_setup(table_directory):
 
     stages_dict = {}
     stages_stats_xl_dict = {}
+    stages = []
     max_stage = 0
     for table in csv_tables:
         base_name = os.path.basename(table)
-        if base_name[1] == "f":
+        if base_name[1] == 'f':
             stage = int(base_name[0])
-        else:
+        elif base_name[2] == 'f':
             stage = int(base_name[:2])
-        if int(stage) > max_stage:
+        elif base_name[1] == 'p':
+            stage = base_name[:3]
+        elif base_name[2] == 'p':
+            stage = base_name[:4]
+
+        stages.append(stage)
+        if float(stage) > max_stage:
             max_stage = stage
+
         stage_stats_xl_name = (stat_table_location + '\\%sft_stats_table.xlsx' % stage)
         wb = xl.Workbook()
         wb.save(stage_stats_xl_name)
         wb.close()
 
-        stage_df = pd.read_csv(table,na_values=[-9999])
-        stage_df['code'].fillna(0,inplace=True)
+        stage_df = pd.read_csv(table, na_values=[-9999])
+        stage_df['code'].fillna(0, inplace=True)
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
     print("Max stage is %sft" % max_stage)
-    return [stages_dict,stages_stats_xl_dict,max_stage,stat_table_location]
 
-def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box_and_whisker=False):
+    return [stages_dict, stages_stats_xl_dict, max_stage, stat_table_location, stages]
+
+def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages, box_and_whisker=False):
     '''This function takes the stages_dict of pandas dataframes, and the stage_stats_xl dictionary, as well as calculated max stage as arguments.
     It fills out the xlsx file for each respective stage height with mean, std, max, min, and median values for the stage as a hole and each landform
     If the box_and_whisker parameter is set to True (not default), then box and whisker plots comparing the W, Z, and C(W,Z)'''
-    for stage in range(1,max_stage+1):
+    for stage in stages:
         print("Writing descriptive stats for stage %sft" % stage)
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
-
-
 
         list_of_fields = ['W', 'Z', 'W_s_Z_s','W_s','Z_s']
         means = []
@@ -105,8 +112,8 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         wb.save(stage_stat_xl)
         print("Descriptive stats for W, Z, and W_s_W_Z_s saved for stage %sft..." % stage)
 
-        list_of_codes = [-2,-1,0,1,2]
-        landform_dict = {-2:'Oversized',-1:'Constricted pool',0:'Normal',1:'Wide riffle',2:'Nozzle'}
+        list_of_codes = [-2, -1, 0, 1, 2]
+        landform_dict = {-2: 'Oversized', -1: 'Constricted pool', 0: 'Normal', 1: 'Wide riffle', 2: 'Nozzle'}
         ws['F1'].value = '*Code: -2 for oversized, -1 for constricted pool, 0 for normal channel, 1 for wide riffle, and 2 for nozzle'
         ws.column_dimensions['G'].width = 15
         ws.column_dimensions['A'].width = 16
@@ -118,8 +125,8 @@ def stage_level_descriptive_stats(stages_dict,stages_stats_xl_dict,max_stage,box
         box_plot_dict = dict(zip(list_of_fields,list_of_field_lists)) #This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
 
         total_rows = len(stage_df.index)
-        above_1_list = [0,0,0] #'W', 'Z', 'W_s_Z_s'
-        above_half_list = [0,0,0]
+        above_1_list = [0, 0, 0] #'W', 'Z', 'W_s_Z_s'
+        above_half_list = [0, 0, 0]
         for index, row in stage_df.iterrows():
             if abs(row['W_s_Z_s']) >= stds[2]:
                 above_1_list[2] += 1
@@ -239,7 +246,7 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         if not os.path.exists(plot_dirs):
             os.makedirs(plot_dirs)
 
-    x_values = np.arange(start=1,stop=max_stage+1,step=1) #Setting up subplots showing W, Z, and C(W,Z) vs stage
+    x_values = np.arange(start=1, stop=max_stage+1, step=1) #Setting up subplots showing W, Z, and C(W,Z) vs stage
 
     ax1 = plt.subplot(311)
     plt.plot(x_values, np.array(list_of_lists[0]),color='g')
@@ -338,7 +345,7 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
     #Set up autocorrelation subplots
     plt.rcParams.update({'figure.max_open_warning': 0})
 
-    for stage in range(1,max_stage+1):
+    for stage in range(1, max_stage+1):
         fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
         directory = os.path.dirname(stage_stat_xl)  # Define folder for autocorrlation spot
