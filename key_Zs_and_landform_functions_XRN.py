@@ -309,8 +309,6 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         width_poly = arcpy.JoinField_management(width_poly_loc, "loc_id",  join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
 
         csv_loc = gcs_folder + "\\%sft_WD_analysis_table.csv" % z_str
-        #analysis_table = arcpy.TableToTable_conversion(width_poly, out_path=table_location, out_name=("WD_analysis_table_%s.dbf" % z_str))
-        #analysis_xlsx = arcpy.TableToExcel_conversion(Input_Table=width_poly, Output_Excel_File=table_location + ("\\WD_analysis_table_%s.xlsx" % z_str))
         tableToCSV(width_poly, csv_filepath=csv_loc, fld_to_remove_override=[])
         df = pd.read_csv(csv_loc)
         df.rename({'LOCATION': 'dist_down', 'Width': 'W', 'MEAN': 'Z'}, axis=1, inplace=True)
@@ -320,6 +318,7 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         classify_landforms_GUI.main_classify_landforms(tables=[csv_loc], w_field='W', z_field='Z', dist_field='dist_down', out_folder=detrend_folder, make_plots=False)
 
         j_loc_field = 'loc_%sft' % loc_stage
+        df = pd.read_csv(csv_loc)
         aligned_df = pd.read_csv(aligned_csv_loc)
         df.sort_values(by=['dist_down'], inplace=True)
         temp_df_mini = df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
@@ -327,11 +326,12 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
                              'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
+        result['Dz_%sft' % z_str] = float(z - ['thwg_z'])
         result = result.replace(np.nan, 0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
         result.to_csv(aligned_csv_loc)
 
-        print('%sft stage GCS completed and merged to @s' % (z_str, aligned_csv_loc))
+        print('%sft stage GCS completed and merged to @ %s' % (z_str, aligned_csv_loc))
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
