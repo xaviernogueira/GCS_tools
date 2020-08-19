@@ -318,15 +318,15 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         classify_landforms_GUI.main_classify_landforms(tables=[csv_loc], w_field='W', z_field='Z', dist_field='dist_down', out_folder=detrend_folder, make_plots=False)
 
         j_loc_field = 'loc_%sft' % loc_stage
-        df = pd.read_csv(csv_loc)
+        gcs_df = pd.read_csv(csv_loc)
         aligned_df = pd.read_csv(aligned_csv_loc)
-        df.sort_values(by=['dist_down'], inplace=True)
+        gcs_df.sort_values(by=['dist_down'], inplace=True)
         temp_df_mini = df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
         temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str),
                              'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
-        result['Dz_%sft' % z_str] = float(z - ['thwg_z'])
+        result['Dz_%sft' % z_str] = float(z - result['thwg_z'])
         result = result.replace(np.nan, 0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
         result.to_csv(aligned_csv_loc)
