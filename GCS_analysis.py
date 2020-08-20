@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.tri as tri
 import scipy.signal as sig
+import scipy.stats as st
 from tkinter import *
 import logging
 
@@ -127,7 +128,7 @@ def percents(data, field):
     return output
 
 
-def runs_test(series):
+def runs_test(series, spacing=0):
     '''
     Does WW runs test for values above/below median of series
 
@@ -147,6 +148,7 @@ def runs_test(series):
     test_series = [x for x in series if x != m]
     run_lengths = []
     count = 0
+    num_in_sequence = 0
     for i, vals in enumerate(zip(test_series, test_series[1:])):
         x1, x2 = vals
         count += 1
@@ -154,6 +156,8 @@ def runs_test(series):
         if (x1 > m and x2 < m) or (x1 < m and x2 > m):
             run_lengths.append(count)
             count = 0
+        else:
+            num_in_sequence += 1
         # if on the last value, but no transition, then last value is part of current run
         if i == len(test_series) - 2:
             count += 1
@@ -167,19 +171,43 @@ def runs_test(series):
     # num of values below median
     n_minus = n - n_plus
     # expected number of runs if random
-    exp_runs = 2 * n_plus * n_minus * 1.0 / n + 1
+    exp_runs = ((2 * n_plus * n_minus * 1.0) / n) + 1
     # actual number of runs
-    num_runs = len(run_lengths)
+    num_runs = len(run_lengths) # Based of the Enginering Statistics Handbook. Removing 'runs' of one seems like it could make sense.
     # standard deviation of expected num of runs if random
     exp_run_std = np.sqrt((exp_runs - 1) * (exp_runs - 2) * 1.0 / (n - 1))
-    # number of standard deviations (of exected run length) that the actual run count differs from WW expected run count
+    # number of standard deviations (of epxected run length) that the actual run count differs from WW expected run count
     z_diff_expected = (num_runs - exp_runs) * 1.0 / exp_run_std
+    # Median length of a run
+    median_run_length = np.mean(np.array(run_lengths))
+    # Significance value of the absolute value of the Z statistic
+    p_value = st.norm.cdf(abs(z_diff_expected))
 
-    data = {'Runs': num_runs,
-            'Expected Runs': exp_runs,
-            'Expected Run StDev': exp_run_std,
-            'Z': z_diff_expected
-            }
+    if p_value >= 0.99:
+        p_value = str(round(p_value, 5)) + '**'
+    elif p_value >= 0.95:
+        p_value = str(round(p_value, 5)) + '**'
+
+    if spacing != 0:
+        mean_run_length = median_run_length * spacing
+        data = {'Runs': num_runs,
+                'Expected Runs': round(exp_runs, 2),
+                'Expected Run StDev': round(exp_run_std, 2),
+                'abs(Z)': abs(round(z_diff_expected, 2)),
+                'p value': p_value,
+                'Percent of XS in run of > %sft' % spacing: (num_in_sequence / n) * 100,
+                'Median run length (ft)': round(median_run_length * spacing, 2)
+                }
+    else:
+        data = {'Runs': num_runs,
+                'Expected Runs': round(exp_runs, 2),
+                'Expected Run StDev': round(exp_run_std, 2),
+                'abs(Z)': abs(round(z_diff_expected, 2)),
+                'p value': p_value,
+                '% of XS in run of > %sft' % spacing: (num_in_sequence / n) * 100,
+                'Median run length': round(median_run_length, 2)
+                }
+    num_runs = 0
 
     return data
 

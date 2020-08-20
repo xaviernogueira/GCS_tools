@@ -827,7 +827,7 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
 
     print('Plots completed')
 
-def ww_runs_test(detrend_folder, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s']):
+def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     '''INPUTS: Main directory (LINEAR_DETREND folder).
             A list of float or int stage heights for the runs test to be run on.
             A list of fields to do the WW runs test on.
@@ -838,13 +838,19 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s
             Z: number of standard deviations difference between actual and expected number of run (standard deviation of num. of runs if random)'''
 
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
-    out_folder = detrend_folder + '\\gcs_ready_tables\\GCS_stat_tables_and_plots\\WW_runs_test'
+    out_folder = detrend_folder + '\\landform_analysis'
+    xl_loc = out_folder + '\\WW_runs_tests.xlsx'
 
-    if not os.path.exists(out_folder):
-        os.makedirs(out_folder)
-
+    base_row = 1
+    gap = len(fields) + 2
+    wb = xl.Workbook()
+    wb.save(xl_loc)
+    ws = wb.active
     for z in key_zs:
-        print('Runs test with values %s being ran for a %sft stage' % (key_zs, z))
+        print('Runs test with values %s being ran for a %sft stage' % (fields, z))
+        ws.cell(row=base_row, column=1).value = '%sft' % z
+        ws.cell(row=base_row, column=2).value = 'Field'
+
         if isinstance(z, float) == True:
             if z >= 10.0:
                 z_str = (str(z)[0:2] + 'p' + str(z)[3])
@@ -853,24 +859,50 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s
         else:
             z_str = str(z)
 
-        out_xl = out_folder + '\\%sft_WW_runs_tests.xlsx'
         data_csv = gcs_folder + '\\%sft_WD_analysis_table.csv' % z_str
         data_df = pd.read_csv(data_csv)
         data_df.sort_values(by=['dist_down'], inplace=True)
+        spacing = data_df.iloc[1]['dist_down'] - data_df.iloc[0]['dist_down']
 
-        for field in fields:
+        for count, field in enumerate(fields):
+            row = base_row + count + 1
+            ws.cell(row=row, column=2).value = field
             series = data_df.loc[:, [field]].squeeze()
-            out_df = GCS_analysis.runs_test(series)
-            writer = pd.ExcelWriter(out_xl)
-            out_df.to_excel(writer, '%s runs' % field)
-            writer.save()
+            out_dict = GCS_analysis.runs_test(series, spacing=int(spacing))
+            if count == 0:  # Set heading for a given flow using the output names from the WW runs dict
+                for i, key in enumerate(out_dict.keys()):
+                    ws.cell(row=base_row, column=(3 + i)).value = str(key)
+            for j, key in enumerate(out_dict.values()):  # Inserts corresponding values
+                ws.cell(row=row, column=(3 + j)).value = str(key)
 
+        base_row += gap
+        wb.save(xl_loc)
+        print('%sft stage runs test complete!' % z)
 
-
+    ws.column_dimensions['D'].width = 16
+    ws.column_dimensions['E'].width = 16
+    ws.column_dimensions['H'].width = 18
+    wb.save(xl_loc)
+    wb.close()
+    print('Wald-Wolfowitz runs test for values below/above median finished for all inputs. Located @ %s' % xl_loc)
 
 def caamano_analysis(aligned_csv):
     '''IN: Aligned csv with landform codes for each XS.
     OUT:'''
+
+def key_z_final_analysis(in_table):
+    '''INPUT: A xlsx table with three columns: comid or unique reach ID, geomorphic class, key_zs=[Baseflow, Bankful, Valley floor], detrend_path (optional), and catcment area (optional)
+    OUTPUTS: Key Z gcs plots, runs test results, nested landform ananlysis, heatplots, autocorrelation, power spectral density, and correlation subplots.
+    Box plots comparing values between class, Key Z, and catchment area quartiles (optional).
+    This function is repeatable and overwrites its self '''
+
+    #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
+    #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s'])
+    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
+    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
+    #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s',])
+    #Box plots function()
+
 
 ###### INPUTS ######
 comid_list = [17609707]
@@ -879,7 +911,7 @@ SCO_list = [1]
 # [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 
-
+key_z_final_analysis = True
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -889,13 +921,21 @@ for count, comid in enumerate(comid_list):
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
     aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
 
+    key_z_dict = {}
+
     arcpy.env.overwriteOutput = True
 
     #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
-    prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
-    align_csv(aligned_csv_loc, centerlines_nums=[1,2,3,5,7,8], max_stage=20)
-    key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
+    #prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
+    #align_csv(aligned_csv_loc, centerlines_nums=[1,2,3,5,7,8], max_stage=20)
+
     #key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
-    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
-    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
+
+    if key_z_final_analysis == True:
+        #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
+        ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W_s', 'Z_s', 'W_s_Z_s'])
+        #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[0.5, 2, 5])
+        #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
+        #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[], fields=['W_s', 'Z_s',]) FINISH
+        #Box plots function FINISH
 
