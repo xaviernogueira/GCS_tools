@@ -186,7 +186,7 @@ def runs_test(series, spacing=0):
     if p_value >= 0.99:
         p_value = str(round(p_value, 5)) + '**'
     elif p_value >= 0.95:
-        p_value = str(round(p_value, 5)) + '**'
+        p_value = str(round(p_value, 5)) + '*'
 
     if spacing != 0:
         mean_run_length = median_run_length * spacing
@@ -195,7 +195,7 @@ def runs_test(series, spacing=0):
                 'Expected Run StDev': round(exp_run_std, 2),
                 'abs(Z)': abs(round(z_diff_expected, 2)),
                 'p value': p_value,
-                'Percent of XS in run of > %sft' % spacing: (num_in_sequence / n) * 100,
+                'Percent of XS in run > %sft' % spacing: (num_in_sequence / n) * 100,
                 'Median run length (ft)': round(median_run_length * spacing, 2)
                 }
     else:
@@ -204,7 +204,7 @@ def runs_test(series, spacing=0):
                 'Expected Run StDev': round(exp_run_std, 2),
                 'abs(Z)': abs(round(z_diff_expected, 2)),
                 'p value': p_value,
-                '% of XS in run of > %sft' % spacing: (num_in_sequence / n) * 100,
+                '% of XS in run > %sft' % spacing: (num_in_sequence / n) * 100,
                 'Median run length': round(median_run_length, 2)
                 }
     num_runs = 0

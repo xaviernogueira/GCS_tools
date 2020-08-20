@@ -322,8 +322,8 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         gcs_df = pd.read_csv(csv_loc)
         aligned_df = pd.read_csv(aligned_csv_loc)
         gcs_df.sort_values(by=['dist_down'], inplace=True)
-        temp_df_mini = df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str),'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), }, axis=1, inplace=True)
+        temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s', 'W_s_Z_s']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
         result = result.replace(np.nan, 0)
@@ -639,8 +639,11 @@ def nested_landform_analysis(aligned_csv, key_zs):
     ws.cell(row=1, column=1).value = 'Nested landform set [baseflow, BF, flood]'
     ws.cell(row=1, column=2).value = 'Abundances'
     ws.cell(row=1, column=3).value = '% of unique sets'
+    ws.cell(row=1, column=4).value = 'Total unique sets(125 possible):'
+    ws.cell(row=2, column=4).value = len(unique_nests)
     ws.column_dimensions['A'].width = 25
     ws.column_dimensions['B'].width = 16
+    ws.column_dimensions['D'].width = 20
 
     for count, unique_set in enumerate(nest_abundances):
         string = '%s, %s, %s' % (code_dict[unique_set[0][0]],code_dict[unique_set[0][1]],code_dict[unique_set[0][2]])
@@ -735,13 +738,14 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
         ymax = 0
 
         for count, z in enumerate(key_zs):
+            titles.append('COMID%s, class %s, stage %sft' % (comids[0], geo_class, z))
+
             if isinstance(z, float) == True:
                 if z >= 10.0:
                     z = (str(z)[0:2] + 'p' + str(z)[3])
                 else:
                     z = (str(z)[0] + 'p' + str(z)[2])
 
-            titles.append('COMID%s, class %s, stage %sft' % (comids[0], geo_class, z))
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
             data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
             data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
@@ -750,19 +754,19 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
             y = data.loc[:, [('Z_s')]].to_numpy()
 
             if count == 0:
-                xmax = float(np.percentile(x, 99))
-                ymax = float(np.percentile(y, 99))
-                xmin = float(np.percentile(x, 1))
-                ymin = float(np.percentile(y, 1))
+                xmax = float(np.percentile(x, 99.5))
+                ymax = float(np.percentile(y, 99.5))
+                xmin = float(np.percentile(x, 0.5))
+                ymin = float(np.percentile(y, 0.5))
 
-            if float(np.percentile(x, 99)) >= xmax:
-                xmax = float(np.percentile(x, 99))
-            if float(np.percentile(y, 99)) >= ymax:
-                ymax = float(np.percentile(y, 99))
-            if float(np.percentile(x, 1)) <= xmin:
-                xmin = float(np.percentile(x, 1))
-            if float(np.percentile(y, 1)) <= ymin:
-                ymin = float(np.percentile(y, 1))
+            if float(np.percentile(x, 99.5)) >= xmax:
+                xmax = float(np.percentile(x, 99.5))
+            if float(np.percentile(y, 99.5)) >= ymax:
+                ymax = float(np.percentile(y, 99.5))
+            if float(np.percentile(x, 0.5)) <= xmin:
+                xmin = float(np.percentile(x, 0.5))
+            if float(np.percentile(y, 0.5)) <= ymin:
+                ymin = float(np.percentile(y, 0.5))
 
         for count, ax in enumerate(axs):
             key_z = key_zs[count]
@@ -778,7 +782,7 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
             x = data.loc[:, [('W_s')]].to_numpy()
             y = data.loc[:, [('Z_s')]].to_numpy()
 
-            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd')
+            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(xmin, xmax, ymin, ymax))
             ax.set(xlim=(xmin, xmax), ylim=(xmin, ymax))
             ax.set_title(titles[count])
             ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
@@ -933,9 +937,9 @@ for count, comid in enumerate(comid_list):
 
     if key_z_final_analysis == True:
         #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
-        ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W_s', 'Z_s', 'W_s_Z_s'])
+        #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W_s', 'Z_s', 'W_s_Z_s'])
         #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[0.5, 2, 5])
-        #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
+        #heat_plotter(comids=comid_list, geo_class=1, key_zs=[0.5, 2, 5], max_stage=20) #Make sure updates for float key zs work
         #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[], fields=['W_s', 'Z_s',]) FINISH
         #Box plots function FINISH
 
