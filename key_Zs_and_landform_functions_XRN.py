@@ -267,7 +267,7 @@ def align_csv(code_csv_loc, centerlines_nums, max_stage=20):
 
     return result
 
-def key_zs_gcs(detrend_folder, key_zs=[]):
+def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
     '''This function does a full GCS analysis using three specific key Zs that can include any float. Results saved
     to the gcs_ready_tables, as well as plotted. Results are aligned to the existing csv to facilitate landform analysis'''
     centerline_nums = find_centerline_nums(detrend_folder)
@@ -277,6 +277,9 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
     aligned_csv_loc = detrend_folder + '\\landform_analysis\\all_stages_table.csv'
+
+    del_files = []
+    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xml', '.shx']
 
     xs_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
     if xs_list[0][-8] == '_':
@@ -295,6 +298,13 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
             z_str = (str(z)[0] + 'p' + str(z)[2])
 
         in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), wetted_folder + '\\wetted_poly_%sft_ds.shp' % z_str]
+
+        if clip_poly != '' and os.path.exists(clip_poly):
+            for count, file in enumerate(in_list):
+                name = file[:4] + '_C.shp'
+                arcpy.Clip_analysis(file, clip_poly, out_feature_class=name)
+                in_list[count] = name
+                del_files.append(name[:4])
 
         clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
         width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
@@ -332,6 +342,16 @@ def key_zs_gcs(detrend_folder, key_zs=[]):
         result.to_csv(aligned_csv_loc)
 
         print('%sft stage GCS completed and merged to @ %s' % (z, aligned_csv_loc))
+
+    print('Deleting files: %s' % del_files)
+    for prefix in del_files:
+        for suffix in del_suffix:
+            path = prefix + suffix
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    print("Couldn't delete %s" % prefix + suffix)
 
 
 def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
