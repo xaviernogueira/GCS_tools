@@ -13,6 +13,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 import scipy.signal as sig
+import itertools
+from itertools import combinations
 import file_functions
 from file_functions import *
 
@@ -410,7 +412,7 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
             plt.cla()
     print("Autocorrelation plots created for each stage @ %s" % plot_dirs)
 
-# Autocorrelation Heat Map plottinh
+# Autocorrelation Heat Map plotting
     x = []
     y = []
     z = []
@@ -573,10 +575,14 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         freq_lists = []
         dens_lists = []
         for z in key_zs.sort():
-            if z >= 10.0:
+            if z >= 10.0 and isinstance(z, float):
                 z_str = (str(z)[0:2] + 'p' + str(z)[3])
-            else:
+            elif z < 10.0 and isinstance(z, float):
                 z_str = (str(z)[0] + 'p' + str(z)[2])
+            elif isinstance(z, int):
+                z_str = str(z) + 'p0'
+            else:
+                print('Key z list parameters not valid. Please fill list with int or float.')
             df = pd.read_csv(detrend_folder + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z_str)
             df.sort_values(['dist_down'], inplace=True)
             values = df.loc[:, [value]].squeeze()
@@ -584,7 +590,65 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
+        value_dict[value].append(freq_lists)
         value_dict[value].append(dens_lists)
+
+    for value in value_dict.keys():
+        fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
+        fig_name = detrend_folder + '\\landform_analysis\\Key_z_PSD_%s.png' % value
+        ax[0].title('%s Power Spectral Density plots' % value)
+        ax[len(key_zs)].set_xlabel('Frequency (cycles/ft)')
+        for count, z in enumerate(key_zs):
+            ax[count].plt(value_dict[value][count][0], value_dict[value][count][1], color='red')
+            ax[count].title('%sft stage PSD' % z)
+            ax[count].plt.axvline(np.max(value_dict[value][count][1]))
+
+        fig.set_size_inches(12, 6)
+        plt.savefig(fig_name, dpi=300, bbox_inches='tight')
+        plt.cla()
+    plt.close('all')
+
+    print('Plotting key z signal correlation')
+    aligned_df = pd.read_csv(detrend_folder + '\\landform_analysis\\all_stages_csv')
+    aligned_df.sort_values('loc_1ft', inplace=True)
+    locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+    for value in value_dict.keys():
+        if len(value) == 3:
+            value_in_df = value[0] + value[2]
+        elif value == 'W_s_Z_s':
+            value_in_df = 'Ws*Zs'
+
+        signals = []
+        colors = ['red', 'blue', 'green']
+        comb = combinations(key_zs, 2)
+
+        fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=True)
+        ax[0].set_title('')
+        ax[0].set_ylabel(value)
+        ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
+
+        for z in key_zs.sort():
+            signals.append(aligned_df.loc[:, [value + '_%sft' % z]].squeeze())
+        for count, signal in enumerate(signals):
+            ax[0].plt(locs, signal, color=colors[count])
+            if count == signals[len(signals)-1]:  # Get this working with combinations that are iteratable and label the y axes
+
+
+            #ax[count+1].plt(locs, sig.correlate(signal, signals[count+1], mode='same'))
+
+        ax[1].plt(locs, sig.correlate(signals[0], signals[1], mode='same'))
+        ax[2].plt(locs, sig.correlate(signals[1], signals[2], mode='same'))
+        ax[3].plt(locs, sig.correlate(signals[0], signals[2], mode='same'))
+        ax[1].set_ylabel('%sft and %sft signal correlation' % (key_zs[0], key_zs[1]))
+        ax[2].set_ylabel('%sft and %sft signal correlation' % (key_zs[1], key_zs[2]))
+        ax[3].set_ylabel('%sft and %sft signal correlation' % (key_zs[2], key_zs[0]))
+
+
+
+
+
+
+
 
 
 
@@ -593,9 +657,14 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
 
 #INPUTS#
-sc_class = 2
-comid = 17609015
+sc_class = 1
+comid = 17609707
 GCS_process_on=False
+
+direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+out_folder = direct + r'\LINEAR_DETREND'
+
+key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'])
 
 if GCS_process_on == True:
     table_directory = (
