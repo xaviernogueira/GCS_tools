@@ -914,13 +914,13 @@ def caamano_analysis(aligned_csv):
     '''IN: Aligned csv with landform codes for each XS.
     OUT:'''
 
-def key_z_final_analysis(in_table):
+def key_z_final_analysis(in_table, clip_poly=''):
     '''INPUT: A xlsx table with three columns: comid or unique reach ID, geomorphic class, key_zs=[Baseflow, Bankful, Valley floor], detrend_path (optional), and catcment area (optional)
     OUTPUTS: Key Z gcs plots, runs test results, nested landform ananlysis, heatplots, autocorrelation, power spectral density, and correlation subplots.
     Box plots comparing values between class, Key Z, and catchment area quartiles (optional).
     This function is repeatable and overwrites its self '''
 
-    #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
+    #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5], clip_poly=clip_poly)
     #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s'])
     #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
     #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work

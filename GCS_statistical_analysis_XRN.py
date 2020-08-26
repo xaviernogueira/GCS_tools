@@ -542,7 +542,7 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
     fig.set_size_inches(12, 6)
     tpc = ax.tripcolor(triang, std_z, cmap='jet')
     ax.set(xlabel='Flood stage height (US ft)', ylabel='Spatial Frequency (cycles/ft)')
-    qlabels = range(1,max_stage+1)  # show less discharge ticks to make plot less cluttered
+    qlabels = range(1, max_stage+1)  # show less discharge ticks to make plot less cluttered
     xticks = [1*q for q in qlabels]
     ax.set_xticks(xticks)
     xticklabels = [('%s' % q) for q in qlabels]
@@ -564,6 +564,32 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
 
 def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     '''Key Z level subplots showing correlation, autocorrelation, and power spectral density'''
+    print('Plotting Key Z power spectral densities...')
+    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectivley
+    for field in fields:
+        value_dict[field] = []
+
+    for value in value_dict.keys():
+        freq_lists = []
+        dens_lists = []
+        for z in key_zs.sort():
+            if z >= 10.0:
+                z_str = (str(z)[0:2] + 'p' + str(z)[3])
+            else:
+                z_str = (str(z)[0] + 'p' + str(z)[2])
+            df = pd.read_csv(detrend_folder + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z_str)
+            df.sort_values(['dist_down'], inplace=True)
+            values = df.loc[:, [value]].squeeze()
+            frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)))
+            freq_lists.append(frequencies)
+            dens_lists.append(psd)
+
+        value_dict[value].append(dens_lists)
+
+
+
+
+
 
 
 #INPUTS#
