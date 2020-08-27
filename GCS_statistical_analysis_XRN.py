@@ -590,9 +590,9 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             df.sort_values(['dist_down'], inplace=True)
             values = df.loc[:, [value]].squeeze()
             if value != 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)))
+                frequencies, psd = sig.periodogram(values, 1.0 / 20, window=sig.get_window('hamming', len(values)))
             elif value == 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)), detrend=False)
+                frequencies, psd = sig.periodogram(values, 1.0 / 20, window=sig.get_window('hamming', len(values)), detrend=False)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
@@ -603,24 +603,32 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
         fig_name = detrend_folder + '\\landform_analysis\\Key_z_PSD_%s.png' % value
         ax[0].set_title('%s Power Spectral Density plots' % value)
-        ax[0].set_xticks(np.arange(0, 0.075, 0.005), minor=True)
-        ax[0].set_xlim(0.0, 0.075)
+        end_freq = np.max(value_dict[value][0][0]) - (np.max(value_dict[value][0][0]) / 3)
+        ax[0].set_xticks(np.arange(0.0, np.max(value_dict[value][0][0]), round(np.max(value_dict[value][0][0] / 30), 3)))
+        ax[0].grid(b=True, which='major', color='grey', linewidth=1.0)
+        ax[0].grid(b=True, which='minor', color='grey', linewidth=0.5)
+        ax[0].set_xlim(0.0, end_freq)
         ax[len(key_zs) - 1].set_xlabel('Frequency (cycles/ft)')
+
+        labels = ['Baseflow', 'Bank full', 'Valley Fill']
         for count, z in enumerate(key_zs):
             max_psd = np.max(value_dict[value][1][count])
             max_psd_freq_index = np.where(value_dict[value][1][count] == max_psd)[0][0]
             ax[count].plot(value_dict[value][0][count], value_dict[value][1][count], color='red')
             ax[count].set_ylabel('%sft stage PSD' % z)
-            ax[count].axvline(value_dict[value][0][count][max_psd_freq_index])
-            ax[count].grid(True, which='both', color='grey')
+            ax[count].grid(b=True, which='major', color='grey', linewidth=1.0)
+            ax[count].grid(b=True, which='minor', color='grey', linewidth=0.5)
+            ax[count].text(0.75, 0.75, labels[count], transform=ax[count].transAxes, fontsize=16)
+            ax[count].text(0.62, 0.60, 'Max power freq: %s cycles/ft' % round(value_dict[value][0][count][max_psd_freq_index], 4), transform=ax[count].transAxes, fontsize=10)
 
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
     plt.close('all')
+    print('PSD plots created!')
 
     print('Plotting key z signal correlation')
-    aligned_df = pd.read_csv(detrend_folder + '\\landform_analysis\\all_stages_csv')
+    aligned_df = pd.read_csv(detrend_folder + '\\landform_analysis\\all_stages_table.csv')
     aligned_df.sort_values('loc_1ft', inplace=True)
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
     for value in value_dict.keys():
@@ -633,30 +641,52 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         cor_coeffs = []
         colors = ['red', 'blue', 'green', 'pink', 'orange']
         fig_name = detrend_folder + '\\landform_analysis\\Key_z_corr_%s.png' % value
-        comb = combinations(key_zs, 2)
-        key_zs.sort()
+        comb = list(combinations(key_zs, 2))
 
-        fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=True)
-        ax[0].set_title('')
+        fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
+        ax[0].set_title('Correlation of %s signals' % value)
         ax[0].set_ylabel(value)
         ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
 
         for count, z in enumerate(key_zs):
-            signals.append(aligned_df.loc[:, [value + '_%sft' % z_str_list[count]]].squeeze())
+            signals.append(aligned_df.loc[:, [value_in_df + '_%sft' % z_str_list[count]]].squeeze())
 
+        min_sig = 0
+        max_sig = 0
         for count, signal in enumerate(signals):
             ax[0].plot(locs, signal, color=colors[count])
+            if np.min(signal) <= min_sig:
+                min_sig = np.min(signal)
+            if np.max(signal) >= max_sig:
+                max_sig = np.max(signal)
+        ax[0].grid(True, which='both')
+        ax[0].set_xticks(np.arange(0, np.max(locs), 250))
+        ax[0].set_xlim(0.0, np.max(locs))
+        ax[0].set_yticks(np.arange(round(min_sig, 0), round(max_sig, 0), 1), minor=False)
 
+        min_corr = 0
+        max_corr = 0
         for count, combo in enumerate(comb):
             index1 = key_zs.index(combo[0])
             index2 = key_zs.index(combo[1])
-            ax[count + 1].plot(locs, sig.correlate(signals[index1], signals[index2], mode='same'))
-            ax[count + 1].set_ylabel('%sft and %sft signal correlation' % combo[0], combo[1])
+            corr = sig.correlate(signals[index1], signals[index2], mode='same')
+            ax[count + 1].plot(locs, corr)
+            ax[count + 1].set_ylabel('%sft and %sft' % (combo[0], combo[1]))
+            ax[count + 1].grid(True, which='both')
+
+            if np.min(corr) <= min_corr:
+                min_corr = np.min(corr)
+            if np.max(corr) >= max_corr:
+                max_corr = np.max(corr)
+        for i in range(0, len(comb)):
+            ax[i + 1].set_ylim(min_corr, max_corr)
+
 
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
     plt.close('all')
+    print('Correlation plots finished!')
 
 
 
