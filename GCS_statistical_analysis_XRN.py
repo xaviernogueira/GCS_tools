@@ -567,14 +567,16 @@ def autocorr_and_powerspec(stages_dict,stages_stats_xl_dict,max_stage,save_plots
 def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     '''Key Z level subplots showing correlation, autocorrelation, and power spectral density'''
     print('Plotting Key Z power spectral densities...')
-    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectivley
+    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
+    z_str_list = []
+    key_zs.sort()
     for field in fields:
         value_dict[field] = []
 
     for value in value_dict.keys():
         freq_lists = []
         dens_lists = []
-        for z in key_zs.sort():
+        for z in key_zs:
             if z >= 10.0 and isinstance(z, float):
                 z_str = (str(z)[0:2] + 'p' + str(z)[3])
             elif z < 10.0 and isinstance(z, float):
@@ -583,10 +585,14 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
                 z_str = str(z) + 'p0'
             else:
                 print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str_list.append(z_str)
             df = pd.read_csv(detrend_folder + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z_str)
             df.sort_values(['dist_down'], inplace=True)
             values = df.loc[:, [value]].squeeze()
-            frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)))
+            if value != 'Z_s':
+                frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)))
+            elif value == 'Z_s':
+                frequencies, psd = sig.periodogram(values, 1.0 / 3, window=sig.get_window('hamming', len(values)), detrend=False)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
@@ -596,12 +602,17 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
     for value in value_dict.keys():
         fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
         fig_name = detrend_folder + '\\landform_analysis\\Key_z_PSD_%s.png' % value
-        ax[0].title('%s Power Spectral Density plots' % value)
-        ax[len(key_zs)].set_xlabel('Frequency (cycles/ft)')
+        ax[0].set_title('%s Power Spectral Density plots' % value)
+        ax[0].set_xticks(np.arange(0, 0.075, 0.005), minor=True)
+        ax[0].set_xlim(0.0, 0.075)
+        ax[len(key_zs) - 1].set_xlabel('Frequency (cycles/ft)')
         for count, z in enumerate(key_zs):
-            ax[count].plt(value_dict[value][count][0], value_dict[value][count][1], color='red')
-            ax[count].title('%sft stage PSD' % z)
-            ax[count].plt.axvline(np.max(value_dict[value][count][1]))
+            max_psd = np.max(value_dict[value][1][count])
+            max_psd_freq_index = np.where(value_dict[value][1][count] == max_psd)[0][0]
+            ax[count].plot(value_dict[value][0][count], value_dict[value][1][count], color='red')
+            ax[count].set_ylabel('%sft stage PSD' % z)
+            ax[count].axvline(value_dict[value][0][count][max_psd_freq_index])
+            ax[count].grid(True, which='both', color='grey')
 
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
@@ -619,40 +630,33 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             value_in_df = 'Ws*Zs'
 
         signals = []
-        colors = ['red', 'blue', 'green']
+        cor_coeffs = []
+        colors = ['red', 'blue', 'green', 'pink', 'orange']
+        fig_name = detrend_folder + '\\landform_analysis\\Key_z_corr_%s.png' % value
         comb = combinations(key_zs, 2)
+        key_zs.sort()
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=True)
         ax[0].set_title('')
         ax[0].set_ylabel(value)
         ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
 
-        for z in key_zs.sort():
-            signals.append(aligned_df.loc[:, [value + '_%sft' % z]].squeeze())
+        for count, z in enumerate(key_zs):
+            signals.append(aligned_df.loc[:, [value + '_%sft' % z_str_list[count]]].squeeze())
+
         for count, signal in enumerate(signals):
-            ax[0].plt(locs, signal, color=colors[count])
-            if count == signals[len(signals)-1]:  # Get this working with combinations that are iteratable and label the y axes
+            ax[0].plot(locs, signal, color=colors[count])
 
+        for count, combo in enumerate(comb):
+            index1 = key_zs.index(combo[0])
+            index2 = key_zs.index(combo[1])
+            ax[count + 1].plot(locs, sig.correlate(signals[index1], signals[index2], mode='same'))
+            ax[count + 1].set_ylabel('%sft and %sft signal correlation' % combo[0], combo[1])
 
-            #ax[count+1].plt(locs, sig.correlate(signal, signals[count+1], mode='same'))
-
-        ax[1].plt(locs, sig.correlate(signals[0], signals[1], mode='same'))
-        ax[2].plt(locs, sig.correlate(signals[1], signals[2], mode='same'))
-        ax[3].plt(locs, sig.correlate(signals[0], signals[2], mode='same'))
-        ax[1].set_ylabel('%sft and %sft signal correlation' % (key_zs[0], key_zs[1]))
-        ax[2].set_ylabel('%sft and %sft signal correlation' % (key_zs[1], key_zs[2]))
-        ax[3].set_ylabel('%sft and %sft signal correlation' % (key_zs[2], key_zs[0]))
-
-
-
-
-
-
-
-
-
-
-
+        fig.set_size_inches(12, 6)
+        plt.savefig(fig_name, dpi=300, bbox_inches='tight')
+        plt.cla()
+    plt.close('all')
 
 
 
@@ -661,7 +665,7 @@ sc_class = 1
 comid = 17609707
 GCS_process_on=False
 
-direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
 out_folder = direct + r'\LINEAR_DETREND'
 
 key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'])
