@@ -644,8 +644,8 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         comb = list(combinations(key_zs, 2))
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
-        ax[0].set_title('Correlation of %s signals' % value)
-        ax[0].set_ylabel(value)
+        ax[0].set_title('Correlation of %s signals' % value_in_df)
+        ax[0].set_ylabel(value_in_df)
         ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
 
         for count, z in enumerate(key_zs):
@@ -654,7 +654,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         min_sig = 0
         max_sig = 0
         for count, signal in enumerate(signals):
-            ax[0].plot(locs, signal, color=colors[count])
+            ax[0].plot(locs, signal, color=colors[count], label=labels[count] + ' (%sft)' % key_zs[count])
             if np.min(signal) <= min_sig:
                 min_sig = np.min(signal)
             if np.max(signal) >= max_sig:
@@ -663,6 +663,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
         ax[0].set_xlim(0.0, np.max(locs))
         ax[0].set_yticks(np.arange(round(min_sig, 0), round(max_sig, 0), 1), minor=False)
+        ax[0].legend(loc='lower center', ncol=len(signals), fontsize=8)
 
         min_corr = 0
         max_corr = 0
@@ -680,7 +681,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
                 max_corr = np.max(corr)
         for i in range(0, len(comb)):
             ax[i + 1].set_ylim(min_corr, max_corr)
-
+            ax[i + 1].set_yticks(np.arange(round(min_corr, -2), round(max_corr, -2), 50), minor=True)
 
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
