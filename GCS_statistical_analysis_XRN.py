@@ -631,11 +631,15 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
     aligned_df = pd.read_csv(detrend_folder + '\\landform_analysis\\all_stages_table.csv')
     aligned_df.sort_values('loc_1ft', inplace=True)
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+
+    values_in_df_list = []
     for value in value_dict.keys():
         if len(value) == 3:
             value_in_df = value[0] + value[2]
+            values_in_df_list.append(value_in_df)
         elif value == 'W_s_Z_s':
             value_in_df = 'Ws*Zs'
+            values_in_df_list.append(value_in_df)
 
         signals = []
         cor_coeffs = []
@@ -691,7 +695,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
     for i, value in enumerate(value_dict.keys()):
-        fig_name = detrend_folder + '\\landform_analysis\\%sIFFT_r_squared_plot.png' % value
+        fig_name = detrend_folder + '\\landform_analysis\\%s_IFFT_r_squared_plot.png' % value
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
 
@@ -707,24 +711,24 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             if np.min(inverse) <= ymin or np.min(signal) <= ymin:
                 ymin = np.min(np.array([np.min(inverse), np.min(signal)]))
 
-            ax[count].plot(locs, signal, label='%s signal' % value_in_df[i], color='blue')
-            ax[count].plot(locs, inverse, label='reconstructed %s signal' % value_in_df[i], color='red')
+            ax[count].plot(locs, signal, label='%s signal' % values_in_df_list[i], color='blue')
+            ax[count].plot(locs, inverse, label='Reconstructed %s signal' % values_in_df_list[i], color='red')
             if count == 0:
                 ax[count].legend(loc='upper center', ncol=2, fontsize=8)
             r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
             ax[count].grid(True, which='both')
             ax[count].text(0.5, 0.2, labels[count], transform=ax[count].transAxes, fontsize=14)
             ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
-            ax[count].set_ylabel('%sft %s' % (labels[count], value_in_df[i]))
+            ax[count].set_ylabel('%sft stage %s' % (key_zs[count], values_in_df_list[i]))
 
         ax[0].set_ylim(ymin, ymax)
         ax[0].set_xlim(0.0, np.max(locs))
+        fig.suptitle('%s signals and reconstructed inverse-FFT signals' % values_in_df_list[i], y=0.94)
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
-
 
 #INPUTS#
 sc_class = 1
