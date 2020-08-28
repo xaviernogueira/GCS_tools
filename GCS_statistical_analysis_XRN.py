@@ -1,10 +1,12 @@
+import scipy as sp
+import scipy.signal as sig
+from scipy import fft
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D
 import matplotlib.tri as tri
-import scipy as sp
 import pandas as pd
 import GCS_analysis
 import openpyxl as xl
@@ -12,7 +14,6 @@ from openpyxl import Workbook
 import os
 from os import listdir
 from os.path import isfile, join
-import scipy.signal as sig
 import itertools
 from itertools import combinations
 import file_functions
@@ -590,9 +591,9 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             df.sort_values(['dist_down'], inplace=True)
             values = df.loc[:, [value]].squeeze()
             if value != 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0 / 20, window=sig.get_window('hamming', len(values)))
+                frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)))
             elif value == 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0 / 20, window=sig.get_window('hamming', len(values)), detrend=False)
+                frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)), detrend=False)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
@@ -644,7 +645,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         comb = list(combinations(key_zs, 2))
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
-        ax[0].set_title('Correlation of %s signals' % value_in_df)
+        ax[0].set_title('Cross Correlation of %s signals' % value_in_df)
         ax[0].set_ylabel(value_in_df)
         ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
 
@@ -687,8 +688,31 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
     plt.close('all')
-    print('Correlation plots finished!')
+    print('Cross-Correlation plots finished!')
 
+    print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
+    for i, value in enumerate(value_dict.keys()):
+        fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
+        ax[0].set_xticks(np.arange(0, round(np.max(locs), 250)))
+        ax[len(signals) - 1].set_xlabel('Thalweg distance downstream (ft)')
+
+        for count, signal in enumerate(signals):
+            inverse = sp.fft.ifft(sp.fft.fft(signal))
+            ax[count].plot(locs, signal, label='%s signal' % value_in_df[i], color='blue')
+            ax[count].plot(locs, inverse, label='reconstructed %s signal' % value_in_df[i], color='red', linestyle='--')
+            if count == 0:
+                ax[count].legend(loc='upper center', ncol=2, fontsize=8)
+            r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
+            ax[count].grid(True, which='both')
+            ax[count].text(0.5, 0.2, labels[count], transform=ax[count].transAxes, fontsize=14)
+            ax[count].text(0.5, 0.1, 'Pearsons R^2= %s' % r_squared, 4, transform=ax[count].transAxes, fontsize=10)
+            ax[count].set_ylabel('%sft %s' % (labels[count], value_in_df[i]))
+
+        fig.set_size_inches(12, 6)
+        plt.savefig(fig_name, dpi=300, bbox_inches='tight')
+        plt.cla()
+    plt.close('all')
+    print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
 
 #INPUTS#
