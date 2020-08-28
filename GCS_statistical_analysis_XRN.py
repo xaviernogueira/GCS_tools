@@ -691,16 +691,24 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
     for i, value in enumerate(value_dict.keys()):
-        fig_name = detrend_folder + '\\landform_analysis\\IFFT_r_squared_plot.png'
+        fig_name = detrend_folder + '\\landform_analysis\\%sIFFT_r_squared_plot.png' % value
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
-        ax[0].set_xticks(np.arange(0, round(np.max(locs), 250)))
+        ax[0].set_xticks(np.arange(0, np.max(locs), 250))
+
         ax[len(signals) - 1].set_xlabel('Thalweg distance downstream (ft)')
 
+        ymin = 0
+        ymax = 0
         for count, signal in enumerate(signals):
             fourier = np.fft.fft(signal).real
             inverse = np.fft.ifft(fourier).real
+            if np.max(inverse) >= ymax or np.max(signal) >= ymax:
+                ymax = np.max(np.array([np.max(inverse), np.max(signal)]))
+            if np.min(inverse) <= ymin or np.min(signal) <= ymin:
+                ymin = np.min(np.array([np.min(inverse), np.min(signal)]))
+
             ax[count].plot(locs, signal, label='%s signal' % value_in_df[i], color='blue')
-            ax[count].plot(locs, inverse, label='reconstructed %s signal' % value_in_df[i], color='red', linestyle='--')
+            ax[count].plot(locs, inverse, label='reconstructed %s signal' % value_in_df[i], color='red')
             if count == 0:
                 ax[count].legend(loc='upper center', ncol=2, fontsize=8)
             r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
@@ -709,6 +717,8 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
             ax[count].set_ylabel('%sft %s' % (labels[count], value_in_df[i]))
 
+        ax[0].set_ylim(ymin, ymax)
+        ax[0].set_xlim(0.0, np.max(locs))
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
