@@ -1,6 +1,5 @@
 import scipy as sp
 import scipy.signal as sig
-from scipy import fft
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -692,12 +691,14 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
     for i, value in enumerate(value_dict.keys()):
+        fig_name = detrend_folder + '\\landform_analysis\\IFFT_r_squared_plot.png'
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, round(np.max(locs), 250)))
         ax[len(signals) - 1].set_xlabel('Thalweg distance downstream (ft)')
 
         for count, signal in enumerate(signals):
-            inverse = sp.fft.ifft(sp.fft.fft(signal))
+            fourier = np.fft.fft(signal).real
+            inverse = np.fft.ifft(fourier).real
             ax[count].plot(locs, signal, label='%s signal' % value_in_df[i], color='blue')
             ax[count].plot(locs, inverse, label='reconstructed %s signal' % value_in_df[i], color='red', linestyle='--')
             if count == 0:
@@ -705,7 +706,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
             ax[count].grid(True, which='both')
             ax[count].text(0.5, 0.2, labels[count], transform=ax[count].transAxes, fontsize=14)
-            ax[count].text(0.5, 0.1, 'Pearsons R^2= %s' % r_squared, 4, transform=ax[count].transAxes, fontsize=10)
+            ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
             ax[count].set_ylabel('%sft %s' % (labels[count], value_in_df[i]))
 
         fig.set_size_inches(12, 6)
