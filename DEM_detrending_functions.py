@@ -385,18 +385,15 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
     else:
         column = 'z_fit'
 
-
     if stage != 0:
         detrended_raster_file = detrend_location + ("\\rs_dt_s%s.tif" % stage)
     else:
         detrended_raster_file = detrend_location + "\\ras_detren.tif"
         print("0th stage marks non-stage specific centerline")
     points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y",
-                                                   out_layer=("fitted_station_points_stage%s" % (stage)),
+                                                   out_layer=("fitted_station_points_stage%s" % stage),
                                                    spatial_reference=spatial_ref, in_z_field=column)
-    points = arcpy.SaveToLayerFile_management(points,
-                                                  ("fitted_station_points_stage%sft" % (stage)).replace('.csv',
-                                                                                                             '.lyr'))
+    points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points_stage%sft" % (stage)).replace('.csv', '.lyr'))
     points = arcpy.CopyFeatures_management(points)
     print("Creating Thiessen polygons...")
     # Delete non-relevent fields tp reduce errors
@@ -408,7 +405,7 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
     cell_size1 = arcpy.GetRasterProperties_management(DEM, "CELLSIZEX")
     cell_size = float(cell_size1.getOutput(0))
     thiessen = arcpy.CreateThiessenPolygons_analysis(points, "thiespoly_stage%s.shp" % stage, fields_to_copy='ALL')
-    z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_stage%sft.tif' % (stage)),
+    z_fit_raster = arcpy.PolygonToRaster_conversion(thiessen, column, ('theis_raster_stage%sft.tif' % stage),
                                                         cell_assignment="CELL_CENTER", cellsize=cell_size)
     detrended_DEM = arcpy.Raster(DEM) - arcpy.Raster(z_fit_raster)
     detrended_DEM.save(detrended_raster_file)
@@ -433,12 +430,12 @@ def diagnostic_quick_plot(location_np, z_np, xlim=0):
     return plt.show()
 
 
-def make_quadratic_fit_plot(location_np, z_np, fit_params,stage=0, location=''):
+def make_quadratic_fit_plot(location_np, z_np, fit_params, stage=0, location=''):
     # Make a plot of the quadratic fit
     # Plot longitudinal elevation profile and detrending fit line
     x_plot = location_np
     y1_plot = z_np
-    y2_plot = (fit_params[0]*x_plot**(2) + fit_params[1]*x_plot + fit_params[2])
+    y2_plot = (fit_params[0]*x_plot**2 + fit_params[1]*x_plot + fit_params[2])
     plt.plot(x_plot, y1_plot, 'r', label="Actual elevation profile")
     plt.xlabel("Thalweg distance downstream (ft)")
     plt.ylabel("Bed elevation (ft)")
@@ -471,18 +468,18 @@ def make_linear_fit_plot(location_np, z_np, fit_params, stage=0, xmin=0, xmax=0,
     for i in range(len(y2_plots)):
         plt.plot(x_plot, y2_plots[i], 'b', label="Elevation profile linear detrending: %.4f * x + %.4f" % (y2_plots[i][0], y2_plots[i][1]))
     if ymin != 0 and ymax == 0:
-        plt.ylim(ymin,None)
+        plt.ylim(ymin, None)
     if ymax != 0 and ymin ==0:
-        plt.ylim(None,ymax)
+        plt.ylim(None, ymax)
     if ymax != 0 and ymin != 0:
-        plt.ylim(ymin,ymax)
+        plt.ylim(ymin, ymax)
 
     if xmin != 0 and xmax == 0:
-        plt.xlim(xmin,None)
+        plt.xlim(xmin, None)
     if xmax != 0 and xmin ==0:
-        plt.xlim(None,xmax)
+        plt.xlim(None, xmax)
     if xmax != 0 and xmin != 0:
-        plt.xlim(xmin,xmax)
+        plt.xlim(xmin, xmax)
 
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.minorticks_on()
@@ -512,11 +509,11 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
 
     if xmin != 0 and xmax == 0:
-        plt.xlim(xmin,None)
-    if xmax != 0 and xmin ==0:
-        plt.xlim(None,xmax)
+        plt.xlim(xmin, None)
+    if xmax != 0 and xmin == 0:
+        plt.xlim(None, xmax)
     if xmax != 0 and xmin != 0:
-        plt.xlim(xmin,xmax)
+        plt.xlim(xmin, xmax)
 
     plt.minorticks_on()
     plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -549,11 +546,11 @@ spatial_ref = arcpy.Describe(process_footprint).spatialReference
 listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
 ######
 
-breakpoints = [1300,1700,4600,5500]
+breakpoints = []
 transform_value = (0.0) #Leave at 0.0
-xlimits=[1420,5000] #[xmin,xmax] default is 0
-ylimits=[540,590] #[ymin,ymax] default is 0
-chosen_fit_index = [] #Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
+xlimits=[0, 0]  # [xmin, xmax] default is [0, 0]
+ylimits=[0, 0]  # [ymin, ymax] default is [0, 0]
+chosen_fit_index = []  # Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
 
 if process_on == True:
     loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]

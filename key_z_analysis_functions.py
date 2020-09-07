@@ -6,13 +6,13 @@ from os.path import isfile, join
 from matplotlib import pyplot as plt
 import numpy as np
 import file_functions
-import GCS_statistical_analysis_XRN
+import descriptive_statistics_functions
 import create_station_lines
 from create_station_lines import *
 import GCS_analysis
 import pandas
 import openpyxl as xl
-import Post_detrend_to_GCS
+import gcs_generating_functions
 import classify_landforms_GUI
 
 def find_centerline_nums(detrend_folder):
@@ -927,6 +927,7 @@ def key_z_final_analysis(in_table, clip_poly=''):
     #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s',])
     #Box plots function()
 
+arcpy.PolygonToCenterline_topographic(r'Z:\users\xavierrn\GIS Files\smooth_09_temp.shp', r'Z:\users\xavierrn\GIS Files\smooth_09_cent.shp')
 
 ###### INPUTS ######
 comid_list = [17609707]
@@ -935,7 +936,7 @@ SCO_list = [1]
 # [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
 
 
-key_z_final_analysis = True
+key_z_final_analysis = False
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -955,7 +956,7 @@ for count, comid in enumerate(comid_list):
 
     #key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
 
-    if key_z_final_analysis == True:
+    #if key_z_final_analysis == True:
         #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
         #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W_s', 'Z_s', 'W_s_Z_s'])
         #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[0.5, 2, 5])

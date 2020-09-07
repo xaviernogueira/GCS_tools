@@ -5,8 +5,8 @@ from arcpy.sa import *
 from arcpy.da import *
 import os
 from os import listdir
-import Xavier_detrend_postGIS
-from Xavier_detrend_postGIS import *
+import DEM_detrending_functions
+from DEM_detrending_functions import *
 import create_centerline_GUI
 from create_centerline_GUI import *
 import create_station_lines
@@ -27,7 +27,7 @@ import scipy
 from scipy import ndimage
 from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import UnivariateSpline
-import GCS_statistical_analysis_XRN as stats
+import descriptive_statistics_functions as stats
 
 
 def detrend_to_wetted_poly(detrended_dem, out_folder, raster_units, max_stage=[], step=1):
@@ -314,7 +314,7 @@ def z_value_analysis2(out_folder, original_DEM, spacing, breakpoint, centerlines
         ##### See if we can change the detrending functions to be able to run with just xl csv and points so we can call the function iteratively
         #without repeating ourselves. We should then use this function to do the spatial analysis and add the values to analysis tables in proper form
 
-        location_and_z = Xavier_detrend_postGIS.prep_xl_file(xyz_table_location=elevation_table,listofcolumn=['B', 'A', 'E', 'C', 'D'])
+        location_and_z = DEM_detrending_functions.prep_xl_file(xyz_table_location=elevation_table, listofcolumn=['B', 'A', 'E', 'C', 'D'])
         location_np = location_and_z[0]
         z_np = location_and_z[1]
         #Xavier_detrend_postGIS.diagnostic_quick_plot(location_np,z_np) #Un-hash out if first time interacting with data

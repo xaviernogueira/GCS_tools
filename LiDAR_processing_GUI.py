@@ -8,7 +8,7 @@ Things to consider adding:
 """
 
 from Tkinter import *
-from file_functions_oldpy import *
+from file_functions_py2 import *
 import os
 import sys
 import shutil
