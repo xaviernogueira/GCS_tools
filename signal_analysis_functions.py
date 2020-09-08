@@ -18,7 +18,7 @@ from itertools import combinations
 import file_functions
 from file_functions import *
 
-def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
+def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], in_csv=''):
     '''Key Z level subplots showing correlation, autocorrelation, and power spectral density'''
     print('Plotting Key Z power spectral densities...')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
@@ -26,6 +26,9 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
     key_zs.sort()
     for field in fields:
         value_dict[field] = []
+    labels = ['Base flow', 'Bank full', 'Valley Fill']
+
+
 
     for value in value_dict.keys():
         freq_lists = []
@@ -40,7 +43,11 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
             else:
                 print('Key z list parameters not valid. Please fill list with int or float.')
             z_str_list.append(z_str)
-            df = pd.read_csv(detrend_folder + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z_str)
+
+            if in_csv == '':
+                df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
+            else:
+                df = pd.read_csv(in_csv)
             df.sort_values(['dist_down'], inplace=True)
             values = df.loc[:, [value]].squeeze()
             if value != 'Z_s':
@@ -55,7 +62,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
     for value in value_dict.keys():
         fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
-        fig_name = detrend_folder + '\\landform_analysis\\Key_z_PSD_%s.png' % value
+        fig_name = out_folder + '\\Key_z_PSD_%s.png' % value
         ax[0].set_title('%s Power Spectral Density plots' % value)
         end_freq = np.max(value_dict[value][0][0]) - (np.max(value_dict[value][0][0]) / 3)
         ax[0].set_xticks(np.arange(0.0, np.max(value_dict[value][0][0]), round(np.max(value_dict[value][0][0] / 30), 3)))
@@ -64,7 +71,6 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         ax[0].set_xlim(0.0, end_freq)
         ax[len(key_zs) - 1].set_xlabel('Frequency (cycles/ft)')
 
-        labels = ['Baseflow', 'Bank full', 'Valley Fill']
         for count, z in enumerate(key_zs):
             max_psd = np.max(value_dict[value][1][count])
             max_psd_freq_index = np.where(value_dict[value][1][count] == max_psd)[0][0]
@@ -81,8 +87,21 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
     plt.close('all')
     print('PSD plots created!')
 
+
+def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], N=0, in_csv=''):
+    '''INPUTS:
+    N (0 default, accepts int or range(int,int) refers to the # of hamronic components included in the analysis. 0 does a normal fft and ifft
+    in_csv allows the aligned csv to be explicitly referenced if not 'all_stages_table.csv' '''
+
     print('Plotting key z signal correlation')
-    aligned_df = pd.read_csv(detrend_folder + '\\landform_analysis\\all_stages_table.csv')
+    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
+    z_str_list = []
+    key_zs.sort()
+    for field in fields:
+        value_dict[field] = []
+    labels = ['Base flow', 'Bank full', 'Valley Fill']
+
+    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
     aligned_df.sort_values('loc_1ft', inplace=True)
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
 
@@ -98,7 +117,7 @@ def key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', '
         signals = []
         cor_coeffs = []
         colors = ['red', 'blue', 'green', 'pink', 'orange']
-        fig_name = detrend_folder + '\\landform_analysis\\Key_z_corr_%s.png' % value
+        fig_name = out_folder + '\\Key_z_corr_%s.png' % value
         comb = list(combinations(key_zs, 2))
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)

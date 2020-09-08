@@ -529,27 +529,27 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on=False
-detrend_or_diagnostic=True #False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+detrend_or_diagnostic=True  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17607455
-SCO_number = 3
+comid = 17570395
+SCO_number = 4
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx' #change back to 2+spaced to match code!
+xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
 process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
-listofcolumn = ["D", "A", "L", "I", "J"] #For least cost centerlines
+listofcolumn = ["D", "A", "L", "I", "J"]  # For least cost centerlines
 ######
 
-breakpoints = []
-transform_value = (0.0) #Leave at 0.0
+breakpoints = [80,1100,1840,1950,2975,3500,3590,3900]
+transform_value = (0.0)  # Leave at 0.0
 xlimits=[0, 0]  # [xmin, xmax] default is [0, 0]
-ylimits=[0, 0]  # [ymin, ymax] default is [0, 0]
+ylimits=[700, 800]  # [ymin, ymax] default is [0, 0]
 chosen_fit_index = []  # Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
 
 if process_on == True:
@@ -558,7 +558,7 @@ if process_on == True:
     ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
 
     if detrend_or_diagnostic==False:
-        save_location=''
+        save_location = ''
         diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
         fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
         make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],

@@ -927,8 +927,6 @@ def key_z_final_analysis(in_table, clip_poly=''):
     #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s',])
     #Box plots function()
 
-arcpy.PolygonToCenterline_topographic(r'Z:\users\xavierrn\GIS Files\smooth_09_temp.shp', r'Z:\users\xavierrn\GIS Files\smooth_09_cent.shp')
-
 ###### INPUTS ######
 comid_list = [17609707]
 # [17569535,22514218,17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
