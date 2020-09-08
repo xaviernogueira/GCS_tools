@@ -28,8 +28,6 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
 
-
-
     for value in value_dict.keys():
         freq_lists = []
         dens_lists = []
@@ -49,11 +47,10 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
             else:
                 df = pd.read_csv(in_csv)
             df.sort_values(['dist_down'], inplace=True)
+            spacing = df['dist_down'][1] - df['dist_down'][0]
             values = df.loc[:, [value]].squeeze()
-            if value != 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)))
-            elif value == 'Z_s':
-                frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)), detrend=False)
+
+            frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)), detrend=False)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
@@ -64,22 +61,40 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
         fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
         fig_name = out_folder + '\\Key_z_PSD_%s.png' % value
         ax[0].set_title('%s Power Spectral Density plots' % value)
-        end_freq = np.max(value_dict[value][0][0]) - (np.max(value_dict[value][0][0]) / 3)
         ax[0].set_xticks(np.arange(0.0, np.max(value_dict[value][0][0]), round(np.max(value_dict[value][0][0] / 30), 3)))
         ax[0].grid(b=True, which='major', color='grey', linewidth=1.0)
         ax[0].grid(b=True, which='minor', color='grey', linewidth=0.5)
-        ax[0].set_xlim(0.0, end_freq)
+
         ax[len(key_zs) - 1].set_xlabel('Frequency (cycles/ft)')
 
+        percentile = float(np.percentile(value_dict[value][1], 95))
+        freq_indices_list = []
+        switch = False
+
+        for array in len(value_dict[value][1]):
+            for i in range(1, len(array)):
+                sub_list = [f for f in value_dict[value][1][-i:] if f >= percentile]
+                if len(sub_list) > 0 and switch == False:
+                    switch = True
+                    freq_index = len(array) - 1
+                    freq_indices_list.append(freq_index)
+                if switch == True:
+                    break
+
+        ax[0].set_xlim(0.0, int(max(freq_indices_list)))
         for count, z in enumerate(key_zs):
+            freqs = value_dict[value][0][count]
+            power = value_dict[value][1][count]
+            smooth_power = sp.ndimage.gaussian_filter1d(power, 2, axis=0)
             max_psd = np.max(value_dict[value][1][count])
             max_psd_freq_index = np.where(value_dict[value][1][count] == max_psd)[0][0]
-            ax[count].plot(value_dict[value][0][count], value_dict[value][1][count], color='red')
+            ax[count].plot(freqs, power, color='red')
+            ax[count].plot(freqs, smooth_power, color='blue')
             ax[count].set_ylabel('%sft stage PSD' % z)
             ax[count].grid(b=True, which='major', color='grey', linewidth=1.0)
             ax[count].grid(b=True, which='minor', color='grey', linewidth=0.5)
             ax[count].text(0.75, 0.75, labels[count], transform=ax[count].transAxes, fontsize=16)
-            ax[count].text(0.62, 0.60, 'Max power freq: %s cycles/ft' % round(value_dict[value][0][count][max_psd_freq_index], 4), transform=ax[count].transAxes, fontsize=10)
+            ax[count].text(0.62, 0.60, 'Max power freq: %s cycles/%sft' % (round(value_dict[value][0][count][max_psd_freq_index], 4), spacing), transform=ax[count].transAxes, fontsize=10)
 
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
@@ -104,6 +119,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
     aligned_df.sort_values('loc_1ft', inplace=True)
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+    spacing = locs[1] - locs[2]
 
     values_in_df_list = []
     for value in value_dict.keys():

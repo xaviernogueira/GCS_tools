@@ -513,7 +513,7 @@ def GCS_plotter(table_directory):
             dist_points = plot_6_sorted[:, 0]
             attribute_points = plot_6_sorted[:, 1]
             gaussian_sigma3 = gaussian_filter1d(attribute_points, 3, axis=0)
-            gaussian_sigma6 = gaussian_filter1d(attribute_points, 10, axis=0)
+            gaussian_sigma6 = gaussian_filter1d(attribute_points, 6, axis=0)
 
             plt.scatter(dist_points, attribute_points, c='black', s=0.75, ls='--', label=("%s points" % i))
             plt.plot(dist_points, gaussian_sigma3, c='red', ls='-', label="Gaussian filter, sigma=3")
