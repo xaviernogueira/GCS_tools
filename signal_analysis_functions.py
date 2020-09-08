@@ -69,19 +69,17 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
         percentile = float(np.percentile(value_dict[value][1], 95))
         freq_indices_list = []
-        switch = False
 
         for array in len(value_dict[value][1]):
+            switch = False
             for i in range(1, len(array)):
                 sub_list = [f for f in value_dict[value][1][-i:] if f >= percentile]
                 if len(sub_list) > 0 and switch == False:
                     switch = True
-                    freq_index = len(array) - 1
+                    freq_index = len(array) - i
                     freq_indices_list.append(freq_index)
-                if switch == True:
-                    break
-
         ax[0].set_xlim(0.0, int(max(freq_indices_list)))
+
         for count, z in enumerate(key_zs):
             freqs = value_dict[value][0][count]
             power = value_dict[value][1][count]
@@ -103,10 +101,7 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
     print('PSD plots created!')
 
 
-def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], N=0, in_csv=''):
-    '''INPUTS:
-    N (0 default, accepts int or range(int,int) refers to the # of hamronic components included in the analysis. 0 does a normal fft and ifft
-    in_csv allows the aligned csv to be explicitly referenced if not 'all_stages_table.csv' '''
+def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], in_csv=''):
 
     print('Plotting key z signal correlation')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
@@ -121,15 +116,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
     spacing = locs[1] - locs[2]
 
-    values_in_df_list = []
     for value in value_dict.keys():
-        if len(value) == 3:
-            value_in_df = value[0] + value[2]
-            values_in_df_list.append(value_in_df)
-        elif value == 'W_s_Z_s':
-            value_in_df = 'Ws*Zs'
-            values_in_df_list.append(value_in_df)
-
         signals = []
         cor_coeffs = []
         colors = ['red', 'blue', 'green', 'pink', 'orange']
@@ -137,12 +124,12 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         comb = list(combinations(key_zs, 2))
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
-        ax[0].set_title('Cross Correlation of %s signals' % value_in_df)
-        ax[0].set_ylabel(value_in_df)
+        ax[0].set_title('Cross Correlation of %s signals' % value)
+        ax[0].set_ylabel(value)
         ax[len(key_zs)].set_xlabel('Thalweg distance downstream (ft)')
 
         for count, z in enumerate(key_zs):
-            signals.append(aligned_df.loc[:, [value_in_df + '_%sft' % z_str_list[count]]].squeeze())
+            signals.append(aligned_df.loc[:, [value + '_%sft' % z_str_list[count]]].squeeze())
 
         min_sig = 0
         max_sig = 0
@@ -182,11 +169,43 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     plt.close('all')
     print('Cross-Correlation plots finished!')
 
+
+def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', same_plot=False):
+    '''INPUTS:
+        N (0 default, accepts int or list. Refers to the # of hamronic components included in the analysis,
+        Set the parameter N=list(range(1, N)) for a incrementing range. N=0 does a normal fft and ifft.
+        in_csv allows the aligned csv to be explicitly referenced if not 'all_stages_table.csv'
+        If same_plot == True (False is default), all reconstructed signals will be on one plot instead of individual plots'''
+
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
+    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
+    z_str_list = []
+    key_zs.sort()
+    for field in fields:
+        value_dict[field] = []
+    labels = ['Base flow', 'Bank full', 'Valley Fill']
+
+    ns = []
+    if isinstance(N, int):
+        ns.append(N)
+    elif isinstance(N, list):
+        for i in N:
+            ns.append(i)
+
+    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
+    aligned_df.sort_values('loc_1ft', inplace=True)
+    locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+    spacing = locs[1] - locs[2]
+
     for i, value in enumerate(value_dict.keys()):
-        fig_name = detrend_folder + '\\landform_analysis\\%s_IFFT_r_squared_plot.png' % value
+        fig_name = out_folder + '\\%s_IFFT_r_squared_plot.png' % value
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
+
+        signals = []
+        for count, z in enumerate(key_zs):
+            signals.append(aligned_df.loc[:, [value + '_%sft' % z_str_list[count]]].squeeze())
+        comb = list(combinations(key_zs, 2))
 
         ax[len(signals) - 1].set_xlabel('Thalweg distance downstream (ft)')
 
@@ -200,19 +219,19 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
             if np.min(inverse) <= ymin or np.min(signal) <= ymin:
                 ymin = np.min(np.array([np.min(inverse), np.min(signal)]))
 
-            ax[count].plot(locs, signal, label='%s signal' % values_in_df_list[i], color='blue')
-            ax[count].plot(locs, inverse, label='Reconstructed %s signal' % values_in_df_list[i], color='red')
+            ax[count].plot(locs, signal, label='%s signal' % value, color='blue')
+            ax[count].plot(locs, inverse, label='Reconstructed %s signal' % value, color='red')
             if count == 0:
                 ax[count].legend(loc='upper center', ncol=2, fontsize=8)
             r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
             ax[count].grid(True, which='both')
             ax[count].text(0.5, 0.2, labels[count], transform=ax[count].transAxes, fontsize=14)
             ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
-            ax[count].set_ylabel('%sft stage %s' % (key_zs[count], values_in_df_list[i]))
+            ax[count].set_ylabel('%sft stage %s' % (key_zs[count], value))
 
         ax[0].set_ylim(ymin, ymax)
         ax[0].set_xlim(0.0, np.max(locs))
-        fig.suptitle('%s signals and reconstructed inverse-FFT signals' % values_in_df_list[i], y=0.94)
+        fig.suptitle('%s signals and reconstructed inverse-FFT signals' % value, y=0.94)
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
