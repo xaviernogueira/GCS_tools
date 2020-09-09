@@ -17,9 +17,13 @@ import itertools
 from itertools import combinations
 import file_functions
 from file_functions import *
+import matlab.engine
 
-def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], in_csv=''):
-    '''Key Z level subplots showing correlation, autocorrelation, and power spectral density'''
+def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
+    '''This function saves a plot of the PSD for each input key z to the out_folder using GCS csv files found in the in_folder.
+    INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
+    key_zs can be either float or int.
+    fields can be changed from the defaults is csv headers are different. '''
     print('Plotting Key Z power spectral densities...')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
     z_str_list = []
@@ -42,10 +46,8 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
                 print('Key z list parameters not valid. Please fill list with int or float.')
             z_str_list.append(z_str)
 
-            if in_csv == '':
-                df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
-            else:
-                df = pd.read_csv(in_csv)
+            df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
+
             df.sort_values(['dist_down'], inplace=True)
             spacing = df['dist_down'][1] - df['dist_down'][0]
             values = df.loc[:, [value]].squeeze()
@@ -102,6 +104,9 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
 
 def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], in_csv=''):
+    '''This function plots key z signals for the given fields, and the cross correlation between each combination of two signals.
+    INPUTS: Folder containing aligned all_stages_table.csv. out_folder is where the plot is saved.
+    key_zs can be float or int. If in_csv is overridden to equal a csv location, a csv not part of the documented file structure is used.'''
 
     print('Plotting key z signal correlation')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively

@@ -354,10 +354,12 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
                     print("Couldn't delete %s" % prefix + suffix)
 
 
-def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, key_zs=[], max_stage=20, small_increments=0):
-    '''INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area, pearson correlation threshold (optional), maximum stage for plotting
+def stage_correlation_matrix_plot(out_folder, channel_clip_poly, code_csv_loc, key_zs=[], max_stage=20, small_increments=0):
+    '''
+    INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area maximum stage for plotting
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
     Used to guide key Z selection for the following nested landform analysis'''
+
     print('Calculating cross-correlation matrix...')
     landform_folder = out_folder + '\\landform_analysis'
     result = pd.read_csv(code_csv_loc)
@@ -401,19 +403,27 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.cla()
     print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png'))
 
+def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_stage=20, small_increments=0):
+    '''This function plots a cumulative wetted area % vs stage (CDF), the change in wetted area vs stage (PDF), and a flipped axes
+    plot representing one half of an idealized average channel cross section. All plots can be used to select key zs, and re-plotted marking selected key zs.
+    INPUTS: in_folder containing wetted polygons, and (optionally) containing a sub-folder \\small_increments, which has smaller increment wetted areas.
+    out_folder to save figures. A channel_clip_poly that defines the study area and channel wetted area to include.
+    List key_zs (default is []) which when filled plots key zs as lines on the figures. A max stage to include (int, default is 20).
+    small_increments parameter which when not 0 (default, plots 1ft incs) used the small increment wetted polygons (i.e. 0.1ft or 0.2ft) to construct the plots.'''
+
     print('CDF and PDF wetted area analysis initiated...')
     if small_increments == 0:
         print('Making 1ft flood stage height interval plots...')
-        clipped_wetted_folder = out_folder + "\\clipped_wetted_polygons"
+        clipped_wetted_folder = in_folder + "\\clipped_wetted_polygons"
         if not os.path.exists(clipped_wetted_folder):
             os.makedirs(clipped_wetted_folder)
 
-        wetted_polys = [f for f in listdir(out_folder+'\\wetted_polygons') if f[:26]=='flood_stage_poly_dissolved' and f[-3:]=='shp']
+        wetted_polys = [f for f in listdir(in_folder + '\\wetted_polygons') if f[:26] == 'flood_stage_poly_dissolved' and f[-3:] == 'shp']
 
         print('Calculating wetted areas...')
         wetted_areas = [None]*len(wetted_polys)
         for poly in wetted_polys:
-            poly_loc = ('%s\\wetted_polygons\\%s' % (out_folder, poly))
+            poly_loc = (in_folder + '\\%s' % poly)
             if poly[28] == 'f':
                 stage = int(poly[27])
             else:
@@ -429,12 +439,12 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     else:
         print('Making small increment plots...')
         wetted_areas = []
-        wetted_polys = [f for f in listdir(out_folder + '\\wetted_polygons\\small_increments') if f[:11] == 'wetted_poly' and f[-6:] == 'ft.shp']
-        flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).tolist() # A list storing all small flood stage increments
+        wetted_polys = [f for f in listdir(in_folder + '\\small_increments') if f[:11] == 'wetted_poly' and f[-6:] == 'ft.shp']
+        flood_stage_incs = np.arange(0, max_stage+small_increments, float(small_increments)).tolist()  # A list storing all small flood stage increments
 
         print('Calculating wetted areas...')
         for poly in wetted_polys:
-            poly_loc = out_folder + '\\wetted_polygons\\small_increments\\%s' % poly
+            poly_loc = in_folder + '\\small_increments\\%s' % poly
             poly_area = 0
             for row in arcpy.da.SearchCursor(poly_loc, ["SHAPE@AREA"]):
                 poly_area += float(row[0])
@@ -443,45 +453,16 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     wetted_areas = [i for i in wetted_areas if i != None]
     wetted_areas.sort()
 
-    print('Calculating centerline lengths, d(wetted area), and d(XS length)...')
-    centerline_lengths = [None]*len(centerlines_nums)
-    for count, line in enumerate(centerlines_nums):
-        line_loc = ('%s\\analysis_centerline_and_XS\\stage_centerline_%sft_DS.shp' % (out_folder, line))
-        poly_length = 0
-        for row in arcpy.da.SearchCursor(line_loc, ["SHAPE@LENGTH"]):
-            poly_length += float(row[0])
-        centerline_lengths[count] = poly_length
-    centerline_lengths = [i for i in centerline_lengths if i != None]
-
-    mean_XS_length = []  # Calculates mean width per stage as wetted area / centerline length
-    for count, area in enumerate(wetted_areas):
-        if small_increments != 0:
-            stage = flood_stage_incs[count]
-        else:
-            stage = count
-        index = loc_stage_finder(stage,centerlines_nums)[1]
-        length = centerline_lengths[index]
-        if length != None and length != 0:
-            mean_XS_length.append(float(area/length))
-    mean_XS_length = [i for i in mean_XS_length if i != None]
-
+    print('Calculating d(wetted area)...')
     d_area = []  # Calculates the change in wetted area between stages
     for count, area in enumerate(wetted_areas):
         if count == 0:
             d_area.append(area)
         else:
             d_area.append(float(area-wetted_areas[count-1]))
-
-    d_XS_length = []  # Calculates the change in mean width between stages
-    for count, length in enumerate(mean_XS_length):
-        if count == 0:
-            d_XS_length.append(length)
-        else:
-            d_XS_length.append(float(length - mean_XS_length[count - 1]))
-
     max_area = wetted_areas[-1]
-    print('Plotting CDF and PDF plots')
 
+    print('Plotting CDF and PDF plots')
     if small_increments == 0:
         x1 = np.array(range(0, len(wetted_areas)))
         title = (out_folder + '\\CDF_plot.png')
@@ -561,18 +542,18 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     plt.clf()
     plt.close('all')
 
-    x4 = np.array(mean_XS_length)
+    x4 = np.array(wetted_areas)
     if small_increments == 0:
-        y4 = np.array(range(0, len(mean_XS_length)))
-        title = (out_folder + '\\XS_length_plot.png')
+        y4 = np.array(range(0, len(wetted_areas)))
+        title = (out_folder + '\\mean_XS_plot.png')
     else:
         y4 = np.arange(0, max_stage+small_increments, small_increments)
-        title = (out_folder + '\\XS_length_plot_small_inc.png')
+        title = (out_folder + '\\mean_XS_plot_small_inc.png')
     plt.figure()
     plt.plot(x4, y4)
-    plt.xlabel('Mean XS length')
+    plt.xlabel('Wetted area (ft^2)')
     plt.ylabel('Flood stage height (ft)')
-    plt.title('Mean XS length chart')
+    plt.title('Flood stage and wetted area plot')
     plt.grid(b=True, which='major', color='#666666', linestyle='-')
     plt.grid(b=True, which='minor', color='#666666', linestyle='-')
     plt.xlim(0, max(x4))
@@ -582,39 +563,13 @@ def key_z_finder(out_folder, channel_clip_poly, code_csv_loc, centerlines_nums, 
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + '\\XS_length_plot_with_Zs.png')
+            title = (out_folder + '\\mean_XS_plot.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
     plt.clf()
     plt.close('all')
 
-    if small_increments == 0:
-        x5 = np.array(range(0, len(d_XS_length)))
-        y5 = np.array(d_XS_length)
-        title = (out_folder + '\\PDF_XS_plot.png')
-    else:
-        x5 = np.arange(small_increments, max_stage + small_increments, small_increments)
-        y5 = np.array(d_XS_length[1:])
-        title = (out_folder + '\\PDF_XS_plot_small_inc.png')
-    plt.figure()
-    plt.plot(x5, y5)
-    plt.xlabel('Flood stage height (ft)')
-    plt.ylabel('Change in mean XS length (ft)')
-    plt.title('PDF XS chart')
-    plt.grid(b=True, which='major', color='#666666', linestyle='-')
-    plt.xlim(0, max_stage)
-    plt.ylim(0, None)
-    plt.xticks(np.arange(0, (max_stage + 1), step=1))
-    if len(key_zs) != 0:
-        for stage in key_zs:
-            plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + '\\PDF_XS_plot_with_Zs.png')
-    fig = plt.gcf()
-    fig.set_size_inches(12, 6)
-    plt.savefig(title, dpi=300, bbox_inches='tight')
-    plt.clf()
-    plt.close('all')
 
 def nested_landform_analysis(aligned_csv, key_zs):
     '''IN: Aligned csv with landform codes for each XS. A list (key_zs) containing three stages
