@@ -354,15 +354,17 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
                     print("Couldn't delete %s" % prefix + suffix)
 
 
-def stage_correlation_matrix_plot(out_folder, channel_clip_poly, code_csv_loc, key_zs=[], max_stage=20, small_increments=0):
-    '''
+def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, small_increments=0, aligned_csv_loc=''):
+    ''' This function plots a matrix
     INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area maximum stage for plotting
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
     Used to guide key Z selection for the following nested landform analysis'''
 
     print('Calculating cross-correlation matrix...')
-    landform_folder = out_folder + '\\landform_analysis'
-    result = pd.read_csv(code_csv_loc)
+    if aligned_csv_loc == '':
+        result = pd.read_csv(in_folder + 'all_stages_table.csv')
+    else:
+        result = pd.read_csv(aligned_csv_loc)
 
     col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
     col_list = [('Ws_%sft') % f for f in range(1, max_stage + 1)]
@@ -399,9 +401,9 @@ def stage_correlation_matrix_plot(out_folder, channel_clip_poly, code_csv_loc, k
     ax.set_title("Cross-correlation of stage width series")
     fig.tight_layout()
     fig.set_size_inches(16, 8)
-    plt.savefig((landform_folder + '\\cross_corrs_table.png'), dpi=300, bbox_inches='tight')
+    plt.savefig((out_folder + '\\corrs_matrix_plot.png'), dpi=300, bbox_inches='tight')
     plt.cla()
-    print('Stage width profile correlation matrix: %s' % (landform_folder + '\\cross_corrs_table.png'))
+    print('Stage width profile correlation matrix: %s' % (out_folder + '\\corrs_matrix_plot.png'))
 
 def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_stage=20, small_increments=0):
     '''This function plots a cumulative wetted area % vs stage (CDF), the change in wetted area vs stage (PDF), and a flipped axes

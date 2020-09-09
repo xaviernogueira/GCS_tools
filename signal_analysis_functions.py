@@ -17,13 +17,14 @@ import itertools
 from itertools import combinations
 import file_functions
 from file_functions import *
-import matlab.engine
+#import matlab.engine
 
-def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
+def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5):
     '''This function saves a plot of the PSD for each input key z to the out_folder using GCS csv files found in the in_folder.
     INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
     key_zs can be either float or int.
-    fields can be changed from the defaults is csv headers are different. '''
+    fields can be changed from the defaults is csv headers are different.
+    Smoothing (int, default=5) is the moving average window to smoothing the power spectral data. If 0 no moving average is used. '''
     print('Plotting Key Z power spectral densities...')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
     z_str_list = []
@@ -52,7 +53,11 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
             spacing = df['dist_down'][1] - df['dist_down'][0]
             values = df.loc[:, [value]].squeeze()
 
-            frequencies, psd = sig.periodogram(values, 1.0, window=sig.get_window('hamming', len(values)), detrend=False)
+            frequencies, psd = sig.periodogram(values, 1.0/spacing, window=sig.get_window('hamming', len(values)), detrend=False)
+
+            if smoothing != 0:
+                #psd = np.convolve(psd, np.ones((smoothing,))/smoothing, mode='valid')
+                psd = sp.ndimage.uniform_filter1d(psd, size=smoothing)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
 
@@ -69,33 +74,21 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
 
         ax[len(key_zs) - 1].set_xlabel('Frequency (cycles/ft)')
 
-        percentile = float(np.percentile(value_dict[value][1], 95))
-        freq_indices_list = []
-
-        for array in len(value_dict[value][1]):
-            switch = False
-            for i in range(1, len(array)):
-                sub_list = [f for f in value_dict[value][1][-i:] if f >= percentile]
-                if len(sub_list) > 0 and switch == False:
-                    switch = True
-                    freq_index = len(array) - i
-                    freq_indices_list.append(freq_index)
-        ax[0].set_xlim(0.0, int(max(freq_indices_list)))
-
+        max_freq = 0
         for count, z in enumerate(key_zs):
             freqs = value_dict[value][0][count]
+            if np.max(freqs) >= max_freq:
+                max_freq = np.max(freqs)
             power = value_dict[value][1][count]
-            smooth_power = sp.ndimage.gaussian_filter1d(power, 2, axis=0)
-            max_psd = np.max(value_dict[value][1][count])
-            max_psd_freq_index = np.where(value_dict[value][1][count] == max_psd)[0][0]
-            ax[count].plot(freqs, power, color='red')
-            ax[count].plot(freqs, smooth_power, color='blue')
+            ax[count].plot(freqs, power, '*-', color='blue')
             ax[count].set_ylabel('%sft stage PSD' % z)
+            ax[count].set_xscale('log')
+            ax[count].set_yscale('log')
             ax[count].grid(b=True, which='major', color='grey', linewidth=1.0)
-            ax[count].grid(b=True, which='minor', color='grey', linewidth=0.5)
+            ax[count].grid(b=True, which='minor', color='grey', linewidth=0.5, linestyle='--')
             ax[count].text(0.75, 0.75, labels[count], transform=ax[count].transAxes, fontsize=16)
-            ax[count].text(0.62, 0.60, 'Max power freq: %s cycles/%sft' % (round(value_dict[value][0][count][max_psd_freq_index], 4), spacing), transform=ax[count].transAxes, fontsize=10)
 
+        ax[0].set_xlim(None, max_freq)
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
@@ -242,3 +235,9 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         plt.cla()
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
+
+
+input = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\gcs_ready_tables'
+out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\landform_analysis"
+
+powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
