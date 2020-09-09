@@ -56,7 +56,6 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
             frequencies, psd = sig.periodogram(values, 1.0/spacing, window=sig.get_window('hamming', len(values)), detrend=False)
 
             if smoothing != 0:
-                #psd = np.convolve(psd, np.ones((smoothing,))/smoothing, mode='valid')
                 psd = sp.ndimage.uniform_filter1d(psd, size=smoothing)
             freq_lists.append(frequencies)
             dens_lists.append(psd)
@@ -121,6 +120,17 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Z
         fig_name = out_folder + '\\Key_z_corr_%s.png' % value
         comb = list(combinations(key_zs, 2))
 
+        for z in key_zs:
+            if z >= 10.0 and isinstance(z, float):
+                z_str = (str(z)[0:2] + 'p' + str(z)[3])
+            elif z < 10.0 and isinstance(z, float):
+                z_str = (str(z)[0] + 'p' + str(z)[2])
+            elif isinstance(z, int):
+                z_str = str(z) + 'p0'
+            else:
+                print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str_list.append(z_str)
+
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
         ax[0].set_title('Cross Correlation of %s signals' % value)
         ax[0].set_ylabel(value)
@@ -179,6 +189,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
     z_str_list = []
     key_zs.sort()
+    comb = list(combinations(key_zs, 2))
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
@@ -196,9 +207,24 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
-        fig_name = out_folder + '\\%s_IFFT_r_squared_plot.png' % value
+        if value != 'Ws*Zs':
+            fig_name = out_folder + '\\%s_IFFT_r_squared_plot.png' % value
+        else:
+            value_for_fig = 'WsZs'
+            fig_name = out_folder + '\\%s_IFFT_r_squared_plot.png' % value_for_fig
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
+
+        for z in key_zs:
+            if z >= 10.0 and isinstance(z, float):
+                z_str = (str(z)[0:2] + 'p' + str(z)[3])
+            elif z < 10.0 and isinstance(z, float):
+                z_str = (str(z)[0] + 'p' + str(z)[2])
+            elif isinstance(z, int):
+                z_str = str(z) + 'p0'
+            else:
+                print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str_list.append(z_str)
 
         signals = []
         for count, z in enumerate(key_zs):
@@ -210,7 +236,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         ymin = 0
         ymax = 0
         for count, signal in enumerate(signals):
-            fourier = np.fft.fft(signal).real
+            fourier = np.fft.fft(signal)
             inverse = np.fft.ifft(fourier).real
             if np.max(inverse) >= ymax or np.max(signal) >= ymax:
                 ymax = np.max(np.array([np.max(inverse), np.max(signal)]))
@@ -218,7 +244,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
                 ymin = np.min(np.array([np.min(inverse), np.min(signal)]))
 
             ax[count].plot(locs, signal, label='%s signal' % value, color='blue')
-            ax[count].plot(locs, inverse, label='Reconstructed %s signal' % value, color='red')
+            ax[count].plot(locs, inverse, label='Reconstructed %s signal' % value, color='red', linestyle='--')
             if count == 0:
                 ax[count].legend(loc='upper center', ncol=2, fontsize=8)
             r_squared = float(np.corrcoef(signal, inverse)[0][1])**2
@@ -240,4 +266,5 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
 input = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\gcs_ready_tables'
 out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\landform_analysis"
 
-powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
+#powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
+fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', same_plot=False)
