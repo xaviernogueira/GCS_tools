@@ -19,6 +19,25 @@ import file_functions
 from file_functions import *
 #import matlab.engine
 
+def float_keyz_format(z):
+    '''This function takes a float key z argument and retrusn its equivalent formatted string.
+    ex: 5.3 -> 5p3, or 10.0 -> 10p0'''
+
+    z_str = ''
+    if z >= 10.0 and isinstance(z, float):
+        z_str = (str(z)[0:2] + 'p' + str(z)[3])
+    elif z < 10.0 and isinstance(z, float):
+        z_str = (str(z)[0] + 'p' + str(z)[2])
+    elif isinstance(z, int):
+        z_str = str(z) + 'p0'
+
+    try:
+        return z_str
+    except z_str == '':
+        print('Key z list parameters not valid. Please fill list with int or float.')
+
+
+
 def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5):
     '''This function saves a plot of the PSD for each input key z to the out_folder using GCS csv files found in the in_folder.
     INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
@@ -37,14 +56,7 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
         freq_lists = []
         dens_lists = []
         for z in key_zs:
-            if z >= 10.0 and isinstance(z, float):
-                z_str = (str(z)[0:2] + 'p' + str(z)[3])
-            elif z < 10.0 and isinstance(z, float):
-                z_str = (str(z)[0] + 'p' + str(z)[2])
-            elif isinstance(z, int):
-                z_str = str(z) + 'p0'
-            else:
-                print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str = float_keyz_format(z)
             z_str_list.append(z_str)
 
             df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
@@ -121,14 +133,7 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Z
         comb = list(combinations(key_zs, 2))
 
         for z in key_zs:
-            if z >= 10.0 and isinstance(z, float):
-                z_str = (str(z)[0:2] + 'p' + str(z)[3])
-            elif z < 10.0 and isinstance(z, float):
-                z_str = (str(z)[0] + 'p' + str(z)[2])
-            elif isinstance(z, int):
-                z_str = str(z) + 'p0'
-            else:
-                print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str = float_keyz_format(z)
             z_str_list.append(z_str)
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
@@ -216,14 +221,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
 
         for z in key_zs:
-            if z >= 10.0 and isinstance(z, float):
-                z_str = (str(z)[0:2] + 'p' + str(z)[3])
-            elif z < 10.0 and isinstance(z, float):
-                z_str = (str(z)[0] + 'p' + str(z)[2])
-            elif isinstance(z, int):
-                z_str = str(z) + 'p0'
-            else:
-                print('Key z list parameters not valid. Please fill list with int or float.')
+            z_str = float_keyz_format(z)
             z_str_list.append(z_str)
 
         signals = []
@@ -261,6 +259,54 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         plt.cla()
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
+
+def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], threshold=0):
+    '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
+    INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
+    key_zs can be either float or int.
+    fields can be changed from the defaults is csv headers are different.
+    threshold (float, 0 is default, max=1) if changed from 0 plots lines marking the # of harmonics where a given R^2 is met'''
+
+    print('Calculating IFFT Pearsons correlation vs # of harmonics')
+    value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
+    z_str_list = []
+    key_zs.sort()
+    comb = list(combinations(key_zs, 2))
+    for field in fields:
+        value_dict[field] = []
+    labels = ['Base flow', 'Bank full', 'Valley Fill']
+
+    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
+    aligned_df.sort_values('loc_1ft', inplace=True)
+
+    for value in value_dict.keys():
+        for z in key_zs:
+            z_str = float_keyz_format(z)
+            z_str_list.append(z_str)
+
+            signal = aligned_df.loc[:, [value]].squeeze()
+            value_dict[value].append(signal)
+
+    for value in value_dict.keys():
+        r_squares = []
+        fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
+        fig_name = out_folder + '\\N_harmonics_r2_plot.png'
+        ax[0].set_xticks(np.arange(0, len(value_dict[value][0], 5)))
+        for count, z in key_zs:
+            key_z_r_squares = []
+            signal = value_dict[value][count]
+            fft = np.fft.fft(signal)
+            for i in range(len(fft)):
+                if i == 0:
+                    ifft = np.fft.ifft(fft[i])
+                else:
+                    ifft = np.fft.ifft(fft[:i+1])
+                r2 = float(np.corrcoef(signal, ifft)[0][1])**2
+                key_z_r_squares.append(r2)
+            r_squares.append(key_z_r_squares)
+
+
+
 
 
 input = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\gcs_ready_tables'
