@@ -206,7 +206,12 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         for i in N:
             ns.append(i)
 
-    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
+    if in_csv == '':
+        aligned_csv = in_folder + '\\all_stages_table.csv'
+    else:
+        aligned_csv = in_csv
+
+    aligned_df = pd.read_csv(aligned_csv)
     aligned_df.sort_values('loc_1ft', inplace=True)
     locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
     spacing = locs[1] - locs[2]
@@ -260,7 +265,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
-def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], threshold=0):
+def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0, in_csv=''):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
     INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
     key_zs can be either float or int.
@@ -276,7 +281,12 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
 
-    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
+    if in_csv == '':
+        aligned_csv = in_folder + '\\all_stages_table.csv'
+    else:
+        aligned_csv = in_csv
+
+    aligned_df = pd.read_csv(aligned_csv)
     aligned_df.sort_values('loc_1ft', inplace=True)
 
     for value in value_dict.keys():
@@ -284,26 +294,46 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s
             z_str = float_keyz_format(z)
             z_str_list.append(z_str)
 
-            signal = aligned_df.loc[:, [value]].squeeze()
+            signal = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
             value_dict[value].append(signal)
 
     for value in value_dict.keys():
         r_squares = []
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
-        fig_name = out_folder + '\\N_harmonics_r2_plot.png'
-        ax[0].set_xticks(np.arange(0, len(value_dict[value][0], 5)))
-        for count, z in key_zs:
+        if value != 'Ws*Zs':
+            fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
+        else:
+            fig_name = out_folder + '\\WsZs_N_harmonics_r2_plot.png'
+        ax[0].set_xlabel('# of harmonic terms')
+        ax[0].set_ylabel('Pearsons R^2 between reconstructed signal and original signal')
+
+        for count, z in enumerate(key_zs):
             key_z_r_squares = []
             signal = value_dict[value][count]
             fft = np.fft.fft(signal)
             for i in range(len(fft)):
-                if i == 0:
-                    ifft = np.fft.ifft(fft[i])
-                else:
-                    ifft = np.fft.ifft(fft[:i+1])
+                fft_part = np.put(fft, range(i+1, len(fft)), 0.0)
+                ifft = np.fft.ifft(fft_part)
                 r2 = float(np.corrcoef(signal, ifft)[0][1])**2
                 key_z_r_squares.append(r2)
             r_squares.append(key_z_r_squares)
+            ax[count].plot(np.arange(len(fft)), r_squares[count], color='b')
+            if threshold != 0:
+                index = 0
+                while r_squares[count][index] < threshold:
+                    index += 1
+                ax[count].axhline(y=r_squares[index], xmax=np.arange(len(fft))[index], color='r', linestyle='--')
+                ax[count].axvline(x=np.arange(len(fft))[index], ymax=r_squares[index], color='r', linestyle='--')
+        ax[0].set_xticks(np.arange(0, len(fft), 10))
+        ax[0].set_yticks(np.arange(0, 1, 0.5))
+        ax[0].set_xlim(0.0, len(fft))
+        ax[0].set_ylim(0.0, 1)
+        fig.suptitle('%s # of IFFT harmonics R^2 plot' % value, y=0.94)
+        fig.set_size_inches(12, 6)
+        plt.savefig(fig_name, dpi=300, bbox_inches='tight')
+        plt.cla()
+    plt.close('all')
+    print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
 
 
@@ -313,4 +343,5 @@ input = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEA
 out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\landform_analysis"
 
 #powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
-fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', same_plot=False)
+#fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', same_plot=False)
+harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='')
