@@ -298,37 +298,47 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
             value_dict[value].append(signal)
 
     for value in value_dict.keys():
-        r_squares = []
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         if value != 'Ws*Zs':
             fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
         else:
             fig_name = out_folder + '\\WsZs_N_harmonics_r2_plot.png'
-        ax[0].set_xlabel('# of harmonic terms')
-        ax[0].set_ylabel('Pearsons R^2 between reconstructed signal and original signal')
 
+        ax[len(comb)-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
             key_z_r_squares = []
             signal = value_dict[value][count]
             fft = np.fft.fft(signal)
             for i in range(len(fft)):
-                fft_part = np.put(fft, range(i+1, len(fft)), 0.0)
-                ifft = np.fft.ifft(fft_part)
+                fft = np.fft.fft(signal)
+                np.put(fft, range(i+1, len(fft)), 0.0)
+                ifft = np.fft.ifft(fft).real
                 r2 = float(np.corrcoef(signal, ifft)[0][1])**2
+                if i == 0:
+                    r2 = 0
                 key_z_r_squares.append(r2)
-            r_squares.append(key_z_r_squares)
-            ax[count].plot(np.arange(len(fft)), r_squares[count], color='b')
+
             if threshold != 0:
                 index = 0
-                while r_squares[count][index] < threshold:
+                while key_z_r_squares[index] < threshold and index < len(key_z_r_squares):
                     index += 1
-                ax[count].axhline(y=r_squares[index], xmax=np.arange(len(fft))[index], color='r', linestyle='--')
-                ax[count].axvline(x=np.arange(len(fft))[index], ymax=r_squares[index], color='r', linestyle='--')
-        ax[0].set_xticks(np.arange(0, len(fft), 10))
-        ax[0].set_yticks(np.arange(0, 1, 0.5))
-        ax[0].set_xlim(0.0, len(fft))
+
+            ax[count].plot(np.arange(round(len(fft)/3)), np.asarray(key_z_r_squares)[:round(len(fft)/3)], color='b')
+            ax[count].grid(b=True, which='major', color='grey', linewidth=0.5)
+            ax[count].set_ylabel('Pearsons R^2')
+
+            xmax = np.arange(len(fft))[index] / np.arange(round(len(fft)/3))[-1]
+            ax[count].axhline(y=key_z_r_squares[index], xmax=xmax, color='r', linestyle='--')
+            ax[count].axvline(x=np.arange(len(fft))[index], ymax=key_z_r_squares[index], color='r', linestyle='--')
+
+        ax[0].set_xticks(np.arange(0, round(len(fft)/3), 5))
+        ax[0].set_yticks(np.arange(0, 1, 0.1))
+        ax[0].set_xlim(0.0, round(len(fft)/3))
         ax[0].set_ylim(0.0, 1)
-        fig.suptitle('%s # of IFFT harmonics R^2 plot' % value, y=0.94)
+        if threshold == 0:
+            fig.suptitle('%s R^2 plot with # of harmonics in a reconstructed signal' % value, y=0.94)
+        else:
+            fig.suptitle('%s R^2 plot with # of harmonics in a reconstructed signal. Threshold=%s' % (value, threshold), y=0.94)
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
