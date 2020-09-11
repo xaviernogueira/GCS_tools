@@ -183,13 +183,12 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Z
     print('Cross-Correlation plots finished!')
 
 
-def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs', 'W'], n=0, in_csv='', by_power=False, same_plot=False):
+def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', by_power=False):
     '''INPUTS:
         N (0 default, accepts int or list. Refers to the # of hamronic components included in the analysis,
         Set the parameter N=list(range(1, N)) for a incrementing range. N=0 does a normal fft and ifft.
         in_csv allows the aligned csv to be explicitly referenced if not 'all_stages_table.csv'
-        If by_power == True (bool, False is default)and n != 0, the n highest power frequencies are plotted, else the n lowest frequencies are used.
-        If same_plot == True (False is default), all reconstructed signals will be on one plot instead of individual plots'''
+        If by_power == True (bool, False is default)and n != 0, the n highest power frequencies are plotted, else the n lowest frequencies are used.'''
 
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
@@ -218,18 +217,6 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs',
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
-        if by_power == False:
-            if value != 'Ws*Zs':
-                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value_for_fig, n)
-            else:
-                value_for_fig = 'WsZs'
-                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value_for_fig, n)
-        if by_power == True:
-            if value != 'Ws*Zs':
-                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value_for_fig, n)
-            else:
-                value_for_fig = 'WsZs'
-                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value_for_fig, n)
 
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
@@ -253,6 +240,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs',
                 ifft = np.fft.ifft(fft).real
 
             elif n != 0 and by_power == False:
+                fft = np.fft.fft(signal)
                 np.put(fft, range(n + 1, len(fft)), 0.0)
                 ifft = np.fft.ifft(fft).real
                 cos_coefs = []
@@ -263,6 +251,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs',
                         sin_coefs.append(i.imag)
 
             elif n != 0 and by_power == True:
+                fft = np.fft.fft(signal)
                 psd = np.abs(fft) ** 2
                 indices = np.argsort(psd)[:-n]
                 np.put(fft, indices, 0.0)
@@ -274,8 +263,8 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs',
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
 
-            print('Cos coefficients for %s: %s' % (value, cos_coefs))
-            print('Sin coefficients for %s: %s' % (value, sin_coefs))
+            print('Cos coefficients for %s Z=%sft: %s' % (value, key_zs[count], cos_coefs))
+            print('Sin coefficients for %s, Z=%sft: %s' % (value, key_zs[count], sin_coefs))
 
             if np.max(ifft) >= ymax or np.max(signal) >= ymax:
                 ymax = np.max(np.array([np.max(ifft), np.max(signal)]))
@@ -292,9 +281,25 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs',
             ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
             ax[count].set_ylabel('%sft stage %s' % (key_zs[count], value))
 
+        if by_power == False:
+            if value != 'Ws*Zs':
+                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value, n)
+            else:
+                value_for_fig = 'WsZs'
+                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value_for_fig, n)
+        if by_power == True:
+            if value != 'Ws*Zs':
+                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value, n)
+            else:
+                value_for_fig = 'WsZs'
+                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value_for_fig, n)
+
         ax[0].set_ylim(ymin, ymax)
         ax[0].set_xlim(0.0, np.max(locs))
-        fig.suptitle('%s signals and reconstructed inverse-FFT signals' % value, y=0.94)
+        if n == 0:
+            fig.suptitle('%s signals and reconstructed inverse-FFT signals' % value, y=0.94)
+        else:
+            fig.suptitle('%s signals and reconstructed inverse-FFT w/ %s harmonic frequencies signals' % (n, value), y=0.94)
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
         plt.cla()
@@ -392,5 +397,5 @@ out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_
 ## Add W as well (already did for fourier_analysis)
 
 #powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
-fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs', 'W'], n=10, in_csv='', same_plot=False)
+fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='')
 #harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='')
