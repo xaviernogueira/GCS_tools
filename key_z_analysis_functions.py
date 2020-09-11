@@ -332,8 +332,8 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
         gcs_df = pd.read_csv(csv_loc)
         aligned_df = pd.read_csv(aligned_csv_loc)
         gcs_df.sort_values(by=['dist_down'], inplace=True)
-        temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s', 'W_s_Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1, inplace=True)
+        temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'Z': ('Z_%sft' % z_str), 'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
         result = result.replace(np.nan, 0)
