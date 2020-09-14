@@ -227,15 +227,19 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
+        if value == 'Ws*Zs':
+            value_for_fig = 'WsZs'
+        else:
+            value_for_fig = value
 
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
         if i == 0:
             ws = wb.active
-            ws.title = value
+            ws.title = value_for_fig
         else:
-            wb.create_sheet(value)
-            ws = wb[value]
+            wb.create_sheet(value_for_fig)
+            ws = wb[value_for_fig]
 
         col = 1
         for z in key_zs:
@@ -312,17 +316,10 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         wb.save(xl_name)
 
         if by_power == False:
-            if value != 'Ws*Zs':
-                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value, n)
-            else:
-                value_for_fig = 'WsZs'
-                fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value_for_fig, n)
+            fig_name = out_folder + '\\%s_IFFT_N%s_plot.png' % (value_for_fig, lab)
+
         if by_power == True:
-            if value != 'Ws*Zs':
-                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value, n)
-            else:
-                value_for_fig = 'WsZs'
-                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value_for_fig, n)
+                fig_name = out_folder + '\\%s_IFFT_N%s_by_PSD_plot.png' % (value_for_fig, lab)
 
         ax[0].set_ylim(ymin, ymax)
         ax[0].set_xlim(0.0, np.max(locs))
