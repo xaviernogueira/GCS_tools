@@ -199,6 +199,16 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
 
+    wb = xl.Workbook()
+    lab = n
+    if n == 0:
+        lab = 'all'
+    if by_power == False:
+        xl_name = out_folder + '\\%s_harmonic_coefs.xlsx' % lab
+    else:
+        xl_name = out_folder + '\\%s_harmonic_coefs_by_PSD.xlsx' % lab
+    wb.save(xl_name)
+
     ns = []
     if isinstance(N, int):
         ns.append(N)
@@ -220,10 +230,20 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
 
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
         ax[0].set_xticks(np.arange(0, np.max(locs), 250))
+        if i == 0:
+            ws = wb.active
+            ws.title = value
+        else:
+            wb.create_sheet(value)
+            ws = wb[value]
 
+        col = 1
         for z in key_zs:
             z_str = float_keyz_format(z)
             z_str_list.append(z_str)
+            ws.cell(row=1, column=col).value = '%sft cos coefs' % z
+            ws.cell(row=1, column=col + 1).value = '%sft sin coefs' % z
+            col += 2
 
         signals = []
         for count, z in enumerate(key_zs):
@@ -234,6 +254,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
 
         ymin = 0
         ymax = 0
+        col = 1
         for count, signal in enumerate(signals):
             fft = np.fft.fft(signal)
             if n == 0:
@@ -264,6 +285,12 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
 
+            for ind, coef in enumerate(cos_coefs):
+                row = ind + 2
+                ws.cell(row=row, column=col).value = coef
+                ws.cell(row=row, column=col + 1).value = sin_coefs[ind]
+            col += 2
+
             print('Cos coefficients for %s Z=%sft: %s' % (value, key_zs[count], cos_coefs))
             print('Sin coefficients for %s, Z=%sft: %s' % (value, key_zs[count], sin_coefs))
 
@@ -281,6 +308,8 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
             ax[count].text(0.5, 0.2, labels[count], transform=ax[count].transAxes, fontsize=14)
             ax[count].text(0.5, 0.1, ('Pearsons R^2= %s' % round(r_squared, 4)), transform=ax[count].transAxes, fontsize=10)
             ax[count].set_ylabel('%sft stage %s' % (key_zs[count], value))
+
+        wb.save(xl_name)
 
         if by_power == False:
             if value != 'Ws*Zs':
@@ -425,5 +454,5 @@ out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_
 ## Add W as well (already did for fourier_analysis)
 
 #powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
-#fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='', by_power=True)
-harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='', by_power=True)
+fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='', by_power=False)
+harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='', by_power=False)
