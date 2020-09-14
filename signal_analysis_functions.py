@@ -253,8 +253,9 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
             elif n != 0 and by_power == True:
                 fft = np.fft.fft(signal)
                 psd = np.abs(fft) ** 2
-                indices = np.argsort(psd)[:-n]
-                np.put(fft, indices, 0.0)
+                indices = np.argsort(psd).tolist()
+                n_indices = indices[:-n]
+                np.put(fft, n_indices, 0.0)
                 ifft = np.fft.ifft(fft).real
                 cos_coefs = []
                 sin_coefs = []
@@ -306,12 +307,14 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
-def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0, in_csv=''):
+def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0, in_csv='', by_power=False):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
-    INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
+    INPUTS: in_folder containing all_stages_table.csv containing data for each selected key z. out_folder to save fig.
     key_zs can be either float or int.
     fields can be changed from the defaults is csv headers are different.
-    threshold (float, 0 is default, max=1) if changed from 0 plots lines marking the # of harmonics where a given R^2 is met'''
+    threshold (float, 0 is default, max=1) if changed from 0 plots lines marking the # of harmonics where a given R^2 is met
+    in_csv allows a specified csv location to be used instead of the default file structure
+    by_power (bool, default=False) allows harmonics to be added from highes PSD to lowest'''
 
     print('Calculating IFFT Pearsons correlation vs # of harmonics')
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
@@ -340,24 +343,49 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
 
     for value in value_dict.keys():
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
-        if value != 'Ws*Zs':
-            fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
-        else:
-            fig_name = out_folder + '\\WsZs_N_harmonics_r2_plot.png'
+
+        if by_power == False:
+            if value != 'Ws*Zs':
+                fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
+            else:
+                value_for_fig = 'WsZs'
+                fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value_for_fig
+        if by_power == True:
+            if value != 'Ws*Zs':
+                fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value
+            else:
+                value_for_fig = 'WsZs'
+                fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value_for_fig
 
         ax[len(comb)-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
             key_z_r_squares = []
             signal = value_dict[value][count]
-            fft = np.fft.fft(signal)
-            for i in range(len(fft)):
+
+            if by_power == False:
                 fft = np.fft.fft(signal)
-                np.put(fft, range(i+1, len(fft)), 0.0)
-                ifft = np.fft.ifft(fft).real
-                r2 = float(np.corrcoef(signal, ifft)[0][1])**2
-                if i == 0:
-                    r2 = 0
-                key_z_r_squares.append(r2)
+                for i in range(len(fft)):
+                    fft = np.fft.fft(signal)
+                    np.put(fft, range(i+1, len(fft)), 0.0)
+                    ifft = np.fft.ifft(fft).real
+                    r2 = float(np.corrcoef(signal, ifft)[0][1])**2
+                    if i == 0:
+                        r2 = 0
+                    key_z_r_squares.append(r2)
+
+            else:
+                fft = np.fft.fft(signal)
+                for i in range(len(fft)):
+                    fft = np.fft.fft(signal)
+                    psd = np.abs(fft) ** 2
+                    indices = np.argsort(psd).tolist()
+                    n_indices = indices[:-i]
+                    np.put(fft, n_indices, 0.0)
+                    ifft = np.fft.ifft(fft).real
+                    r2 = float(np.corrcoef(signal, ifft)[0][1])**2
+                    if i == 0:
+                        r2 = 0
+                    key_z_r_squares.append(r2)
 
             if threshold != 0:
                 index = 0
@@ -397,5 +425,5 @@ out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_
 ## Add W as well (already did for fourier_analysis)
 
 #powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
-fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='')
-#harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='')
+#fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='', by_power=True)
+harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='', by_power=True)
