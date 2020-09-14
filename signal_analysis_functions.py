@@ -441,15 +441,3 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
 
-
-
-
-input = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\gcs_ready_tables'
-out = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO1\COMID17609707\LINEAR_DETREND\landform_analysis"
-
-#### ADD 'Z' argument to the fields once Z is aligned in the csv (already added in the other scripts)
-## Add W as well (already did for fourier_analysis)
-
-#powerspec_plotting(in_folder=input, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
-fourier_analysis(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], n=15, in_csv='', by_power=False)
-harmonic_r_square_plot(in_folder=out, out_folder=out, key_zs=[0.5, 2.0, 5.0], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0.90, in_csv='', by_power=False)
