@@ -17,7 +17,7 @@ import itertools
 from itertools import combinations
 import file_functions
 from file_functions import *
-#import matlab.engine
+
 
 def float_keyz_format(z):
     '''This function takes a float key z argument and retrusn its equivalent formatted string.
@@ -35,7 +35,6 @@ def float_keyz_format(z):
         return z_str
     except z_str == '':
         print('Key z list parameters not valid. Please fill list with int or float.')
-
 
 
 def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5):
@@ -420,6 +419,7 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
 
             ax[count].plot(np.arange(round(len(fft)/3)), np.asarray(key_z_r_squares)[:round(len(fft)/3)], color='b')
             ax[count].grid(b=True, which='major', color='grey', linewidth=0.5)
+            ax[count].text(0.5, 0.2, ('%sft ' % z) + labels[count], transform=ax[count].transAxes, fontsize=14)
             ax[count].set_ylabel('Pearsons R^2')
 
             xmax = np.arange(len(fft))[index] / np.arange(round(len(fft)/3))[-1]
