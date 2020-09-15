@@ -292,6 +292,8 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
                 row = ind + 2
                 ws.cell(row=row, column=col).value = coef
                 ws.cell(row=row, column=col + 1).value = sin_coefs[ind]
+                ws.column_dimensions[col].width = 15
+                ws.column_dimensions[col + 1].width = 15
             col += 2
 
             print('Cos coefficients for %s Z=%sft: %s' % (value, key_zs[count], cos_coefs))
