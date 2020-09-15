@@ -63,8 +63,7 @@ def define_ground_polygon(lidar_footprint, naip_imagery_folder, spatial_ref, cen
 
     COMMON ISSUES: Spatial extent file may cause issues, is so just use the NAIP as the extent object after projection"""
     arcpy.env.extent = lidar_footprint
-    naip_imagery = [f for f in listdir(NAIP_imagery_folder) if isfile(join(NAIP_imagery_folder, f))]  # Find NAIP imagery in folder
-
+    naip_imagery = [f for f in listdir(naip_imagery_folder) if isfile(join(naip_imagery_folder, f))]  # Find NAIP imagery in folder
 
     if len(naip_imagery) > 1:
         add_to_mosaic = [NAIP_imagery_folder + "\\" + f for f in naip_imagery]
