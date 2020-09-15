@@ -13,7 +13,6 @@ import create_station_lines
 from create_station_lines import create_station_lines_function
 from os.path import isfile, join
 from GCS_analysis import *
-#from Lidar_to_detrend_ready_XRN_functions import *
 import classify_landforms_GUI
 from classify_landforms_GUI import *
 from openpyxl import Workbook
