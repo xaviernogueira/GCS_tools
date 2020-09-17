@@ -33,6 +33,11 @@ def find_centerline_nums(detrend_folder):
 
     return centerline_nums
 
+def find_xs_spacing(detrend_folder, centerline_nums):
+    """This function takes a detrend folder location for a given reacg, as well as a list containing centerline_nums, and by using
+    string splicing and Arc geomoetry objects returns a list containing the XS widths for each centerline_num XS file """
+
+
 def loc_stage_finder(stage, centerlines_nums):
     '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
     if float(stage) > float(centerlines_nums[-1]):
@@ -181,7 +186,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             except:
                 print("Couldn't delete %s" % file)
 
-    return[code_csv_loc,centerlines_nums]
+    return[code_csv_loc, centerlines_nums]
 
 def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
     '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
@@ -267,16 +272,22 @@ def align_csv(code_csv_loc, centerlines_nums, max_stage=20):
 
     return result
 
-def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
+def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], clip_poly='', csv_loc=''):
     '''This function does a full GCS analysis using three specific key Zs that can include any float. Results saved
-    to the gcs_ready_tables, as well as plotted. Results are aligned to the existing csv to facilitate landform analysis'''
+    to the gcs_ready_tables, as well as plotted. Results are aligned to the existing csv to facilitate landform analysis
+    detrend
+    wetted_folder is the folder containing small increment wetted polygons
+    aligned_csv_folder contains the all_stages_table.csv. If csv_loc=!'', a different csv can be specified'''
     centerline_nums = find_centerline_nums(detrend_folder)
-    wetted_folder = detrend_folder + '\\wetted_polygons\\small_increments'
     centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
     width_poly_folder = detrend_folder + '\\analysis_shapefiles'
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
-    aligned_csv_loc = detrend_folder + '\\landform_analysis\\all_stages_table.csv'
+
+    if csv_loc == '':
+        aligned_csv_loc = aligned_csv_folder + '\\all_stages_table.csv' # aligned csv
+    else:
+        aligned_csv_loc = csv_loc
 
     del_files = []
     del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xml', '.shx']
@@ -301,6 +312,8 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly=''):
 
         if clip_poly != '' and os.path.exists(clip_poly):
             for count, file in enumerate(in_list):
+                os.remove(in_list[1])
+                create_station_lines.create_station_lines_function(line_shp=, spacing=spacing, xs_length=, stage=loc_stage)
                 name = file[:4] + '_C.shp'
                 arcpy.Clip_analysis(file, clip_poly, out_feature_class=name)
                 in_list[count] = name

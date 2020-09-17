@@ -154,19 +154,19 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         ticker = 0
         filter_out = arcpy.sa.Filter(raster_name, "LOW")
         filter_out.save(raster_folder + "\\filter_out%s" % ticker)
-        while ticker < filter_steps: #Apply an iterative low pass filter 15x to the raster to smooth the topography
+        while ticker < filter_steps:  # Apply an iterative low pass filter 15x to the raster to smooth the topography
             filter_out = arcpy.sa.Filter((raster_folder + "\\filter_out%s" % ticker), "LOW")
-            filter_out.save(raster_folder + "\\filter_out%s" % (ticker+1))
+            filter_out.save(raster_folder + "\\filter_out%s" % (ticker + 1))
             ticker += 1
         smooth_ras = (raster_folder + "\\filt_ras.tif")
         filter_out.save(raster_folder + "\\filt_ras.tif")
 
         print("Smoothed raster made, least-cost centerline being calculated...")
-        least_cost_cl = create_centerline_GUI.least_cost_centerline(smooth_ras, upstream_source_poly) #Create least cost centerline from 10x filtered raster
+        least_cost_cl = create_centerline_GUI.least_cost_centerline(smooth_ras, upstream_source_poly)  # Create least cost centerline from 10x filtered raster
         least_cost_cl = create_centerline_GUI.remove_spurs(least_cost_cl, spur_length=10)
         centerline = create_centerline_GUI.smooth_centerline(least_cost_cl, smooth_distance=smooth_distance)
 
-        for ticker in range(filter_steps+1): #Delete intermediate filtered rasters
+        for ticker in range(filter_steps+1):  # Delete intermediate filtered rasters
             file = (raster_folder + "\\filter_out%s" % ticker)
             if os.path.exists(file):
                 try:

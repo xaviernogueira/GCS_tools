@@ -272,7 +272,8 @@ def white_noise_acf_ci(series, maxlags=''):
 
     return lags, lower_lims, upper_lims
 
-def tableToCSV(input_table, csv_filepath,fld_to_remove_override=[]):
+def tableToCSV(input_table, csv_filepath, fld_to_remove_override=[]):
+    """Returns the file path of a csv containing the attributes table of a shapefile or other table"""
     fld_list = arcpy.ListFields(input_table)
     fld_names = [str(fld.name) for fld in fld_list]
     if len(fld_to_remove_override) > 0:
@@ -290,6 +291,30 @@ def tableToCSV(input_table, csv_filepath,fld_to_remove_override=[]):
                 writer.writerow(row)
         print(csv_filepath + " CREATED")
     csv_file.close()
+
+    return csv_filepath
+
+
+def delete_gis_files(file_loc):
+    """This function accepts a GIS file location (eg. \\shapefile.shp) and deletes the file as well
+    as any other related file (eg. shapefile.prj, shapefile.cpg). This function supports .tif, .shp."""
+    suffix = file_loc[-4:]
+    prefix = file_loc[:-4]
+    if suffix == '.shp':
+        suf_list = []
+
+    elif suffix == '.tif':
+        suf_list = []
+
+    for suf in suf_list:
+        file = prefix + suf
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except:
+                print("Couldn't delete %s" % file)
+        else:
+            print('%s does not exist' % file)
 
 
 
