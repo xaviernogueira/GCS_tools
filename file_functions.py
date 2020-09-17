@@ -297,14 +297,20 @@ def tableToCSV(input_table, csv_filepath, fld_to_remove_override=[]):
 
 def delete_gis_files(file_loc):
     """This function accepts a GIS file location (eg. \\shapefile.shp) and deletes the file as well
-    as any other related file (eg. shapefile.prj, shapefile.cpg). This function supports .tif, .shp."""
+    as any other related file (eg. shapefile.prj, shapefile.cpg). This function supports .tif, .shp, and .dbf"""
     suffix = file_loc[-4:]
     prefix = file_loc[:-4]
     if suffix == '.shp':
-        suf_list = []
+        suf_list = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', '.shx']
 
     elif suffix == '.tif':
-        suf_list = []
+        suf_list = ['.tif', '.tif.aux.xml', '.tfw', '.tif.ovr', '.tif.vat.cpg', '.tif.vat.dbf']
+
+    elif suffix == '.dbf':
+        suf_list = ['.dbf', '.cpg', '.dbf.xml']
+
+    else:
+        print('Cant identify file type, make sure input file to delete_gis_files(file_loc) includes .tif, .shp, or .dbf suffix')
 
     for suf in suf_list:
         file = prefix + suf

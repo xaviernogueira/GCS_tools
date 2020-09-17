@@ -18,6 +18,7 @@ import classify_landforms_GUI
 def find_centerline_nums(detrend_folder):
     '''This function takes a detrend folder location for a given reach, and using string splicing to find the used centerline
     stage numbers. A list of stage numbers from smallest to largest is returned'''
+
     centerline_nums = []
     centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
 
@@ -35,8 +36,24 @@ def find_centerline_nums(detrend_folder):
 
 def find_xs_spacing(detrend_folder, centerline_nums):
     """This function takes a detrend folder location for a given reacg, as well as a list containing centerline_nums, and by using
-    string splicing and Arc geomoetry objects returns a list containing the XS widths for each centerline_num XS file """
+    string splicing and Arc geomoetry objects returns a list containing the XS widths for each centerline_num XS file"""
 
+    centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
+    full_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
+    xs_lengths = []
+
+    for num in centerline_nums:
+        if num < 10:
+            sub_list = [i for i in full_list if int(i[17]) == int(num)]
+        else:
+            sub_list = [i for i in full_list if int(i[17:19]) == int(num)]
+        if len(sub_list) == 1:
+            xs_file = centerline_folder + '\\%s' % sub_list[0]
+
+        else:
+            print('Multiple XS files for a given centerline num is causing an error to be raised. Please remove one.')
+
+    return xs_lengths
 
 def loc_stage_finder(stage, centerlines_nums):
     '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
@@ -53,6 +70,22 @@ def loc_stage_finder(stage, centerlines_nums):
     count = centerlines_nums.index(loc_stage)
     return [loc_stage, count]
 
+def float_keyz_format(z):
+    '''This function takes a float key z argument and retrusn its equivalent formatted string.
+    ex: 5.3 -> 5p3, or 10.0 -> 10p0'''
+
+    z_str = ''
+    if z >= 10.0 and isinstance(z, float):
+        z_str = (str(z)[0:2] + 'p' + str(z)[3])
+    elif z < 10.0 and isinstance(z, float):
+        z_str = (str(z)[0] + 'p' + str(z)[2])
+    elif isinstance(z, int):
+        z_str = str(z) + 'p0'
+
+    try:
+        return z_str
+    except z_str == '':
+        print('Key z list parameters not valid. Please fill list with int or float.')
 
 def prep_locations(detrend_location,max_stage=20, skip=False):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
@@ -62,7 +95,6 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     landform_folder = detrend_location + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
     centerline_folder = detrend_location + "\\analysis_centerline_and_XS"
     del_files = []
-    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xlm', 'shx']
 
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
@@ -95,9 +127,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
 
         station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5, stage=[])
         station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num, spacing))
-
-        for suffix in del_suffix:
-            del_files.append(station_lines[:-4] + suffix)
+        del_files.append(station_lines)
 
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % num), join_attributes="ALL", output_type="POINT")
 
@@ -114,11 +144,10 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
             z_table = arcpy.sa.Sample(detrended_raster, single_station_points, out_table=(centerline_folder + "\\thalweg_Z.dbf"), unique_id_field='LOCATION')
 
-            for suffix in ['.dbf', '.cpg', '.dbf.xml']:
-                del_files.append(centerline_folder + "\\thalweg_Z%s" % suffix)
-            for suffix in del_suffix:
-                del_files.append(station_points[:-4] + suffix)
-                del_files.append(single_station_points[:-4] + suffix)
+
+            del_files.append(centerline_folder + "\\thalweg_Z.dbf")
+            del_files.append(station_points)
+            del_files.append(single_station_points)
 
             centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num  # csv with XY coordinates of the centerlines made
             arcpy.AddXY_management(single_station_points)
@@ -162,10 +191,8 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     for counter, num in enumerate(centerlines_nums):
         theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
         out_points = centerline_folder + ("\\align_points%s.shp" % counter)
-
-        for suffix in del_suffix:
-            del_files.append(theis_loc[:-4] + suffix)
-            del_files.append(out_points[:-4] + suffix)
+        del_files.append(theis_loc)
+        del_files.append(out_points)
 
         if counter >= max_count:
             max_count = counter
@@ -180,15 +207,11 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
 
     print('Deleting files: %s' % del_files)
     for file in del_files:
-        if os.path.exists(file):
-            try:
-                os.remove(file)
-            except:
-                print("Couldn't delete %s" % file)
+        file_functions.delete_gis_files(file)
 
     return[code_csv_loc, centerlines_nums]
 
-def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
+def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
     '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
     RETURNS: None. This function creates a folder containing wetted polygons for a 0.1ft increments as well as a clippped detrended DEM and contours.'''
     del_files = []
@@ -213,7 +236,7 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
         arcpy.Clip_analysis(small_wetted_poly_loc + names[1], channel_clip_poly, out_feature_class=(small_wetted_poly_loc + '\\wetted_poly_%sft.shp' % inc_str))
 
         for name in names:
-            del_files.append(small_wetted_poly_loc + name[:-4])
+            del_files.append(small_wetted_poly_loc + name)
     print('Wetted polygons located @ %s' % small_wetted_poly_loc)
 
     contour_loc = detrend_folder + '\\detrended_contours.shp'
@@ -224,21 +247,15 @@ def prep_small_inc(detrend_folder,interval=0.1,max_stage=20):
         max_stage_ras = arcpy.sa.Con(in_ras <= float(max_stage), in_ras)
         max_stage_ras.save(detrend_folder + '\\rs_dt_clip1.tif')
         clipped_ras = arcpy.Clip_management(detrend_folder + '\\rs_dt_clip1.tif', "", clipped_ras_loc, in_template_dataset=channel_clip_poly, clipping_geometry='ClippingGeometry', maintain_clipping_extent='MAINTAIN_EXTENT')
-        del_files.append(detrend_folder + '\\rs_dt_clip1')
+        del_files.append(detrend_folder + '\\rs_dt_clip1.tif')
         contour_ras = arcpy.sa.Contour(clipped_ras_loc, contour_loc, contour_interval=interval)
         print('Contour file and clipped detrended raster made @ %s' % detrend_folder)
     else:
         'Contour file already made @ %s' % contour_loc
 
     print('Deleting files: %s' % del_files)
-    for prefix in del_files:
-        for suffix in del_suffix:
-            path = prefix + suffix
-            if os.path.exists(path):
-                try:
-                    os.remove(path)
-                except:
-                    print("Couldn't delete %s" % prefix + suffix)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
 
 
 def align_csv(code_csv_loc, centerlines_nums, max_stage=20):
@@ -283,14 +300,13 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
     width_poly_folder = detrend_folder + '\\analysis_shapefiles'
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
-
+    centerline_nums = find_centerline_nums(detrend_folder)
     if csv_loc == '':
         aligned_csv_loc = aligned_csv_folder + '\\all_stages_table.csv' # aligned csv
     else:
         aligned_csv_loc = csv_loc
 
     del_files = []
-    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xml', '.shx']
 
     xs_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
     if xs_list[0][-8] == '_':
@@ -300,14 +316,8 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
     print('XS spacing is %sft...' % spacing)
 
     for z in key_zs:
-        if isinstance(z, float) == False:
-            z = float(z)
-        loc_stage = loc_stage_finder(z, centerline_nums)[0]
-        if z >= 10.0:
-            z_str = (str(z)[0:2] + 'p' + str(z)[3])
-        else:
-            z_str = (str(z)[0] + 'p' + str(z)[2])
-
+        z_str = float_keyz_format(z)
+        loc_stage = loc_stage_finder(z, centerline_nums)
         in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), wetted_folder + '\\wetted_poly_%sft_ds.shp' % z_str]
 
         if clip_poly != '' and os.path.exists(clip_poly):
@@ -317,7 +327,7 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
                 name = file[:4] + '_C.shp'
                 arcpy.Clip_analysis(file, clip_poly, out_feature_class=name)
                 in_list[count] = name
-                del_files.append(name[:4])
+                del_files.append(name)
 
         clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
         width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
@@ -357,14 +367,8 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
         print('%sft stage GCS completed and merged to @ %s' % (z, aligned_csv_loc))
 
     print('Deleting files: %s' % del_files)
-    for prefix in del_files:
-        for suffix in del_suffix:
-            path = prefix + suffix
-            if os.path.exists(path):
-                try:
-                    os.remove(path)
-                except:
-                    print("Couldn't delete %s" % prefix + suffix)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
 
 
 def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, small_increments=0, aligned_csv_loc=''):
@@ -845,13 +849,7 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
         ws.cell(row=base_row, column=1).value = '%sft' % z
         ws.cell(row=base_row, column=2).value = 'Field'
 
-        if isinstance(z, float) == True:
-            if z >= 10.0:
-                z_str = (str(z)[0:2] + 'p' + str(z)[3])
-            else:
-                z_str = (str(z)[0] + 'p' + str(z)[2])
-        else:
-            z_str = str(z)
+        z_str = float_keyz_format(z)
 
         data_csv = gcs_folder + '\\%sft_WD_analysis_table.csv' % z_str
         data_df = pd.read_csv(data_csv)
@@ -880,22 +878,45 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     wb.close()
     print('Wald-Wolfowitz runs test for values below/above median finished for all inputs. Located @ %s' % xl_loc)
 
-def caamano_analysis(aligned_csv):
-    '''IN: Aligned csv with landform codes for each XS.
-    OUT:'''
+def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confine_table='', conf_header='', in_csv=''):
+    """This function uses a South Coast channel classification decision tree methodology (92% accuracy) to classify
+    geomorphic channel type.
+    comids (int or list orf ints) can be one comid or many comids in a list. This defines which reaches will be classified.
+    bf_zs (int or float, can be in list) must be the bank full key Z. If multiple comids are in a list, bf_zs must be a list of equal length.
+    in_folder must contain folders for each listed comid in the form \\COMID#######.
+    GCS output csvs must be found @ in_folder\\COMID#####\\LINEAR_DETREND\\gcs_ready_tables\\Zft_WD_analysis_table.csv.
+    out_csv designates the csv location where the classification outputs are stored.
+    confinement ([] default) can be a list of equal length"""
+    if isinstance(comids, int):
+        comid_list = [comids]
+    elif isinstance(comids, list):
+        comid_list = comids
+    else:
+        print('Invalid comids parameter. Must be of ints or int.')
 
-def key_z_final_analysis(in_table, clip_poly=''):
-    '''INPUT: A xlsx table with three columns: comid or unique reach ID, geomorphic class, key_zs=[Baseflow, Bankful, Valley floor], detrend_path (optional), and catcment area (optional)
-    OUTPUTS: Key Z gcs plots, runs test results, nested landform ananlysis, heatplots, autocorrelation, power spectral density, and correlation subplots.
-    Box plots comparing values between class, Key Z, and catchment area quartiles (optional).
-    This function is repeatable and overwrites its self '''
+    classes = []
+    w_to_ds = []
+    coefs_v_d = []
+    slopes = []
+    if len(confinements) != 0:
+        confinement_list = confinements
+    elif len(confinements) == 0 and conf_header != '':
+        print('Pulling confinement values from %s w/ column header %s' % (confine_table, conf_header))
+        confinement_list = []
 
-    #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5], clip_poly=clip_poly)
-    #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s'])
-    #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[]) #Update so a float as a key z can refer to the float to string system
-    #heat_plotter(comids=comid_list, geo_class=3, key_zs=[[1,3,6],[2,3,7]], max_stage=20) #Make sure updates for float key zs work
-    #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder, key_zs=[], fields=['W_s', 'Z_s',])
-    #Box plots function()
+    for count, comid in enumerate(comid_list):
+        if in_csv != '' and len(comid_list) == 1:
+            bf_csv = in_csv
+            print('Using optionally specified csv instead of file strucure: %s' % in_csv)
+        else:
+            z_str = float_keyz_format(bf_zs[count])
+            bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREN\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (comid, z_str)
+        if os.path.exists(bf_csv):
+            df = pd.read_csv(bf_csv)
+        else:
+            print('CSV file name does not exist. Please check file structure of specified in_csv location. Erroneous location: %s' % bf_csv)
+
+        # PULL VALUES AND PROGRAM DECISION TREE TO ADD CLASSES TO A LIST THAT IS THEN ADDED AS A COLUMN
 
 ###### INPUTS ######
 comid_list = [17609707]

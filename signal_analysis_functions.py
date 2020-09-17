@@ -17,24 +17,8 @@ import itertools
 from itertools import combinations
 import file_functions
 from file_functions import *
+import key_z_analysis_functions
 
-
-def float_keyz_format(z):
-    '''This function takes a float key z argument and retrusn its equivalent formatted string.
-    ex: 5.3 -> 5p3, or 10.0 -> 10p0'''
-
-    z_str = ''
-    if z >= 10.0 and isinstance(z, float):
-        z_str = (str(z)[0:2] + 'p' + str(z)[3])
-    elif z < 10.0 and isinstance(z, float):
-        z_str = (str(z)[0] + 'p' + str(z)[2])
-    elif isinstance(z, int):
-        z_str = str(z) + 'p0'
-
-    try:
-        return z_str
-    except z_str == '':
-        print('Key z list parameters not valid. Please fill list with int or float.')
 
 
 def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5):
@@ -55,7 +39,7 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
         freq_lists = []
         dens_lists = []
         for z in key_zs:
-            z_str = float_keyz_format(z)
+            z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
 
             df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
@@ -132,7 +116,7 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Z
         comb = list(combinations(key_zs, 2))
 
         for z in key_zs:
-            z_str = float_keyz_format(z)
+            z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
 
         fig, ax = plt.subplots(len(comb) + 1, 1, sharex=True, sharey=False)
@@ -242,7 +226,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
 
         col = 1
         for z in key_zs:
-            z_str = float_keyz_format(z)
+            z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
             ws.cell(row=1, column=col).value = '%sft cos coefs' % z
             ws.cell(row=1, column=col + 1).value = '%sft sin coefs' % z
@@ -362,7 +346,7 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
 
     for value in value_dict.keys():
         for z in key_zs:
-            z_str = float_keyz_format(z)
+            z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
 
             signal = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
