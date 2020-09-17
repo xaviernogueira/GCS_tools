@@ -1,6 +1,8 @@
 import arcpy
 import csv
 import os
+import scipy
+from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
@@ -14,6 +16,7 @@ import pandas
 import openpyxl as xl
 import gcs_generating_functions
 import classify_landforms_GUI
+import DEM_detrending_functions
 
 def find_centerline_nums(detrend_folder):
     '''This function takes a detrend folder location for a given reach, and using string splicing to find the used centerline
@@ -904,10 +907,11 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     else:
         print('Invalid comids parameter. Must be of ints or int.')
 
-    classes = []
-    w_to_ds = []
-    coefs_v_d = []
-    slopes = []
+    w_to_d_list = []  # Initiate lists to store reach values
+    CV_d_list= []
+    slopes_list = []
+    classes_list = []
+
     if len(confinements) != 0:
         confinement_list = confinements
     elif len(confinements) == 0 and confine_table != '':
@@ -934,11 +938,59 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
         if len(confinements) == 0:
             sub_conf_df = conf_df.loc(conf_df['COMID'] == comid)
             mean_conf = np.mean(sub_conf_df.loc[:, conf_header].to_numpy())
-            confinement_list.append()
+            confinement_list.append(mean_conf)
         elif len(confinements) != 0:
             mean_conf = confinement_list[count]
 
-        # PULL VALUES AND PROGRAM DECISION TREE TO ADD CLASSES TO A LIST THAT IS THEN ADDED AS A COLUMN
+        print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
+        df['depth'] = float(bf_zs[count]) - df['Z']
+        df['w_to_d'] = df['W'] / df['depth']
+        mean_w_to_d = np.mean(df.loc[:, 'w_to_d'].to_numpy())
+        w_to_d_list.append(mean_w_to_d)
+        cv_d = variation(df.loc[:, 'depth'].to_numpy())
+        CV_d_list.append(cv_d)
+
+        print('Now calculating slope for comid %s' % comid)
+        xyz_xlsx = in_folder + 'COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
+        list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
+        slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[3], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
+        slopes_list.append(slope)
+
+        print('Classifying comid %s using decision tree...' % comid)
+        if cv_d < 0.3:
+            if mean_w_to_d >= 2.3:
+                sc_class = 2
+            elif mean_conf >= 1031:
+                if mean_conf >= 1555:
+                    sc_class = 1
+                else:
+                    sc_class = 5
+            else:
+                sc_class = 4
+        elif slope >= 0.027:
+            sc_class = 3
+        elif mean_conf >= 1933:
+            sc_class = 1
+        else:
+            sc_class = 5
+        print('Comid %s is South Coast class %s' % (comid, sc_class))
+        classes_list.append(sc_class)
+
+    print('Making output classification csv...')
+    col_list = ['COMID', 'W_to_D', 'Confinement', 'CV_bf_depth', 'Slope', 'Class']
+    class_df = pd.DataFrame(columns=col_list)
+    class_df[col_list[0]] = np.array(comid_list)
+    class_df[col_list[1]] = np.array(w_to_d_list)
+    class_df[col_list[2]] = np.array(confinement_list)
+    class_df[col_list[3]] = np.array(CV_d_list)
+    class_df[col_list[4]] = np.array(slopes_list)
+    class_df[col_list[5]] = np.array(classes_list)
+
+    class_df.to_csv(out_csv)
+    print('Classification output saved @ %s' % out_csv)
+
+
+
 
 ###### INPUTS ######
 comid_list = [17609707]

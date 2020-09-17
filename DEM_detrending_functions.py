@@ -10,8 +10,8 @@ import numpy as np
 import csv
 
 
-def prep_xl_file(xyz_table_location, listofcolumn):
-    #Import xl file
+def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
+
     id = []
     location = []
     x = []
@@ -53,7 +53,7 @@ def prep_xl_file(xyz_table_location, listofcolumn):
     z_np = np.around(z_np, 9)
     print("Z array: %s" % z_np)
 
-    return [location_np,z_np, ws]
+    return [location_np, z_np, ws]
 
 def quadratic_fit(location_np, location, z_np, ws):
     print("Applying quadratic fit...")
@@ -529,7 +529,7 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on=False
-detrend_or_diagnostic=True  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+detrend_or_diagnostic=False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
@@ -543,7 +543,6 @@ DEM = direct + '\\las_files\\ls_nodt.tif'
 process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
-listofcolumn = ["D", "A", "L", "I", "J"]  # For least cost centerlines
 ######
 
 breakpoints = [80,1100,1840,1950,2975,3500,3590,3900]
@@ -553,9 +552,9 @@ ylimits=[700, 800]  # [ymin, ymax] default is [0, 0]
 chosen_fit_index = []  # Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
 
 if process_on == True:
-    loc = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[0]
-    z = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[1]
-    ws = prep_xl_file(xyz_table_location=xyz_table, listofcolumn=listofcolumn)[2]
+    loc = prep_xl_file(xyz_table_location=xyz_table)[0]
+    z = prep_xl_file(xyz_table_location=xyz_table)[1]
+    ws = prep_xl_file(xyz_table_location=xyz_table)[2]
 
     if detrend_or_diagnostic==False:
         save_location = ''
