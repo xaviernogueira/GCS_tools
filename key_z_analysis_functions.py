@@ -34,7 +34,7 @@ def find_centerline_nums(detrend_folder):
 
     return centerline_nums
 
-def find_xs_spacing(detrend_folder, centerline_nums):
+def find_xs_length(detrend_folder, centerline_nums):
     """This function takes a detrend folder location for a given reacg, as well as a list containing centerline_nums, and by using
     string splicing and Arc geomoetry objects returns a list containing the XS widths for each centerline_num XS file"""
 
@@ -86,6 +86,8 @@ def float_keyz_format(z):
         return z_str
     except z_str == '':
         print('Key z list parameters not valid. Please fill list with int or float.')
+
+
 
 def prep_locations(detrend_location,max_stage=20, skip=False):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
@@ -301,8 +303,10 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
     centerline_nums = find_centerline_nums(detrend_folder)
+    xs_lengths = find_xs_length(detrend_folder, centerline_nums)
+
     if csv_loc == '':
-        aligned_csv_loc = aligned_csv_folder + '\\all_stages_table.csv' # aligned csv
+        aligned_csv_loc = aligned_csv_folder + '\\all_stages_table.csv'  # aligned csv. LETS MAKE A KEY_Z_csv with only aligned key zs. Can re-align for clip poly. We can make a function to do this
     else:
         aligned_csv_loc = csv_loc
 
@@ -317,17 +321,23 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
 
     for z in key_zs:
         z_str = float_keyz_format(z)
-        loc_stage = loc_stage_finder(z, centerline_nums)
-        in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), wetted_folder + '\\wetted_poly_%sft_ds.shp' % z_str]
+        loc_stage = loc_stage_finder(z, centerline_nums)[0]
+        loc_stage_index = loc_stage_finder(z, centerline_nums)[1]
+        in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), centerline_folder + '\\stage_centerline_%sft_DS.shp' % loc_stage]
 
-        if clip_poly != '' and os.path.exists(clip_poly):
-            for count, file in enumerate(in_list):
-                os.remove(in_list[1])
-                create_station_lines.create_station_lines_function(line_shp=, spacing=spacing, xs_length=, stage=loc_stage)
-                name = file[:4] + '_C.shp'
-                arcpy.Clip_analysis(file, clip_poly, out_feature_class=name)
-                in_list[count] = name
-                del_files.append(name)
+        if clip_poly != '' and os.path.exists(clip_poly):  # Allows a new/updated clip file to clip all data inputs and outputs, and create new XS for the clipped centerlines
+            temp_del = []
+            for j, file in enumerate(in_list):
+                no_clip_name = file[:-4] + '_NOCLIP.shp'
+                arcpy.Rename_management(file, no_clip_name)
+                temp_del.append(no_clip_name)
+                if j != 1:
+                    arcpy.Clip_analysis(no_clip_name, clip_poly, out_feature_class=file)
+
+            create_station_lines.create_station_lines_function(line_shp=in_list[2], spacing=spacing, xs_length=xs_lengths[loc_stage_index], stage=loc_stage)
+
+            for i in temp_del:
+                file_functions.delete_gis_files(i)
 
         clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
         width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
@@ -900,8 +910,13 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     slopes = []
     if len(confinements) != 0:
         confinement_list = confinements
-    elif len(confinements) == 0 and conf_header != '':
+    elif len(confinements) == 0 and confine_table != '':
         print('Pulling confinement values from %s w/ column header %s' % (confine_table, conf_header))
+        if confine_table[-4:] == 'shp':
+            if os.path.exists(confine_table[:-4] + '.csv'):
+                conf_df = pd.read_csv(confine_table[:-4] + '.csv')
+            else:
+                conf_df = pd.read_csv(tableToCSV(input_table=confine_table, csv_filepath=confine_table[:-4] + '.csv', fld_to_remove_override=[]))
         confinement_list = []
 
     for count, comid in enumerate(comid_list):
@@ -915,6 +930,13 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
             df = pd.read_csv(bf_csv)
         else:
             print('CSV file name does not exist. Please check file structure of specified in_csv location. Erroneous location: %s' % bf_csv)
+
+        if len(confinements) == 0:
+            sub_conf_df = conf_df.loc(conf_df['COMID'] == comid)
+            mean_conf = np.mean(sub_conf_df.loc[:, conf_header].to_numpy())
+            confinement_list.append()
+        elif len(confinements) != 0:
+            mean_conf = confinement_list[count]
 
         # PULL VALUES AND PROGRAM DECISION TREE TO ADD CLASSES TO A LIST THAT IS THEN ADDED AS A COLUMN
 
@@ -938,6 +960,7 @@ for count, comid in enumerate(comid_list):
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
+    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=out_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table='', conf_header='', in_csv='')
 
     #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
     #prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
