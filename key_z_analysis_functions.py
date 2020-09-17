@@ -56,6 +56,11 @@ def find_xs_length(detrend_folder, centerline_nums):
         else:
             print('Multiple XS files for a given centerline num is causing an error to be raised. Please remove one.')
 
+        temp_list = []
+        for row in arcpy.da.SearchCursor(xs_file, ["SHAPE@LENGTH"]):
+            temp_list.append(int(row[0]))
+        xs_lengths.append(temp_list[0])
+        
     return xs_lengths
 
 def loc_stage_finder(stage, centerlines_nums):
