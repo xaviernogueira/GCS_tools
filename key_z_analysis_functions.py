@@ -450,17 +450,22 @@ def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_cs
     ax.set_xticklabels(col_row_heads)
     ax.set_yticklabels(col_row_heads)
 
+    font_size = round(120 / len(col_row_heads), 0)
     for i in range(len(col_row_heads)):
         for j in range(len(col_row_heads)):
             text = ax.text(j, i, round(cross_corrs[i][j], 2),
-                           ha="center", va="center", fontsize=6, color="r")
+                           ha="center", va="center", fontsize=font_size, color="r")
 
     ax.set_title("Cross-correlation of stage width series")
     fig.tight_layout()
     fig.set_size_inches(16, 8)
-    plt.savefig((out_folder + '\\corrs_matrix_plot.png'), dpi=300, bbox_inches='tight')
+    if len(key_zs) == 0:
+        fig_name = out_folder + '\\corrs_matrix_plot.png'
+    else:
+        fig_name = out_folder + '\\key_zs_corrs_matrix_plot.png'
+    plt.savefig(fig_name, dpi=300, bbox_inches='tight')
     plt.cla()
-    print('Stage width profile correlation matrix: %s' % (out_folder + '\\corrs_matrix_plot.png'))
+    print('Stage width profile correlation matrix: %s' % fig_name)
 
 def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_stage=20, small_increments=0):
     '''This function plots a cumulative wetted area % vs stage (CDF), the change in wetted area vs stage (PDF), and a flipped axes
@@ -1069,6 +1074,5 @@ for count, comid in enumerate(comid_list):
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
-    stage_corr_matrix_plot(in_folder=landform_folder, out_folder=landform_folder, key_zs=[0.5, 2.0, 5.0], max_stage=20, in_csv='')
     #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
 
