@@ -44,7 +44,6 @@ def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
     point_spacing = int(location[1]) - int(location[0])
     print("Point spacing: " + str(point_spacing))
     number_of_points = int(int(location[-1]) / int(point_spacing))
-    print("Number of points: " + str(number_of_points))
 
     location_np = np.array(location)
     z_np = np.array(z)
@@ -227,7 +226,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
     residual = []
     for i in range(len(z_fit_list)):
         residual.append(z[i]-z_fit_list[i])
-    print(residual)
     mean_z = (sum(z) / len(z))
     squared_real = []
     squared_res = []
@@ -247,13 +245,9 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
 
     # Add fitted z values to the xyz table
     cell_test = ws["F1"]
-    print(cell_test.value)
-
     cell_test.value = ("z_fit")
-    print(cell_test.value)
 
     if ws["F1"].value == cell_test.value:
-        print("Sheet activated...")
         for i in z_fit_list:
             index = int(z_fit_list.index(i))
             row_index = index + 2

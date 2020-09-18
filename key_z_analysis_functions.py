@@ -389,30 +389,52 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
         file_functions.delete_gis_files(file)
 
 
-def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, small_increments=0, aligned_csv_loc=''):
-    ''' This function plots a matrix
-    INPUT: Linear detrending output folder, clip polygon capturing all relevent wetted area maximum stage for plotting
+def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_csv=''):  # MAKE IT WORK WITH NxN KEY Z MATRIX
+    ''' This function plots a NxN cross correlation matrix comparing each input standardized width signal.
+    INPUT: in_folder containing '\\all_stages_table.csv' OR in_csv location.
+    out_folder to gave figures to.
+    Key_zs (optional), if specified as a list of floats and ints will plot a NxN correlation matrix with only the chosen Key Z stages.
+    max_stage (default=20), if no key Zs are specified a max_stage x max_stage matrix is produced.
+
     RETURNS: Pearson correlation matrix comaparing the width series of each stage with every other stage. CDF and PDF plots of accumulating wetted areas
     Used to guide key Z selection for the following nested landform analysis'''
 
     print('Calculating cross-correlation matrix...')
-    if aligned_csv_loc == '':
-        result = pd.read_csv(in_folder + 'all_stages_table.csv')
+    if in_csv == '':
+        result = pd.read_csv(in_folder + '\\all_stages_table.csv')
     else:
-        result = pd.read_csv(aligned_csv_loc)
+        result = pd.read_csv(in_csv)
 
-    col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
-    col_list = [('Ws_%sft') % f for f in range(1, max_stage + 1)]
+    result.sort_values('loc_1ft', inplace=True)
+
+    if len(key_zs) == 0:
+        col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
+        col_list = [('Ws_%sft' % f) for f in range(1, max_stage + 1)]
+    else:
+        col_row_heads = []
+        col_list = []
+        for z in key_zs:
+            z_str = float_keyz_format(z)
+            col_row_heads.append('%sft' % z_str)
+            col_list.append('Ws_%sft' % z_str)
 
     cross_corrs = []
     in_data = result.loc[:, col_list]
     cross_corrs_df = in_data.corr()
 
-    for num in range(1, max_stage + 1):  # Putting cross correlation dataframe in a maptplot format
-        row_data = cross_corrs_df.loc[:, ['Ws_%sft' % num]].astype(float)
-        row_data = row_data.squeeze()
-        row_list = row_data.values.tolist()
-        cross_corrs.append(row_list)
+    if len(key_zs) == 0:
+        for num in range(1, max_stage + 1):  # Putting cross correlation dataframe in a maptplot format
+            row_data = cross_corrs_df.loc[:, ['Ws_%sft' % num]].astype(float)
+            row_data = row_data.squeeze()
+            row_list = row_data.values.tolist()
+            cross_corrs.append(row_list)
+    else:
+        for z in key_zs:
+            z_str = float_keyz_format(z)
+            row_data = cross_corrs_df.loc[:, ['Ws_%sft' % z_str]].astype(float)
+            row_data = row_data.squeeze()
+            row_list = row_data.values.tolist()
+            cross_corrs.append(row_list)
 
     for list in cross_corrs:  # Making sure all lists in cross_corrs are the same length to avoid plotting error
         if len(list) != len(col_row_heads):
@@ -430,7 +452,7 @@ def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, small
 
     for i in range(len(col_row_heads)):
         for j in range(len(col_row_heads)):
-            text = ax.text(j, i, round(cross_corrs[i][j],2),
+            text = ax.text(j, i, round(cross_corrs[i][j], 2),
                            ha="center", va="center", fontsize=6, color="r")
 
     ax.set_title("Cross-correlation of stage width series")
@@ -609,7 +631,8 @@ def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_st
 
 
 def nested_landform_analysis(aligned_csv, key_zs):
-    '''IN: Aligned csv with landform codes for each XS. A list (key_zs) containing three stages
+    '''IN: An aligned csv with landform codes for each XS.
+    A list (key_zs) containing three stages. All key_zs must already be aligned into table.
     RETURNS: A xl table containing the abundance of each unique nested landform set'''
     landform_folder = str(os.path.dirname(aligned_csv))
     code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}  # code number and corresponding MU
@@ -675,8 +698,8 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
 
     if len(comids) > 1:
         print('Making hexagaon heatplot for geomorphic class %s' % geo_class)
-        x_list_of_arrays = [[],[],[]] #Initialize list containing [baseflow, bankful, flood] values
-        y_list_of_arrays = [[],[],[]]
+        x_list_of_arrays = [[], [], []]  # Initialize list containing [baseflow, bankful, flood] values
+        y_list_of_arrays = [[], [], []]
 
         for count, comid in enumerate(comids):
             landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
@@ -843,8 +866,9 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
 
     print('Plots completed')
 
-def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
-    '''INPUTS: Main directory (LINEAR_DETREND folder).
+def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
+    '''INPUTS: in_folder = Main directory (LINEAR_DETREND folder).
+                out_folder is the directory where the xlsx with runs test results is saved
             A list of float or int stage heights for the runs test to be run on.
             A list of fields to do the WW runs test on.
     RETURNS: A xlxs file containing the following for each field (separated in sheets):
@@ -853,8 +877,7 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
             expected standard deviation of number of runs (if random)
             Z: number of standard deviations difference between actual and expected number of run (standard deviation of num. of runs if random)'''
 
-    gcs_folder = detrend_folder + '\\gcs_ready_tables'
-    out_folder = detrend_folder + '\\landform_analysis'
+    gcs_folder = in_folder
     xl_loc = out_folder + '\\WW_runs_tests.xlsx'
 
     base_row = 1
@@ -1041,10 +1064,11 @@ for count, comid in enumerate(comid_list):
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
     aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
+    landform_folder = out_folder + '\\landform_analysis'
     confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
-    #find_xs_length(detrend_folder=out_folder, centerline_nums=[1,2,3,5,7,8])
-    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
+    stage_corr_matrix_plot(in_folder=landform_folder, out_folder=landform_folder, key_zs=[0.5, 2.0, 5.0], max_stage=20, in_csv='')
+    #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
 
