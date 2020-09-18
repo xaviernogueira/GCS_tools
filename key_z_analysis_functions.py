@@ -96,6 +96,58 @@ def float_keyz_format(z):
         print('Key z list parameters not valid. Please fill list with int or float.')
 
 
+def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
+    '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
+    RETURNS: None. This function creates a folder containing wetted polygons for a 0.1ft increments as well as a clippped detrended DEM and contours.'''
+    del_files = []
+
+    channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
+    small_wetted_poly_loc = detrend_folder + '\\wetted_polygons\\small_increments'
+
+    if not os.path.exists(small_wetted_poly_loc):  # Make a new folder for the 0.1ft increment wetted polygons
+        os.makedirs(small_wetted_poly_loc)
+
+    in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
+    print('Making wetted polygons...')
+    for inc in np.arange(0, max_stage + interval, float(
+            interval)):  # Create a polygon representing the portion of the detrended DEM below a stage height interval
+        if inc >= 10.0:
+            inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
+        else:
+            inc_str = (str(inc)[0] + 'p' + str(inc)[2])
+        names = [('\\wt_rs_%sft.tif' % inc_str), ('\\wetted_poly_%sft_noclip.shp' % inc_str)]
+        wetted_ras = arcpy.sa.Con(in_ras <= inc, 1)
+        wetted_ras.save(small_wetted_poly_loc + names[0])
+        arcpy.RasterToPolygon_conversion(in_raster=wetted_ras, out_polygon_features=(small_wetted_poly_loc + names[1]),
+                                         simplify=False)
+        arcpy.Clip_analysis(small_wetted_poly_loc + names[1], channel_clip_poly,
+                            out_feature_class=(small_wetted_poly_loc + '\\wetted_poly_%sft.shp' % inc_str))
+
+        for name in names:
+            del_files.append(small_wetted_poly_loc + name)
+    print('Wetted polygons located @ %s' % small_wetted_poly_loc)
+
+    clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif'  # Clipped to channel clip poly
+
+    if not os.path.isfile(
+            clipped_ras_loc):  # Create a clipped detrended DEM to the max stage height value, and the channel_clip_poly file
+        print('Making clipped_raster...')
+        max_stage_ras = arcpy.sa.Con(in_ras <= float(max_stage), in_ras)
+        intermediate_ras = detrend_folder + '\\rs_dt_clip1.tif'
+        max_stage_ras.save(intermediate_ras)
+        clipped_ras = arcpy.Clip_management(intermediate_ras, "", clipped_ras_loc,
+                                            in_template_dataset=channel_clip_poly, clipping_geometry='ClippingGeometry',
+                                            maintain_clipping_extent='MAINTAIN_EXTENT')
+        del_files.append(intermediate_ras)
+        print('Clipped detrended raster made @ %s' % clipped_ras_loc)
+
+    else:
+        'Clipped raster already made @ %s' % clipped_ras_loc
+
+    print('Deleting files: %s' % del_files)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
+
 
 def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GET IT WORKING WELL
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
@@ -154,6 +206,7 @@ def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GE
         file_functions.delete_gis_files(file)
 
     return code_csv_loc
+
 
 def thalweg_zs(detrend_folder, join_csv=''):
     """This function takes the folder containing the detrended raster, finds the lowest stage centerline, and calculates the elevation longitudinally.
@@ -229,55 +282,7 @@ def thalweg_zs(detrend_folder, join_csv=''):
         file_functions.delete_gis_files(file)
 
 
-
-def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
-    '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
-    RETURNS: None. This function creates a folder containing wetted polygons for a 0.1ft increments as well as a clippped detrended DEM and contours.'''
-    del_files = []
-    del_suffix = ['.shp', '.cpg', '.dbf', '.prj', '.sbn', '.sbx', '.shp.xml', '.shx', '.tif', '.tif.aux.xml', '.tfw', '.tif.ovr', '.tif.vat.cpg', '.tif.vat.dbf']
-    channel_clip_poly = detrend_folder + '\\raster_clip_poly.shp'
-    small_wetted_poly_loc = detrend_folder + '\\wetted_polygons\\small_increments'
-
-    if not os.path.exists(small_wetted_poly_loc):  # Make a new folder for the 0.1ft increment wetted polygons
-        os.makedirs(small_wetted_poly_loc)
-
-    in_ras = arcpy.sa.Raster(detrend_folder + '\\ras_detren.tif')
-    print('Making wetted polygons...')
-    for inc in np.arange(0, max_stage+interval, float(interval)):  # Create a polygon representing the portion of the detrended DEM below a stage height interval
-        if inc >= 10.0:
-            inc_str = (str(inc)[0:2] + 'p' + str(inc)[3])
-        else:
-            inc_str = (str(inc)[0] + 'p' + str(inc)[2])
-        names = [('\\wt_rs_%sft.tif' % inc_str), ('\\wetted_poly_%sft_noclip.shp' % inc_str)]
-        wetted_ras = arcpy.sa.Con(in_ras <= inc, 1)
-        wetted_ras.save(small_wetted_poly_loc + names[0])
-        arcpy.RasterToPolygon_conversion(in_raster=wetted_ras, out_polygon_features=(small_wetted_poly_loc + names[1]), simplify=False)
-        arcpy.Clip_analysis(small_wetted_poly_loc + names[1], channel_clip_poly, out_feature_class=(small_wetted_poly_loc + '\\wetted_poly_%sft.shp' % inc_str))
-
-        for name in names:
-            del_files.append(small_wetted_poly_loc + name)
-    print('Wetted polygons located @ %s' % small_wetted_poly_loc)
-
-    contour_loc = detrend_folder + '\\detrended_contours.shp'
-    clipped_ras_loc = detrend_folder + '\\rs_dt_clip.tif'  # Clipped to channel clip poly
-
-    if not os.path.isfile(contour_loc):  # Create a clipped detrended DEM to the max stage height value, and the channel_clip_poly file
-        print('Making contours...')
-        max_stage_ras = arcpy.sa.Con(in_ras <= float(max_stage), in_ras)
-        max_stage_ras.save(detrend_folder + '\\rs_dt_clip1.tif')
-        clipped_ras = arcpy.Clip_management(detrend_folder + '\\rs_dt_clip1.tif', "", clipped_ras_loc, in_template_dataset=channel_clip_poly, clipping_geometry='ClippingGeometry', maintain_clipping_extent='MAINTAIN_EXTENT')
-        del_files.append(detrend_folder + '\\rs_dt_clip1.tif')
-        contour_ras = arcpy.sa.Contour(clipped_ras_loc, contour_loc, contour_interval=interval)
-        print('Contour file and clipped detrended raster made @ %s' % detrend_folder)
-    else:
-        'Contour file already made @ %s' % contour_loc
-
-    print('Deleting files: %s' % del_files)
-    for file in del_files:
-        file_functions.delete_gis_files(file)
-
-
-def align_csv(code_csv_loc, centerlines_nums, max_stage=20):
+def align_csv(code_csv_loc, centerlines_nums, max_stage=20): # GET WORKING WELL WITH KEY Zs AND RE-DOABLE EASILY FOR UPDATING CLIP POLYS OR CENTERLINES
     '''IN: Aligned csv location, list of used centerline nums, key Zs (optional)
     RETURNS: An aligned csv containing all stages at 1ft increments is returned as a dataframe. '''
     print('Calculating cross-correlation matrix...')
@@ -402,7 +407,7 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
         file_functions.delete_gis_files(file)
 
 
-def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_csv=''):  # MAKE IT WORK WITH NxN KEY Z MATRIX
+def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_csv=''): 
     ''' This function plots a NxN cross correlation matrix comparing each input standardized width signal.
     INPUT: in_folder containing '\\all_stages_table.csv' OR in_csv location.
     out_folder to gave figures to.
