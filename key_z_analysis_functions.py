@@ -962,7 +962,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
             break
 
         if len(confinements) == 0:
-            sub_conf_df = conf_df.loc(conf_df['COMID'] == comid)
+            sub_conf_df = conf_df.query('COMID == %s' % int(comid))
             mean_conf = np.mean(sub_conf_df.loc[:, conf_header].to_numpy())
             confinement_list.append(mean_conf)
         elif len(confinements) != 0:
@@ -970,13 +970,14 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
 
         print('Now calculating slope for comid %s' % comid)
         if slope_table != '' and slope_header != '':
-            sub_slope_df = slope_df.loc(slope_df['COMID'] == comid)
+            sub_slope_df = slope_df.query('COMID == %s' % int(comid))
             mean_slope = np.mean(sub_slope_df.loc[:, slope_header].to_numpy())
         else:
-            xyz_xlsx = in_folder + 'COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
+            print('Using detrending XYZ table to calculate mean reach slope...')
+            xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
             list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
-            mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[3],
-                                                            list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
+            mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[2], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
+
         slopes_list.append(mean_slope)
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
@@ -989,7 +990,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
 
         print('Classifying comid %s using decision tree...' % comid)
         if cv_d < 0.3:
-            if mean_w_to_d >= 2.3:
+            if mean_w_to_d >= 23:
                 sc_class = 2
             elif mean_conf >= 1031:
                 if mean_conf >= 1555:
@@ -1010,6 +1011,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     print('Making output classification csv...')
     col_list = ['COMID', 'W_to_D', 'Confinement', 'CV_bf_depth', 'Slope', 'Class']
     class_df = pd.DataFrame(columns=col_list)
+    class_df.set_index('COMID')
     class_df[col_list[0]] = np.array(comid_list)
     class_df[col_list[1]] = np.array(w_to_d_list)
     class_df[col_list[2]] = np.array(confinement_list)
@@ -1017,10 +1019,9 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     class_df[col_list[4]] = np.array(slopes_list)
     class_df[col_list[5]] = np.array(classes_list)
 
+
     class_df.to_csv(out_csv)
     print('Classification output saved @ %s' % out_csv)
-
-
 
 
 ###### INPUTS ######
@@ -1045,5 +1046,5 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
     #find_xs_length(detrend_folder=out_folder, centerline_nums=[1,2,3,5,7,8])
-    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table=confine_table, slope_header='SLOPE', in_csv='')
+    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
 

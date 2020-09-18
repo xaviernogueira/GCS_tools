@@ -52,8 +52,9 @@ def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
     z_np = np.float_(z_np)
     z_np = np.around(z_np, 9)
     print("Z array: %s" % z_np)
+    wb.save(xyz_table_location)
 
-    return [location_np, z_np, ws]
+    return [location_np, z_np, xyz_table_location]  # If errors rise, switch wb back to ws as it was ebfore
 
 def quadratic_fit(location_np, location, z_np, ws):
     print("Applying quadratic fit...")
@@ -116,7 +117,6 @@ def quadratic_fit(location_np, location, z_np, ws):
     else:
         print("Something is wrong with writing to the excel sheet")
 
-
     wb.save(filename=xyz_table)
 
     print("Excel file ready for Arc processing!")
@@ -172,9 +172,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
                 split_z_list.append(z[slope_break_indices[index-1]:])
 
         print("Breakpoints added...")
-        print("Slope break index: " + str(slope_break_indices))
-        print("Split location list: " + str(split_location_list))
-        print("Split z list: " + str(split_z_list))
 
         # Get fit parameters for each section of the data
         if len(split_z_list) == len(split_location_list):
@@ -240,9 +237,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
         squared_real.append((z[i] - mean_z)**2)
         squared_res.append(residual[i]**2)
 
-    print("List of squared variance from mean: " + str(squared_real))
-    print("List of squared residuals: " + str(squared_res))
-
     R_squared = 1 - (sum(squared_res)/sum(squared_real))
     print("The coefficient of determination is: " + str(R_squared))
 
@@ -250,8 +244,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
     mean_res = sum(residual)/len(residual)
     sd_res = np.std(residual)
     res_z_score = [(z_res_value - mean_res) * 1.0 / sd_res for z_res_value in residual]
-    print(residual)
-    print("The mean residual is %.2f" % mean_res)
 
     # Add fitted z values to the xyz table
     cell_test = ws["F1"]
@@ -270,7 +262,6 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
     else:
         print("Something is wrong with writing to the excel sheet")
     ws["A1"].value == "OID"
-
 
     wb.save(filename=xyz_table_location)
 
