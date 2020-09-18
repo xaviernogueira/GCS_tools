@@ -60,7 +60,7 @@ def find_xs_length(detrend_folder, centerline_nums):
         for row in arcpy.da.SearchCursor(xs_file, ["SHAPE@LENGTH"]):
             temp_list.append(int(row[0]))
         xs_lengths.append(temp_list[0])
-        
+
     return xs_lengths
 
 def loc_stage_finder(stage, centerlines_nums):
@@ -896,7 +896,7 @@ def ww_runs_test(detrend_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     wb.close()
     print('Wald-Wolfowitz runs test for values below/above median finished for all inputs. Located @ %s' % xl_loc)
 
-def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confine_table='', conf_header='', in_csv=''):
+def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confine_table='', conf_header='', slope_table='', slope_header='', in_csv=''):
     """This function uses a South Coast channel classification decision tree methodology (92% accuracy) to classify
     geomorphic channel type.
     comids (int or list orf ints) can be one comid or many comids in a list. This defines which reaches will be classified.
@@ -904,7 +904,9 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     in_folder must contain folders for each listed comid in the form \\COMID#######.
     GCS output csvs must be found @ in_folder\\COMID#####\\LINEAR_DETREND\\gcs_ready_tables\\Zft_WD_analysis_table.csv.
     out_csv designates the csv location where the classification outputs are stored.
-    confinement ([] default) can be a list of equal length"""
+    confinement ([] default) can be a list of equal length.
+    If confinement is empty, and confine_table is a .csv or .shp location, the conf_header is used pull confinement values associated with the comid
+    If slope_table='' (default), slope is found via linear regression across the reach thalweg. If slope_table and slope_header are defined, slope is pulled from table. """
     if isinstance(comids, int):
         comid_list = [comids]
     elif isinstance(comids, list):
@@ -920,13 +922,31 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     if len(confinements) != 0:
         confinement_list = confinements
     elif len(confinements) == 0 and confine_table != '':
-        print('Pulling confinement values from %s w/ column header %s' % (confine_table, conf_header))
-        if confine_table[-4:] == 'shp':
+        print('Pulling confinement values from %s with column header %s' % (confine_table, conf_header))
+        if confine_table[-4:] == '.shp':
             if os.path.exists(confine_table[:-4] + '.csv'):
                 conf_df = pd.read_csv(confine_table[:-4] + '.csv')
             else:
                 conf_df = pd.read_csv(tableToCSV(input_table=confine_table, csv_filepath=confine_table[:-4] + '.csv', fld_to_remove_override=[]))
+        elif confine_table[-4:] == '.csv':
+            confine_df = pd.read_csv(confine_table)
+        else:
+            print('Invalid confine_table or confine_header parameter. ')
         confinement_list = []
+
+    if slope_table != '' and slope_header != '':
+        print('Slopes will be pulled from %s with header %s' % (slope_table, slope_header))
+        if slope_table == confine_table:
+            slope_df = pd.read_csv(slope_table[:-4] + '.csv')
+        elif slope_table[-4:] == '.shp':
+            if os.path.exists(slope_table[:-4] + '.csv'):
+                slope_df = pd.read_csv(slope_table[:-4] + '.csv')
+            else:
+                slope_df = pd.read_csv(tableToCSV(input_table=slope_table, csv_filepath=slope_table[:-4] + '.csv', fld_to_remove_override=[]))
+        elif slope_table[-4:] == '.csv':
+            slope_df = pd.read_csv(slope_table)
+        else:
+            print('Invalid slope_table or slope_header parameter. ')
 
     for count, comid in enumerate(comid_list):
         if in_csv != '' and len(comid_list) == 1:
@@ -934,11 +954,12 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
             print('Using optionally specified csv instead of file strucure: %s' % in_csv)
         else:
             z_str = float_keyz_format(bf_zs[count])
-            bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREN\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (comid, z_str)
+            bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (comid, z_str)
         if os.path.exists(bf_csv):
             df = pd.read_csv(bf_csv)
         else:
             print('CSV file name does not exist. Please check file structure of specified in_csv location. Erroneous location: %s' % bf_csv)
+            break
 
         if len(confinements) == 0:
             sub_conf_df = conf_df.loc(conf_df['COMID'] == comid)
@@ -947,6 +968,17 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
         elif len(confinements) != 0:
             mean_conf = confinement_list[count]
 
+        print('Now calculating slope for comid %s' % comid)
+        if slope_table != '' and slope_header != '':
+            sub_slope_df = slope_df.loc(slope_df['COMID'] == comid)
+            mean_slope = np.mean(sub_slope_df.loc[:, slope_header].to_numpy())
+        else:
+            xyz_xlsx = in_folder + 'COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
+            list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
+            mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[3],
+                                                            list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
+        slopes_list.append(mean_slope)
+
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
         df['depth'] = float(bf_zs[count]) - df['Z']
         df['w_to_d'] = df['W'] / df['depth']
@@ -954,12 +986,6 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
         w_to_d_list.append(mean_w_to_d)
         cv_d = variation(df.loc[:, 'depth'].to_numpy())
         CV_d_list.append(cv_d)
-
-        print('Now calculating slope for comid %s' % comid)
-        xyz_xlsx = in_folder + 'COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
-        list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
-        slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[3], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
-        slopes_list.append(slope)
 
         print('Classifying comid %s using decision tree...' % comid)
         if cv_d < 0.3:
@@ -972,7 +998,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
                     sc_class = 5
             else:
                 sc_class = 4
-        elif slope >= 0.027:
+        elif mean_slope >= 0.027:
             sc_class = 3
         elif mean_conf >= 1933:
             sc_class = 1
@@ -1007,29 +1033,17 @@ SCO_list = [1]
 key_z_final_analysis = False
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
+    sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
     out_folder = direct + r'\LINEAR_DETREND'
     process_footprint = direct + '\\las_footprint.shp'
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
     aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
-
+    confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
-    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=out_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table='', conf_header='', in_csv='')
-
-    #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20) #Ran with all reaches!
-    #prep_locations(detrend_location=out_folder, max_stage=20) #out_list[0]=code_csv_loc, centerline_nums = out_list[1]
-    #align_csv(aligned_csv_loc, centerlines_nums=[1,2,3,5,7,8], max_stage=20)
-
-    #key_z_finder(out_folder, channel_clip_poly, code_csv_loc=aligned_csv_loc, centerlines_nums=find_centerline_nums(detrend_folder=out_folder), key_zs=[], max_stage=20, small_increments=0.1)
-
-    #if key_z_final_analysis == True:
-        #key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2, 5])
-        #ww_runs_test(detrend_folder=out_folder, key_zs=[0.5, 2, 5], fields=['W_s', 'Z_s', 'W_s_Z_s'])
-        #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=[0.5, 2, 5])
-        #heat_plotter(comids=comid_list, geo_class=1, key_zs=[0.5, 2, 5], max_stage=20) #Make sure updates for float key zs work
-        #GCS_statistical_analysis_XRN.key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[], fields=['W_s', 'Z_s',]) FINISH
-        #Box plots function FINISH
+    #find_xs_length(detrend_folder=out_folder, centerline_nums=[1,2,3,5,7,8])
+    cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table=confine_table, slope_header='SLOPE', in_csv='')
 
