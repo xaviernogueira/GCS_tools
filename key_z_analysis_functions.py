@@ -97,7 +97,7 @@ def float_keyz_format(z):
 
 
 
-def prep_locations(detrend_folder, max_stage=20, skip=False):
+def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GET IT WORKING WELL
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
 
@@ -178,8 +178,7 @@ def thalweg_zs(detrend_folder, join_csv=''):
     min_num = min(centerline_nums)
 
     line_loc = ('%s\\stage_centerline_%sft_DS.shp' % (centerline_folder, min_num))
-    station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5,
-                                                                       stage=[])
+    station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5, stage=[])
     station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (min_num, spacing))
     del_files.append(station_lines)
 
@@ -210,11 +209,14 @@ def thalweg_zs(detrend_folder, join_csv=''):
     arcpy.CalculateField_management(station_points, 'thwg_z', expression='!ras_detren!', expression_type='PYTHON3')
 
     temp_csv = detrend_folder + '\\temp_thwg_z.csv'
-    out_df = pd.read_csv(file_functions.tableToCSV(station_points, temp_csv)) # See what columns are stored here and only keep ones we would join
+    full_df = pd.read_csv(file_functions.tableToCSV(station_points, temp_csv))  # See what columns are stored here and only keep ones we would join
+    out_df = full_df.loc[:, ['loc_%sft' % min_num, 'thwg_z']]
+    print(out_df)
 
     if join_csv == '':
         print('Thalweg Z values stored in returned data frame')
         return out_df
+
     else:
         join_field ='loc_%sft' % min(centerline_nums)
         in_df = pd.read_csv(join_csv)
@@ -225,9 +227,6 @@ def thalweg_zs(detrend_folder, join_csv=''):
 
     for file in del_files:
         file_functions.delete_gis_files(file)
-
-
-
 
 
 
@@ -1088,5 +1087,6 @@ for count, comid in enumerate(comid_list):
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
+    thalweg_zs(detrend_folder=out_folder, join_csv='')
     #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
 
