@@ -97,94 +97,28 @@ def float_keyz_format(z):
 
 
 
-def prep_locations(detrend_location,max_stage=20, skip=False):
+def prep_locations(detrend_folder, max_stage=20, skip=False):
     '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
     arcpy.env.overwriteOutput = True
 
-    detrended_raster = detrend_location + "\\ras_detren.tif"
-    landform_folder = detrend_location + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
-    centerline_folder = detrend_location + "\\analysis_centerline_and_XS"
+    detrended_raster = detrend_folder + "\\ras_detren.tif"
+    landform_folder = detrend_folder + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
+    centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
     del_files = []
 
-    if not os.path.exists(landform_folder):
-        os.makedirs(landform_folder)
-
-    print('Begining centerline reconciliation process...')
-    centerlines_nums = []
-    centerlines = [f for f in listdir(centerline_folder) if isfile(join(centerline_folder, f)) and f[-5:] == 'S.shp']
-    XS_files = [i for i in listdir(centerline_folder) if isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
-
-    temp_location = []
-    cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % XS_files[0])
-    for row in cursor:
-        temp_location.append(int(row.getValue('LOCATION')))
-    temp_location.sort()
-    spacing = int(temp_location[1] - temp_location[0])
-    print('XS spacing is %sft...' % spacing)
-
-    min_num = 20
-    for line in centerlines:
-        line_loc = ('%s\\%s' % (centerline_folder, line))
-        if line[-11] == '_':
-            num = int(line[-10])
-        else:
-            num = int(line[-11:-9])
-        centerlines_nums.append(num)
-
-        if num <= min_num:
-            min_num = num
-        centerlines_nums.sort()
-
-        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5, stage=[])
+    for num in centerline_nums:   # JUST COPIED AND PASTED COME BACK AND FIX
+        line_loc = ('%s\\stage_centerline_%sft_DS.shp' % (centerline_folder, num))
+        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5,
+                                                                           stage=[])
         station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num, spacing))
         del_files.append(station_lines)
 
-        station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(centerline_folder + "\\station_points_%sft.shp" % num), join_attributes="ALL", output_type="POINT")
+        station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(
+                    centerline_folder + "\\station_points_%sft.shp" % num), join_attributes="ALL", output_type="POINT")
+    if not os.path.exists(landform_folder):
+        os.makedirs(landform_folder)
 
-    print('Using centerlines: %s' % centerlines_nums)
-    for num in centerlines_nums:
-        station_points = centerline_folder + "\\station_points_%sft.shp" % num
-
-        if num == min_num:
-            print("Extracting thalweg elevation for Caamano analysis...")
-            loc_field = 'SP_SG_%sFT' % num
-
-            single_station_points = centerline_folder + ("\\%s.shp" % loc_field)
-
-            arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
-            z_table = arcpy.sa.Sample(detrended_raster, single_station_points, out_table=(centerline_folder + "\\thalweg_Z.dbf"), unique_id_field='LOCATION')
-
-
-            del_files.append(centerline_folder + "\\thalweg_Z.dbf")
-            del_files.append(station_points)
-            del_files.append(single_station_points)
-
-            centerline_XY_loc = centerline_folder + '\\centerline_XY_%sft.csv' % num  # csv with XY coordinates of the centerlines made
-            arcpy.AddXY_management(single_station_points)
-            file_functions.tableToCSV(single_station_points, csv_filepath=centerline_XY_loc, fld_to_remove_override=[])
-
-            station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table, join_field=loc_field, fields=['ras_detren'])
-            arcpy.AddField_management(station_points, ('loc_%sft' % num), 'SHORT')
-            arcpy.AddField_management(station_points, 'thwg_z', 'FLOAT')
-            arcpy.CalculateField_management(station_points, 'loc_%sft' % num, expression='!LOCATION!', expression_type='PYTHON3')
-            arcpy.CalculateField_management(station_points, 'thwg_z', expression='!ras_detren!', expression_type='PYTHON3')
-
-            for stage in range(0, max_stage+1):
-                stage_f = float(stage)
-                arcpy.AddField_management(station_points, ('Dz_%sft' % stage), 'FLOAT')
-                arcpy.CalculateField_management(station_points, ('Dz_%sft' % stage), expression=('%s - !thwg_z!' % stage_f), expression_type='PYTHON3')
-
-            del_fields = [f.name for f in arcpy.ListFields(station_points) if f.name[:2] != 'Dz']
-            for field in [('loc_%sft' % num), 'FID', 'thwg_z', 'Shape']:
-                try:
-                    del_fields.remove(field)
-                except:
-                    "Can't delete field: %s" % field
-
-            arcpy.DeleteField_management(station_points, del_fields)
-            print('Fields deleted: %s' % del_fields)
-
-        if num != min_num:
+        if num != min(centerline_nums):
             theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
             arcpy.CreateThiessenPolygons_analysis(station_points, theis_loc, 'ALL')
             arcpy.AddField_management(theis_loc, ('loc_%sft' % num), 'SHORT')
@@ -198,7 +132,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
             arcpy.DeleteField_management(theis_loc,del_fields)
 
     max_count = 0
-    for counter, num in enumerate(centerlines_nums):
+    for counter, num in enumerate(centerline_nums):
         theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
         out_points = centerline_folder + ("\\align_points%s.shp" % counter)
         del_files.append(theis_loc)
@@ -207,7 +141,7 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
         if counter >= max_count:
             max_count = counter
         if counter == 1:
-            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min_num, theis_loc, out_feature_class=out_points, join_attributes='ALL', )
+            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min(centerline_nums), theis_loc, out_feature_class=out_points, join_attributes='ALL', )
         elif counter > 1:
             arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc, out_feature_class=out_points, join_attributes='ALL', )
 
@@ -219,7 +153,83 @@ def prep_locations(detrend_location,max_stage=20, skip=False):
     for file in del_files:
         file_functions.delete_gis_files(file)
 
-    return[code_csv_loc, centerlines_nums]
+    return code_csv_loc
+
+def thalweg_zs(detrend_folder, join_csv=''):
+    """This function takes the folder containing the detrended raster, finds the lowest stage centerline, and calculates the elevation longitudinally.
+    If join_csv='' (default), a dataframe is returned containing loc_[min_centerline_num]ft and thalweg elevation field ('thwg_z') is returned.
+     If join_csv is defined, the dataframe is joined to an existing csv using loc_[min_centerline_num]ft as the join field"""
+
+    del_files = []
+    detrended_raster = detrend_folder + "\\ras_detren.tif"
+    print('Beginning centerline reconciliation process...')
+    centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
+    XS_files = [i for i in listdir(centerline_folder) if isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
+
+    temp_location = []
+    cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % XS_files[0])
+    for row in cursor:
+        temp_location.append(int(row.getValue('LOCATION')))
+    temp_location.sort()
+    spacing = int(temp_location[1] - temp_location[0])
+    print('XS spacing is %sft...' % spacing)
+
+    centerline_nums = find_centerline_nums(detrend_folder)
+    min_num = min(centerline_nums)
+
+    line_loc = ('%s\\stage_centerline_%sft_DS.shp' % (centerline_folder, min_num))
+    station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5,
+                                                                       stage=[])
+    station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (min_num, spacing))
+    del_files.append(station_lines)
+
+    station_points = centerline_folder + "\\station_points_%sft.shp" % min_num
+    arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=station_points, join_attributes="ALL", output_type="POINT")
+    del_files.append(station_points)
+
+    print('Extracting thalweg elevations...')
+    loc_field = 'SP_SG_%sFT' % min_num
+
+    single_station_points = centerline_folder + ("\\%s.shp" % loc_field)
+    arcpy.MultipartToSinglepart_management(station_points, out_feature_class=single_station_points)
+    del_files.append(single_station_points)
+
+    z_table = centerline_folder + "\\thalweg_Z.dbf"
+    arcpy.sa.Sample(detrended_raster, single_station_points, out_table=z_table, unique_id_field='LOCATION')
+    del_files.append(z_table)
+
+    centerline_XY_csv = centerline_folder + '\\centerline_XY_%sft.csv' % min_num  # MAKES CSV FOR MUWEI MAYBE DO THIS IN OTHER FUNCTION
+    arcpy.AddXY_management(single_station_points)
+    file_functions.tableToCSV(single_station_points, csv_filepath=centerline_XY_csv, fld_to_remove_override=[])
+    print('Thalweg XY cooridnates csv located @ %s' % centerline_XY_csv)
+
+    station_points = arcpy.JoinField_management(station_points, in_field='LOCATION', join_table=z_table, join_field=loc_field, fields=['ras_detren'])
+    arcpy.AddField_management(station_points, ('loc_%sft' % min_num), 'SHORT')
+    arcpy.AddField_management(station_points, 'thwg_z', 'FLOAT')
+    arcpy.CalculateField_management(station_points, 'loc_%sft' % min_num, expression='!LOCATION!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(station_points, 'thwg_z', expression='!ras_detren!', expression_type='PYTHON3')
+
+    temp_csv = detrend_folder + '\\temp_thwg_z.csv'
+    out_df = pd.read_csv(file_functions.tableToCSV(station_points, temp_csv)) # See what columns are stored here and only keep ones we would join
+
+    if join_csv == '':
+        print('Thalweg Z values stored in returned data frame')
+        return out_df
+    else:
+        join_field ='loc_%sft' % min(centerline_nums)
+        in_df = pd.read_csv(join_csv)
+        result_df = in_df.merge(out_df, left_on=join_field, right_on=join_field, how='left')
+        result_df.to_csv(join_csv)
+        print('Thalweg z values joined to %s' % join_csv)
+        return join_csv
+
+    for file in del_files:
+        file_functions.delete_gis_files(file)
+
+
+
+
+
 
 def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
     '''IN: Folder containing detrended DEM ras_detren.tif, an stage interval length, a maximum flood stafe height.
@@ -357,13 +367,13 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
         arcpy.AddField_management(width_poly_loc, field_name="loc_id", field_type="SHORT")
         field_calc = "(int(!LOCATION!))"
         arcpy.CalculateField_management(width_poly_loc, field="loc_id", expression=field_calc, expression_type="PYTHON3")
-        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_poly_loc, "loc_id", detrended_DEM, out_table=(width_poly_folder + '\\stats_table_%s.dbf' % z_str), statistics_type="MEAN")
-        width_poly = arcpy.JoinField_management(width_poly_loc, "loc_id",  join_table=zonal_table, join_field="loc_id", fields=["MEAN"])
+        zonal_table = arcpy.sa.ZonalStatisticsAsTable(width_poly_loc, "loc_id", detrended_DEM, out_table=(width_poly_folder + '\\stats_table_%s.dbf' % z_str), statistics_type="ALL")
+        width_poly = arcpy.JoinField_management(width_poly_loc, "loc_id",  join_table=zonal_table, join_field="loc_id", fields=["MEAN", "MINIMUM"])
 
         csv_loc = gcs_folder + "\\%sft_WD_analysis_table.csv" % z_str
         tableToCSV(width_poly, csv_filepath=csv_loc, fld_to_remove_override=[])
         df = pd.read_csv(csv_loc)
-        df.rename({'LOCATION': 'dist_down', 'Width': 'W', 'MEAN': 'Z'}, axis=1, inplace=True)
+        df.rename({'LOCATION': 'dist_down', 'Width': 'W', 'MEAN': 'Z', 'MINIMUM': 'Z_min'}, axis=1, inplace=True)
         df.sort_values(by=['dist_down'], inplace=True)
         df.to_csv(csv_loc)
 
@@ -373,13 +383,17 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
         gcs_df = pd.read_csv(csv_loc)
         aligned_df = pd.read_csv(aligned_csv_loc)
         gcs_df.sort_values(by=['dist_down'], inplace=True)
-        temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'Z': ('Z_%sft' % z_str), 'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1, inplace=True)
+        gcs_df['Max_depth'] = float(z) - gcs_df['Z_min']  # Calculates the maximum depth in the cross-section
+
+        temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s', 'Z_min']]
+        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'Z': ('Z_%sft' % z_str),'Max_depth': ('Max_depth_%sft' % z_str), 'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1, inplace=True)
         temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
         result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
         result = result.replace(np.nan, 0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-        result['Dz_%sft' % z_str] = float(z) - result['thwg_z']
+        result['Dz_%sft' % z_str] = float(z) - result['thwg_z']  # Calculates water depth at least-cost thalweg
+
+        gcs_df.to_csv(csv_loc)
         result.to_csv(aligned_csv_loc)
 
         print('%sft stage GCS completed and merged to @ %s' % (z, aligned_csv_loc))
@@ -1009,7 +1023,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
         slopes_list.append(mean_slope)
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
-        df['depth'] = float(bf_zs[count]) - df['Z']
+        df['depth'] = float(bf_zs[count]) - df['Max_depth']  # Change to Z if we want average depth, but I think max depth makes more sense
         df['w_to_d'] = df['W'] / df['depth']
         mean_w_to_d = np.mean(df.loc[:, 'w_to_d'].to_numpy())
         w_to_d_list.append(mean_w_to_d)
