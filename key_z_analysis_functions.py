@@ -63,6 +63,33 @@ def find_xs_length(detrend_folder, centerline_nums):
 
     return xs_lengths
 
+def find_xs_spacing(detrend_folder):
+    """"This function takes the detrended folder and centerline_nums (optional)""""
+    centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
+
+    xs_files = [i for i in listdir(centerline_folder) if
+                isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
+
+    temp_location = []
+    cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % xs_files[0])
+    for row in cursor:
+        temp_location.append(int(row.getValue('LOCATION')))
+    temp_location.sort()
+    spacing1 = int(temp_location[1] - temp_location[0])
+
+    if xs_files[0][-8] == '_':
+        spacing2 = int(xs_files[0][-7])
+    elif xs_files[0][-9] == '_':
+        spacing2 = int(xs_files[0][-8:-6])
+
+    if spacing1 == spacing2:
+        print('XS spacing is %sft...' % spacing1)
+        return spacing1
+
+    else:
+        print('XS shapefile name spacing (from string splicing) is not equal to spacing found via arcpy Search Cursor.')
+        return spacing2
+
 def loc_stage_finder(stage, centerlines_nums):
     '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
     if float(stage) > float(centerlines_nums[-1]):
@@ -150,13 +177,15 @@ def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
 
 
 def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GET IT WORKING WELL
-    '''This function takes a reach and creates a new gcs csv with a location associated with the lowest stage centerline'''
+    '''This function takes a reach and creates a new csv with aligned'''
     arcpy.env.overwriteOutput = True
 
     detrended_raster = detrend_folder + "\\ras_detren.tif"
     landform_folder = detrend_folder + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
     centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
     del_files = []
+    centerline_nums = find_centerline_nums(detrend_folder)
+    spacing = find_xs_spacing(detrend_folder)
 
     for num in centerline_nums:   # JUST COPIED AND PASTED COME BACK AND FIX
         line_loc = ('%s\\stage_centerline_%sft_DS.shp' % (centerline_folder, num))
@@ -217,16 +246,8 @@ def thalweg_zs(detrend_folder, join_csv=''):
     detrended_raster = detrend_folder + "\\ras_detren.tif"
     print('Beginning centerline reconciliation process...')
     centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
-    XS_files = [i for i in listdir(centerline_folder) if isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
 
-    temp_location = []
-    cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % XS_files[0])
-    for row in cursor:
-        temp_location.append(int(row.getValue('LOCATION')))
-    temp_location.sort()
-    spacing = int(temp_location[1] - temp_location[0])
-    print('XS spacing is %sft...' % spacing)
-
+    spacing = find_xs_spacing(detrend_folder)
     centerline_nums = find_centerline_nums(detrend_folder)
     min_num = min(centerline_nums)
 
@@ -324,22 +345,16 @@ def key_zs_gcs(detrend_folder, wetted_folder, aligned_csv_folder, key_zs=[], cli
     width_poly_folder = detrend_folder + '\\analysis_shapefiles'
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
+
+    del_files = []
     centerline_nums = find_centerline_nums(detrend_folder)
     xs_lengths = find_xs_length(detrend_folder, centerline_nums)
+    spacing = find_xs_spacing(detrend_folder)
 
     if csv_loc == '':
         aligned_csv_loc = aligned_csv_folder + '\\all_stages_table.csv'  # aligned csv. LETS MAKE A KEY_Z_csv with only aligned key zs. Can re-align for clip poly. We can make a function to do this
     else:
         aligned_csv_loc = csv_loc
-
-    del_files = []
-
-    xs_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
-    if xs_list[0][-8] == '_':
-        spacing = int(xs_list[0][-7])
-    elif xs_list[0][-9] == '_':
-        spacing = int(xs_list[0][-8:-6])
-    print('XS spacing is %sft...' % spacing)
 
     for z in key_zs:
         z_str = float_keyz_format(z)
@@ -423,7 +438,9 @@ def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_cs
     else:
         result = pd.read_csv(in_csv)
 
-    result.sort_values('loc_1ft', inplace=True)
+    detrend_folder, path = os.path.split(in_folder)
+    centerline_nums = find_centerline_nums(detrend_folder)
+    result.sort_values('loc_%sft' % min(centerline_nums), inplace=True)
 
     if len(key_zs) == 0:
         col_row_heads = [('%sft' % f) for f in range(1, max_stage + 1)]
@@ -918,7 +935,7 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
         data_csv = gcs_folder + '\\%sft_WD_analysis_table.csv' % z_str
         data_df = pd.read_csv(data_csv)
         data_df.sort_values(by=['dist_down'], inplace=True)
-        spacing = data_df.iloc[1]['dist_down'] - data_df.iloc[0]['dist_down']
+        spacing = int(data_df.iloc[1]['dist_down'] - data_df.iloc[0]['dist_down'])
 
         for count, field in enumerate(fields):
             row = base_row + count + 1
