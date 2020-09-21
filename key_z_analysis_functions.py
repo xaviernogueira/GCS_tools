@@ -241,7 +241,7 @@ def prep_locations(detrend_folder):
     keep_headers = [i for i in headers if i[:3] == 'loc']
 
     out_aligned_df = aligned_df.loc[:, keep_headers]
-    out_aligned_df.sort_values(by=['loc_%sft' % min(centerline_nums)], in_place=True)
+    out_aligned_df.sort_values(by=['loc_%sft' % min(centerline_nums)], inplace=True)
     out_aligned_df.to_csv(aligned_csv)
 
     print('Deleting files: %s' % del_files)
