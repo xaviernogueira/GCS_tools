@@ -18,6 +18,7 @@ import gcs_generating_functions
 import classify_landforms_GUI
 import DEM_detrending_functions
 
+
 def find_centerline_nums(detrend_folder):
     '''This function takes a detrend folder location for a given reach, and using string splicing to find the used centerline
     stage numbers. A list of stage numbers from smallest to largest is returned'''
@@ -36,6 +37,7 @@ def find_centerline_nums(detrend_folder):
     centerline_nums.sort()
 
     return centerline_nums
+
 
 def find_xs_length(detrend_folder, centerline_nums):
     """This function takes a detrend folder location for a given reacg, as well as a list containing centerline_nums, and by using
@@ -63,8 +65,9 @@ def find_xs_length(detrend_folder, centerline_nums):
 
     return xs_lengths
 
+
 def find_xs_spacing(detrend_folder):
-    """"This function takes the detrended folder and centerline_nums (optional)""""
+    """This function takes the detrended folder and centerline_nums (optional)"""
     centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
 
     xs_files = [i for i in listdir(centerline_folder) if
@@ -89,6 +92,7 @@ def find_xs_spacing(detrend_folder):
     else:
         print('XS shapefile name spacing (from string splicing) is not equal to spacing found via arcpy Search Cursor.')
         return spacing2
+
 
 def loc_stage_finder(stage, centerlines_nums):
     '''Useful function to find the centerline associated with a given stage and list of used stage centerline numbers'''
@@ -176,31 +180,33 @@ def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
         file_functions.delete_gis_files(file)
 
 
-def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GET IT WORKING WELL
-    '''This function takes a reach and creates a new csv with aligned'''
+def prep_locations(detrend_folder):
+    '''This function takes a reach and creates a new csv with aligned location identifiers using a Thiessen Polygon methodology.
+    Returns aligned_locations.csv in the \\landform_analysis sub-folder. This csv can be used to align any data field for any key z or stage range.'''
     arcpy.env.overwriteOutput = True
-
-    detrended_raster = detrend_folder + "\\ras_detren.tif"
-    landform_folder = detrend_folder + '\\landform_analysis'  # Make directory for landform analysis xl files and centerline adjusted GCS tables
-    centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
     del_files = []
+
+    detrended_raster = detrend_folder + '\\ras_detren.tif'
+    landform_folder = detrend_folder + '\\landform_analysis'
+    centerline_folder = detrend_folder + "\\analysis_centerline_and_XS"
+
+    if not os.path.exists(landform_folder):
+        os.makedirs(landform_folder)
+
     centerline_nums = find_centerline_nums(detrend_folder)
     spacing = find_xs_spacing(detrend_folder)
 
-    for num in centerline_nums:   # JUST COPIED AND PASTED COME BACK AND FIX
+    for num in centerline_nums:
         line_loc = ('%s\\stage_centerline_%sft_DS.shp' % (centerline_folder, num))
-        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5,
-                                                                           stage=[])
+        station_lines = create_station_lines.create_station_lines_function(line_loc, spacing=spacing, xs_length=5, stage=[])
         station_lines = centerline_folder + ('\\stage_centerline_%sft_DS_XS_%sx5ft.shp' % (num, spacing))
         del_files.append(station_lines)
 
         station_points = arcpy.Intersect_analysis([station_lines, line_loc], out_feature_class=(
                     centerline_folder + "\\station_points_%sft.shp" % num), join_attributes="ALL", output_type="POINT")
-    if not os.path.exists(landform_folder):
-        os.makedirs(landform_folder)
 
         if num != min(centerline_nums):
-            theis_loc = (centerline_folder + "\\thiessen_%sft.shp" % num)
+            theis_loc = centerline_folder + "\\thiessen_%sft.shp" % num
             arcpy.CreateThiessenPolygons_analysis(station_points, theis_loc, 'ALL')
             arcpy.AddField_management(theis_loc, ('loc_%sft' % num), 'SHORT')
             arcpy.CalculateField_management(theis_loc, ('loc_%sft' % num), expression='!LOCATION!', expression_type='PYTHON3')
@@ -210,7 +216,7 @@ def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GE
                     del_fields.remove(field)
                 except:
                     "Can't delete field: %s" % field
-            arcpy.DeleteField_management(theis_loc,del_fields)
+            arcpy.DeleteField_management(theis_loc, del_fields)
 
     max_count = 0
     for counter, num in enumerate(centerline_nums):
@@ -222,19 +228,27 @@ def prep_locations(detrend_folder, max_stage=20, skip=False):  # FIX THIS AND GE
         if counter >= max_count:
             max_count = counter
         if counter == 1:
-            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min(centerline_nums), theis_loc, out_feature_class=out_points, join_attributes='ALL', )
+            arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min(centerline_nums), theis_loc, out_feature_class=out_points, join_attributes='ALL')
         elif counter > 1:
-            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc, out_feature_class=out_points, join_attributes='ALL', )
+            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc, out_feature_class=out_points, join_attributes='ALL')
 
-    code_csv_loc = landform_folder + '\\all_stages_table.csv'
-    file_functions.tableToCSV(out_points, csv_filepath=code_csv_loc, fld_to_remove_override=['FID_statio', 'FID_thiess'])
-    print('Empty stages csv created @ %s' % code_csv_loc)
+    aligned_csv = landform_folder + '\\aligned_locations.csv'  # Creates a csv with the aligned locations for each centerline. Allows joins to add any data to this for analysis.
+    aligned_df = pd.read_csv(file_functions.tableToCSV(out_points, csv_filepath=aligned_csv, fld_to_remove_override=['FID_statio', 'FID_thiess']))
+    aligned_df.rename(columns={'LOCATION': 'loc_%sft' % min(centerline_nums)}, inplace=True)
+
+    headers = list(aligned_df.columns.values)
+    keep_headers = [i for i in headers if i[:3] == 'loc']
+
+    out_aligned_df = aligned_df.loc[:, keep_headers]
+    out_aligned_df.sort('loc_%sft' % min(centerline_nums), in_place=True)
+    out_aligned_df.to_csv(aligned_csv)
 
     print('Deleting files: %s' % del_files)
     for file in del_files:
         file_functions.delete_gis_files(file)
 
-    return code_csv_loc
+    print('Empty aligned csv created @ %s!' % aligned_csv)
+    return aligned_csv
 
 
 def thalweg_zs(detrend_folder, join_csv=''):
@@ -303,11 +317,15 @@ def thalweg_zs(detrend_folder, join_csv=''):
         file_functions.delete_gis_files(file)
 
 
-def align_csv(code_csv_loc, centerlines_nums, max_stage=20): # GET WORKING WELL WITH KEY Zs AND RE-DOABLE EASILY FOR UPDATING CLIP POLYS OR CENTERLINES
+def add_aligned_values(detrend_folder, aligned_csv_loc, key_zs=[], max_stage=20): # GET WORKING WELL WITH KEY Zs AND RE-DOABLE EASILY FOR UPDATING CLIP POLYS OR CENTERLINES
     '''IN: Aligned csv location, list of used centerline nums, key Zs (optional)
     RETURNS: An aligned csv containing all stages at 1ft increments is returned as a dataframe. '''
     print('Calculating cross-correlation matrix...')
+
+    #### GOAL HERE IS TO ALLOW A LIST OF FIELDS FOUND IN THE GCS CSVS TO BE JOINED TO A SPECIFIED ALIGNED FOLDER WHETHER OVER A RANGE OF FLOWS (output = all_stages_table.csv
+    ### OR ALTERATIVELY JUST key_zs_table.csv. IF THWG_Z field is present, it should solve for max_depth. Find and replace zonal_stats max_depth appraoch.
     landform_folder = out_folder + '\\landform_analysis'
+
 
     for stage in range(1, max_stage + 1):
         out_points_df = pd.read_csv(code_csv_loc, na_values=-9999)
@@ -327,7 +345,7 @@ def align_csv(code_csv_loc, centerlines_nums, max_stage=20): # GET WORKING WELL 
         result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
         result = result.replace(np.nan, 0)
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-        result.to_csv(code_csv_loc)
+        result.to_csv(aligned_csv_loc)
         print('Stage %sft added to the all stages csv' % stage)
 
     print('Stage alignment completed...')
@@ -1109,6 +1127,7 @@ for count, comid in enumerate(comid_list):
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
-    thalweg_zs(detrend_folder=out_folder, join_csv='')
+    #thalweg_zs(detrend_folder=out_folder, join_csv='') # try again iwth joining to the aligned_location.csv
+    prep_locations(detrend_folder=out_folder)
     #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
 

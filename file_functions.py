@@ -312,6 +312,7 @@ def delete_gis_files(file_loc):
     else:
         print('Cant identify file type, make sure input file to delete_gis_files(file_loc) includes .tif, .shp, or .dbf suffix')
 
+    counter = 0
     for suf in suf_list:
         file = prefix + suf
         if os.path.exists(file):
@@ -320,7 +321,8 @@ def delete_gis_files(file_loc):
             except:
                 print("Couldn't delete %s" % file)
         else:
-            print('%s does not exist' % file)
+            counter += 1
+    print('Couldnt find %s files sub-files. Not normally and issue but if overwrite errors raise this could be the culprit!')
 
 
 
