@@ -322,7 +322,8 @@ def delete_gis_files(file_loc):
                 print("Couldn't delete %s" % file)
         else:
             counter += 1
-    print('Couldnt find %s files sub-files. Not normally and issue but if overwrite errors raise this could be the culprit!')
+
+    print('Couldnt find %s files sub-files. Not normally and issue but if overwrite errors raise this could be the culprit!' % counter)
 
 
 
