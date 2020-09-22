@@ -8,7 +8,7 @@ import logging
 arcpy.env.overwriteOutput = True
 
 @err_info
-def create_station_lines_function(line_shp, spacing, xs_length, stage):
+def create_station_lines_function(line_shp, spacing, xs_length, stage=[]):
     '''
     Creates station lines perpendicular to line_shp with given longitudinal spacing and lateral XS length
     (lengths are in units of input line coordinate system)
@@ -16,6 +16,10 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
     
     # convert line to route feature
     # *** include coordinate priority so we automatically have stationing oriented DOWNSTREAM
+    if isinstance(stage, int):
+        stage = [stage]
+    elif isinstance(stage, float):
+        stage = [int(stage)]
     logging.info('Converting input line to route...')
     
     line_fields = [field.name for field in arcpy.ListFields(line_shp)]
@@ -70,6 +74,8 @@ def create_station_lines_function(line_shp, spacing, xs_length, stage):
         arcpy.Delete_management(delfile)
 
     logging.info('Finished. Output: %s' % out_name)
+    if len(stage) > 0:
+        print('Station lines for stage %sft made. Output: %s' % (stage[0], out_name))
     return out_name
 
 

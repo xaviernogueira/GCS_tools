@@ -45,7 +45,7 @@ def find_xs_length(detrend_folder, centerline_nums):
 
     centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
     full_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
-    full_list = [i for i in full_list if i[-8:] != 'x5ft.shp']
+    full_list = [i for i in full_list if i[-8:] != 'x5ft.shp' and i[-10:] != 'delete.shp']
     xs_lengths = []
 
     for num in centerline_nums:
@@ -57,7 +57,7 @@ def find_xs_length(detrend_folder, centerline_nums):
             xs_file = centerline_folder + '\\%s' % sub_list[0]
 
         else:
-            print('Multiple XS files for a given centerline num is causing an error to be raised. Please remove one.')
+            print('Multiple XS files (or none!) for a given centerline num is causing an error to be raised. Please remove one.')
 
         temp_list = []
         for row in arcpy.da.SearchCursor(xs_file, ["SHAPE@LENGTH"]):
@@ -361,18 +361,27 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
         in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), centerline_folder + '\\stage_centerline_%sft_DS.shp' % loc_stage]
 
         if clip_poly != '' and os.path.exists(clip_poly):  # Allows a new/updated clip file to clip all data inputs and outputs, and create new XS for the clipped centerlines
-
             for j, file in enumerate(in_list):
                 no_clip_name = file[:-4] + '_delete.shp'
-                arcpy.Rename_management(file, no_clip_name)
-                del_files.append(no_clip_name)
+                if os.path.exists(no_clip_name):
+                    file_functions.delete_gis_files(no_clip_name)
+                try:
+                    arcpy.Rename_management(file, no_clip_name)
+                    del_files.append(no_clip_name)
+                except:
+                    print('Error occured, could not rename %s file likely because it does not exist or is open' % file)
+
                 if j != 1:
                     arcpy.Clip_analysis(no_clip_name, clip_poly, out_feature_class=file)
 
-            create_station_lines.create_station_lines_function(line_shp=in_list[2], spacing=spacing, xs_length=xs_lengths[loc_stage_index], stage=loc_stage)
+            create_station_lines_function(in_list[2], spacing, xs_lengths[loc_stage_index], stage=loc_stage)
 
-        clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
-        width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
+        clipped_station_lines = detrend_folder + '\\analysis_shapefiles\\clipped_XS_lines_%sft.shp' % z_str
+        arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=clipped_station_lines)
+
+        width_poly_loc = width_poly_folder + '\\width_rectangles_%sft.shp' % z_str
+        arcpy.Buffer_analysis(clipped_station_lines, width_poly_loc, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
+        #arcpy.AddGeometryAttributes_management(width_poly_loc, 'AREA', Area_Unit='SQUARE_FEET_US')
         arcpy.AddField_management(width_poly_loc, "Width", field_type="FLOAT")
         expression = ("(float(!Shape.area!)) / %d" % spacing)
         arcpy.CalculateField_management(width_poly_loc, "Width", expression, "PYTHON3")
@@ -400,6 +409,8 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
     print('Deleting files: %s' % del_files)
     for file in del_files:
         file_functions.delete_gis_files(file)
+
+    print('GCS tables completed @ %s' % gcs_folder)
 
 
 def add_aligned_values(detrend_folder, aligned_csv_loc, key_zs=[], max_stage=20): # GET WORKING WELL WITH KEY Zs AND RE-DOABLE EASILY FOR UPDATING CLIP POLYS OR CENTERLINES
