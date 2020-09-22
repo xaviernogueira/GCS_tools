@@ -45,6 +45,7 @@ def find_xs_length(detrend_folder, centerline_nums):
 
     centerline_folder = detrend_folder + '\\analysis_centerline_and_XS'
     full_list = [f for f in listdir(centerline_folder) if (f[21:26] == 'DS_XS' or f[22:27] == 'DS_XS') and f[-4:] == '.shp']
+    full_list = [i for i in full_list if i[-8:] != 'x5ft.shp']
     xs_lengths = []
 
     for num in centerline_nums:
@@ -72,6 +73,7 @@ def find_xs_spacing(detrend_folder):
 
     xs_files = [i for i in listdir(centerline_folder) if
                 isfile(join(centerline_folder, i)) and i[-5:] == 't.shp' and len(i) > 32]
+    xs_files = [i for i in xs_files if i[-8:] != 'x5ft.shp']
 
     temp_location = []
     cursor = arcpy.SearchCursor(centerline_folder + '\\%s' % xs_files[0])
@@ -359,18 +361,15 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
         in_list = [wetted_folder + '\\wetted_poly_%sft.shp' % z_str, centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (loc_stage, spacing), centerline_folder + '\\stage_centerline_%sft_DS.shp' % loc_stage]
 
         if clip_poly != '' and os.path.exists(clip_poly):  # Allows a new/updated clip file to clip all data inputs and outputs, and create new XS for the clipped centerlines
-            temp_del = []
+
             for j, file in enumerate(in_list):
-                no_clip_name = file[:-4] + '_NOCLIP.shp'
+                no_clip_name = file[:-4] + '_delete.shp'
                 arcpy.Rename_management(file, no_clip_name)
-                temp_del.append(no_clip_name)
+                del_files.append(no_clip_name)
                 if j != 1:
                     arcpy.Clip_analysis(no_clip_name, clip_poly, out_feature_class=file)
 
             create_station_lines.create_station_lines_function(line_shp=in_list[2], spacing=spacing, xs_length=xs_lengths[loc_stage_index], stage=loc_stage)
-
-            for i in temp_del:
-                file_functions.delete_gis_files(i)
 
         clipped_XS_loc = arcpy.Clip_analysis(in_list[1], in_list[0], out_feature_class=width_poly_folder + '\\clipped_station_lines_%sft.shp' % z_str)
         width_poly_loc = arcpy.Buffer_analysis(clipped_XS_loc, width_poly_folder + '\\width_rectangles_%sft.shp' % z_str, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
@@ -1149,6 +1148,7 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
     # # try again iwth joining to the aligned_location.csv
+    #find_xs_length(detrend_folder=out_folder, centerline_nums=find_centerline_nums(out_folder))
     key_zs_gcs(detrend_folder=out_folder, key_zs=[], clip_poly=channel_clip_poly, max_stage=20)
     #aligned_file = prep_locations(detrend_folder=out_folder)
     #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
