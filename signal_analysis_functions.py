@@ -90,7 +90,7 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
     print('PSD plots created!')
 
 
-def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], in_csv=''):
+def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv=''):
     '''This function plots key z signals for the given fields, and the cross correlation between each combination of two signals.
     INPUTS: Folder containing aligned all_stages_table.csv. out_folder is where the plot is saved.
     key_zs can be float or int. If in_csv is overridden to equal a csv location, a csv not part of the documented file structure is used.'''
@@ -166,7 +166,7 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Z
     print('Cross-Correlation plots finished!')
 
 
-def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs'], n=0, in_csv='', by_power=False):
+def fourier_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], n=0, in_csv='', by_power=False):
     '''INPUTS:
         N (0 default, accepts int or list. Refers to the # of hamronic components included in the analysis,
         Set the parameter N=list(range(1, N)) for a incrementing range. N=0 does a normal fft and ifft.
@@ -210,7 +210,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
-        if value == 'Ws*Zs':
+        if value == 'W_s_Z_s':
             value_for_fig = 'WsZs'
         else:
             value_for_fig = value
@@ -318,7 +318,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['Ws*Zs', 'Ws', 'Zs']
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
-def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'Ws', 'Zs'], threshold=0, in_csv='', by_power=False):
+def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s_Z_s', 'W_s', 'Z_s'], threshold=0, in_csv='', by_power=False):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
     INPUTS: in_folder containing all_stages_table.csv containing data for each selected key z. out_folder to save fig.
     key_zs can be either float or int.
@@ -356,16 +356,16 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['Ws*Zs', 'W
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
 
         if by_power == False:
-            if value != 'Ws*Zs':
+            if value != 'W_s_Z_s':
                 fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
             else:
-                value_for_fig = 'WsZs'
+                value_for_fig = 'W_s_Z_s'
                 fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value_for_fig
         if by_power == True:
-            if value != 'Ws*Zs':
+            if value != 'W_s_Z_s':
                 fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value
             else:
-                value_for_fig = 'WsZs'
+                value_for_fig = 'W_s_Z_s'
                 fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value_for_fig
 
         ax[len(comb)-1].set_xlabel('# of harmonic terms')

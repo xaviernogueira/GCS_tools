@@ -49,15 +49,10 @@ def find_xs_length(detrend_folder, centerline_nums):
     xs_lengths = []
 
     for num in centerline_nums:
-        if num < 10:
-            sub_list = [i for i in full_list if int(i[17]) == int(num)]
+        if os.path.exists(centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (num, find_xs_spacing(detrend_folder))):
+            xs_file = centerline_folder + '\\stage_centerline_%sft_DS_XS_%sft.shp' % (num, find_xs_spacing(detrend_folder))
         else:
-            sub_list = [i for i in full_list if int(i[17:19]) == int(num)]
-        if len(sub_list) == 1:
-            xs_file = centerline_folder + '\\%s' % sub_list[0]
-
-        else:
-            print('Multiple XS files (or none!) for a given centerline num is causing an error to be raised. Please remove one.')
+            print('Cant find XS file, make sure formatting is: stage_centerline_[CENTERLINE_NUM]ft_DS_XS_[XS SPACING]ft.shp')
 
         temp_list = []
         for row in arcpy.da.SearchCursor(xs_file, ["SHAPE@LENGTH"]):
@@ -311,6 +306,8 @@ def thalweg_zs(detrend_folder, join_csv=''):
     out_df[~out_df.index.duplicated(keep='first')]
 
     print(out_df)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
 
     if join_csv == '':
         print('Thalweg Z values stored in returned data frame')
@@ -323,9 +320,6 @@ def thalweg_zs(detrend_folder, join_csv=''):
         result_df.to_csv(join_csv)
         print('Thalweg z values joined to %s' % join_csv)
         return join_csv
-
-    for file in del_files:
-        file_functions.delete_gis_files(file)
 
 
 
@@ -412,74 +406,55 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
     print('GCS tables completed @ %s' % gcs_folder)
 
 
-def add_aligned_values(in_folder, join_csv, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'code', 'thwg_depth'], max_stage=20):
+def add_aligned_values(in_folder, join_csv, key_zs=[], fields=['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s', 'code'], max_stage=20):
     """IN: In_folder containing GCS tables for all input stages (key zs or 0-max stage range).
     join_csv is the centerline aligned csv created in prep_locations() functions, and is where all added values are joined to.
     key_zs parameter must be a list containing int or float representing Zs with data to join to the join_csv.
-    fields is set to a default that joins all relevent analysis values. This can be optionally modified.
+    fields is set to a default that joins all relevent analysis values. This can be optionally modified, but 'dist_down can NOT be removed.
     If thwg_depth is included in the fields list (default), but thalweg_z() function has not been run, it will be ran first within this function.
     max_stage parameter (default=20) is only relevent if no key_zs are listed, and is the max stage with values to be joined (1ft increments)
 
     WARNING: Re-running this function with the same input stages may cause issues in plotting functions later."""
     print('Aligning values across stages...')
 
+    detrend_folder = os.path.dirname(os.path.realpath(in_folder))
+    centerlines_nums = find_centerline_nums(detrend_folder)
+    join_df = pd.read_csv(join_csv)
 
     if len(key_zs) == 0 and max_stage != 0:  # Controls what range or list of stage values will be used to create gcs csvs
         key_zs = [i for i in range(0, max_stage+1)]
 
-    if 'thwg_depth' in fields:
-        ##### CHECK TO SEE IF THWG_Z is in the join_csv
-        print('Calculating thalweg water depth for all stages...')
-        thwg_csv =
+    if 'thwg_z' in list(join_df.columns.values):
+        print('Thalweg Z values already present, thalweg depth will be calculated...')
 
-    ############################# THIS IS COPY AND PASTED MAKE SURE IT WOKRS##################################################
-    j_loc_field = 'loc_%sft' % loc_stage  # PUT THIS IN ALIGNMENT FUNCTION
-    gcs_df = pd.read_csv(csv_loc)
-    aligned_df = pd.read_csv(aligned_csv_loc)
+    else:
+        print('Thalweg Z value NOT in join_csv, thalweg_z() function running first...')
+        thalweg_zs(detrend_folder=detrend_folder, join_csv=join_csv)
 
-    temp_df_mini = gcs_df.loc[:, ['dist_down', 'code', 'W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s']]
-    temp_df_mini.rename(
-        {'dist_down': j_loc_field, 'code': ('code_%sft' % z_str), 'W': ('W_%sft' % z_str), 'Z': ('Z_%sft' % z_str),
-         'W_s': ('Ws_%sft' % z_str), 'Z_s': ('Zs_%sft' % z_str), 'W_s_Z_s': ('Ws*Zs_%sft' % z_str)}, axis=1,
-        inplace=True)
-    temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
-    result = aligned_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
-    result = result.replace(np.nan, 0)
-    result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-    result['Dz_%sft' % z_str] = float(z) - result['thwg_z']  # Calculates water depth at least-cost thalweg
+    for z in key_zs:
+        join_df = pd.read_csv(join_csv)
+        z_str = float_keyz_format(z)
+        join_stage = loc_stage_finder(z, centerlines_nums)[0]
+        join_field = 'loc_%sft' % join_stage
+        gcs_df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
 
-    result.to_csv(aligned_csv_loc)
-
-    print('%sft stage GCS completed and merged to @ %s' % (z, aligned_csv_loc))
-
-
-
-
-
-    for stage in range(1, max_stage + 1):
-        out_points_df = pd.read_csv(code_csv_loc, na_values=-9999)
-        out_points_df.sort_values(by=['loc_%sft' % centerlines_nums[0]], inplace=True)
-
-        gcs_csv = out_folder + ('\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % int(stage))
-
-        loc_stage = loc_stage_finder(stage, centerlines_nums)[0]
-        j_loc_field = 'loc_%sft' % loc_stage
-
-        temp_df = pd.read_csv(gcs_csv)
-        temp_df.sort_values(by=['dist_down'], inplace=True)
-        temp_df_mini = temp_df.loc[:, ['dist_down', 'code', 'W', 'W_s', 'Z_s']]
-        temp_df_mini.rename({'dist_down': j_loc_field, 'code': ('code_%sft' % stage), 'W': ('W_%sft' % stage),  # TAKES A DICTIONARY INPUT SO WE CAN MAKE A DICTIONARY BEFORE WITH THE NEEDED HEADERS
-                             'W_s': ('Ws_%sft' % stage), 'Z_s': ('Zs_%sft' % stage), }, axis=1, inplace=True)
-        temp_df_mini.sort_values(by=[j_loc_field], inplace=True)
-        result = out_points_df.merge(temp_df_mini, left_on=j_loc_field, right_on=j_loc_field, how='left')
-        result = result.replace(np.nan, 0)
+        temp_df_mini = gcs_df.loc[:, fields[:-1]]
+        rename_dict = {}
+        for field in fields[:-1]:
+            if field == 'dist_down' or field == 'LOCATION':
+                rename_dict[field] = join_field
+            else:
+                rename_dict[field] = field + '_%sft' % z_str
+        temp_df_mini.rename(rename_dict, axis=1, inplace=True)
+        temp_df_mini.sort_values(by=[join_field], inplace=True)
+        result = join_df.merge(temp_df_mini, left_on=join_field, right_on=join_field, how='left')
         result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
-        result.to_csv(aligned_csv_loc)
-        print('Stage %sft added to the all stages csv' % stage)
+        result['Depth_%sft' % z_str] = float(z) - result['thwg_z']  # Calculates water depth at least-cost thalweg
+        result.to_csv(join_csv)
+        print('%sft stage GCS completed and merged to @ %s' % (z, join_csv))
 
-    print('Stage alignment completed...')
 
-    return result
+    return join_csv
 
 def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_csv=''): 
     ''' This function plots a NxN cross correlation matrix comparing each input standardized width signal.
@@ -1018,7 +993,7 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
     wb.close()
     print('Wald-Wolfowitz runs test for values below/above median finished for all inputs. Located @ %s' % xl_loc)
 
-def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confine_table='', conf_header='', slope_table='', slope_header='', in_csv=''):
+def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confine_table='', conf_header='', slope_table='', slope_header='', in_csv=''):
     """This function uses a South Coast channel classification decision tree methodology (92% accuracy) to classify
     geomorphic channel type.
     comids (int or list orf ints) can be one comid or many comids in a list. This defines which reaches will be classified.
@@ -1040,6 +1015,7 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
     CV_d_list= []
     slopes_list = []
     classes_list = []
+
 
     if len(confinements) != 0:
         confinement_list = confinements
@@ -1071,12 +1047,13 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
             print('Invalid slope_table or slope_header parameter. ')
 
     for count, comid in enumerate(comid_list):
+        bf_z_str = float_keyz_format(bf_z)  # BF Z string formatting for column pulling
+
         if in_csv != '' and len(comid_list) == 1:
             bf_csv = in_csv
             print('Using optionally specified csv instead of file strucure: %s' % in_csv)
         else:
-            z_str = float_keyz_format(bf_zs[count])
-            bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (comid, z_str)
+            bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % comid
         if os.path.exists(bf_csv):
             df = pd.read_csv(bf_csv)
         else:
@@ -1103,11 +1080,10 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
         slopes_list.append(mean_slope)
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
-        df['depth'] = float(bf_zs[count]) - df['Max_depth']  # Change to Z if we want average depth, but I think max depth makes more sense
-        df['w_to_d'] = df['W'] / df['depth']
+        df['w_to_d'] = df['W_%sft' % bf_z_str] / df['Depth_%sft' % bf_z_str]
         mean_w_to_d = np.mean(df.loc[:, 'w_to_d'].to_numpy())
         w_to_d_list.append(mean_w_to_d)
-        cv_d = variation(df.loc[:, 'depth'].to_numpy())
+        cv_d = variation(df.loc[:, 'Depth_%sft' % bf_z_str].to_numpy())
         CV_d_list.append(cv_d)
 
         print('Classifying comid %s using decision tree...' % comid)
@@ -1148,10 +1124,8 @@ def cart_sc_classifier(comids, bf_zs, in_folder, out_csv, confinements=[], confi
 
 ###### INPUTS ######
 comid_list = [17609707]
-# [17569535,22514218,17607553,17609707,17609017,17610661,17586504,17610257,17573013,17573045,17586810,17609015,17585738,17586610,17610235,17595173,17607455,17586760,17563722,17594703,17609699,17570395,17585756,17611423,17609755,17569841,17563602,17610541,17610721,17610671]
 SCO_list = [1]
-# [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
-
+key_zs = [0.5, 2.0, 5.0]
 
 key_z_final_analysis = False
 for count, comid in enumerate(comid_list):
@@ -1162,7 +1136,7 @@ for count, comid in enumerate(comid_list):
     process_footprint = direct + '\\las_footprint.shp'
     table_location = out_folder + "\\gcs_ready_tables"
     channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
-    aligned_csv_loc = out_folder + '\\landform_analysis\\all_stages_table.csv'
+    aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
     landform_folder = out_folder + '\\landform_analysis'
     confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
     key_z_dict = {}
@@ -1170,8 +1144,9 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
     # # try again iwth joining to the aligned_location.csv
     #find_xs_length(detrend_folder=out_folder, centerline_nums=find_centerline_nums(out_folder))
-    key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2.0, 5.0], clip_poly='', max_stage=20)
     #aligned_file = prep_locations(detrend_folder=out_folder)
     #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-    #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
+    #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly='', max_stage=20)
+    #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
+    cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
 

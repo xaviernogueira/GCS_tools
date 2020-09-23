@@ -518,8 +518,8 @@ detrend_or_diagnostic=False  # False plots graphs to help make breakpoint decisi
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17570395
-SCO_number = 4
+comid = 17607553
+SCO_number = 1
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx'
