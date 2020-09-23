@@ -1081,11 +1081,12 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
         df['w_to_d'] = df['W_%sft' % bf_z_str] / df['Depth_%sft' % bf_z_str]
-        mean_w_to_d = np.mean(df.loc[:, 'w_to_d'].to_numpy())
+        mean_w_to_d = np.nanmean(df.loc[:, 'w_to_d'].to_numpy())
         w_to_d_list.append(mean_w_to_d)
         cv_d = variation(df.loc[:, 'Depth_%sft' % bf_z_str].to_numpy())
         CV_d_list.append(cv_d)
 
+        print('w/d is %s' % mean_w_to_d)
         print('Classifying comid %s using decision tree...' % comid)
         if cv_d < 0.3:
             if mean_w_to_d >= 23:
@@ -1123,9 +1124,9 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17609707]
-SCO_list = [1]
-key_zs = [0.5, 2.0, 5.0]
+comid_list = [17585738]
+SCO_list = [3]
+key_zs = [0.2, 0.9, 3.7]
 
 key_z_final_analysis = False
 for count, comid in enumerate(comid_list):
@@ -1142,11 +1143,9 @@ for count, comid in enumerate(comid_list):
     key_z_dict = {}
 
     arcpy.env.overwriteOutput = True
-    # # try again iwth joining to the aligned_location.csv
-    #find_xs_length(detrend_folder=out_folder, centerline_nums=find_centerline_nums(out_folder))
+
+    #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
     #aligned_file = prep_locations(detrend_folder=out_folder)
     #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-    #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly='', max_stage=20)
     #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
     cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
-

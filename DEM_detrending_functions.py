@@ -518,8 +518,8 @@ detrend_or_diagnostic=False  # False plots graphs to help make breakpoint decisi
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17607553
-SCO_number = 1
+comid = 17585738
+SCO_number = 3
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx'
@@ -527,13 +527,14 @@ centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
 process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND'
+#centerline = detrend_workplace + '\\analysis_centerline_and_XS\stage_centerline_2ft_DS.shp'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = [80,1100,1840,1950,2975,3500,3590,3900]
+breakpoints = []
 transform_value = (0.0)  # Leave at 0.0
-xlimits=[0, 0]  # [xmin, xmax] default is [0, 0]
-ylimits=[700, 800]  # [ymin, ymax] default is [0, 0]
+xlimits=[0, 1600]  # [xmin, xmax] default is [0, 0]
+ylimits=[80, 0]  # [ymin, ymax] default is [0, 0]
 chosen_fit_index = []  # Allows one piecewise segment to be used for the whole DEM. Helpful with poor-centerline quality. Leave empty to have all included
 
 if process_on == True:
