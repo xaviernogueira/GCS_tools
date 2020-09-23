@@ -381,7 +381,6 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
 
         width_poly_loc = width_poly_folder + '\\width_rectangles_%sft.shp' % z_str
         arcpy.Buffer_analysis(clipped_station_lines, width_poly_loc, float(spacing / 2), line_side='FULL', line_end_type='FLAT')
-        #arcpy.AddGeometryAttributes_management(width_poly_loc, 'AREA', Area_Unit='SQUARE_FEET_US')
         arcpy.AddField_management(width_poly_loc, "Width", field_type="FLOAT")
         expression = ("(float(!Shape.area!)) / %d" % spacing)
         arcpy.CalculateField_management(width_poly_loc, "Width", expression, "PYTHON3")
@@ -413,14 +412,25 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
     print('GCS tables completed @ %s' % gcs_folder)
 
 
-def add_aligned_values(detrend_folder, aligned_csv_loc, key_zs=[], max_stage=20): # GET WORKING WELL WITH KEY Zs AND RE-DOABLE EASILY FOR UPDATING CLIP POLYS OR CENTERLINES
-    '''IN: Aligned csv location, list of used centerline nums, key Zs (optional)
-    RETURNS: An aligned csv containing all stages at 1ft increments is returned as a dataframe. '''
-    print('Calculating cross-correlation matrix...')
+def add_aligned_values(in_folder, join_csv, key_zs=[], fields=['W', 'W_s', 'Z', 'Z_s', 'code', 'thwg_depth'], max_stage=20):
+    """IN: In_folder containing GCS tables for all input stages (key zs or 0-max stage range).
+    join_csv is the centerline aligned csv created in prep_locations() functions, and is where all added values are joined to.
+    key_zs parameter must be a list containing int or float representing Zs with data to join to the join_csv.
+    fields is set to a default that joins all relevent analysis values. This can be optionally modified.
+    If thwg_depth is included in the fields list (default), but thalweg_z() function has not been run, it will be ran first within this function.
+    max_stage parameter (default=20) is only relevent if no key_zs are listed, and is the max stage with values to be joined (1ft increments)
 
-    #### GOAL HERE IS TO ALLOW A LIST OF FIELDS FOUND IN THE GCS CSVS TO BE JOINED TO A SPECIFIED ALIGNED FOLDER WHETHER OVER A RANGE OF FLOWS (output = all_stages_table.csv
-    ### OR ALTERATIVELY JUST key_zs_table.csv. IF THWG_Z field is present, it should solve for max_depth. Find and replace zonal_stats max_depth appraoch.
-    landform_folder = out_folder + '\\landform_analysis'
+    WARNING: Re-running this function with the same input stages may cause issues in plotting functions later."""
+    print('Aligning values across stages...')
+
+
+    if len(key_zs) == 0 and max_stage != 0:  # Controls what range or list of stage values will be used to create gcs csvs
+        key_zs = [i for i in range(0, max_stage+1)]
+
+    if 'thwg_depth' in fields:
+        ##### CHECK TO SEE IF THWG_Z is in the join_csv
+        print('Calculating thalweg water depth for all stages...')
+        thwg_csv =
 
     ############################# THIS IS COPY AND PASTED MAKE SURE IT WOKRS##################################################
     j_loc_field = 'loc_%sft' % loc_stage  # PUT THIS IN ALIGNMENT FUNCTION
@@ -1160,7 +1170,7 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
     # # try again iwth joining to the aligned_location.csv
     #find_xs_length(detrend_folder=out_folder, centerline_nums=find_centerline_nums(out_folder))
-    key_zs_gcs(detrend_folder=out_folder, key_zs=[], clip_poly=channel_clip_poly, max_stage=20)
+    key_zs_gcs(detrend_folder=out_folder, key_zs=[0.5, 2.0, 5.0], clip_poly='', max_stage=20)
     #aligned_file = prep_locations(detrend_folder=out_folder)
     #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
     #cart_sc_classifier(comids=comid_list, bf_zs=[2.0], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confinements=[], confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv='')
