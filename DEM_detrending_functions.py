@@ -518,8 +518,8 @@ detrend_or_diagnostic=False  # False plots graphs to help make breakpoint decisi
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17585738
-SCO_number = 3
+comid = 17609699
+SCO_number = 4
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
 xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx'
@@ -527,7 +527,7 @@ centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
 process_footprint = direct + '\\las_footprint.shp'
 detrend_workplace = direct + '\\LINEAR_DETREND'
-#centerline = detrend_workplace + '\\analysis_centerline_and_XS\stage_centerline_2ft_DS.shp'
+#centerline = detrend_workplace + '\\analysis_centerline_and_XS\stage_centerline_1ft_DS.shp'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 

@@ -90,7 +90,7 @@ def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', '
     print('PSD plots created!')
 
 
-def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv=''):
+def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv=''):
     '''This function plots key z signals for the given fields, and the cross correlation between each combination of two signals.
     INPUTS: Folder containing aligned all_stages_table.csv. out_folder is where the plot is saved.
     key_zs can be float or int. If in_csv is overridden to equal a csv location, a csv not part of the documented file structure is used.'''
@@ -102,10 +102,11 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s',
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
 
     aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
-    aligned_df.sort_values('loc_1ft', inplace=True)
-    locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+    aligned_df.sort_values(join_field, inplace=True)
+    locs = aligned_df.loc[:, [join_field]].squeeze()
     spacing = locs[1] - locs[2]
 
     for value in value_dict.keys():
@@ -166,7 +167,7 @@ def cross_corr_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s',
     print('Cross-Correlation plots finished!')
 
 
-def fourier_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], n=0, in_csv='', by_power=False):
+def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=0, in_csv='', by_power=False):
     '''INPUTS:
         N (0 default, accepts int or list. Refers to the # of hamronic components included in the analysis,
         Set the parameter N=list(range(1, N)) for a incrementing range. N=0 does a normal fft and ifft.
@@ -181,6 +182,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
 
     wb = xl.Workbook()
     lab = n
@@ -200,13 +202,13 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z
             ns.append(i)
 
     if in_csv == '':
-        aligned_csv = in_folder + '\\all_stages_table.csv'
+        aligned_csv = in_folder + '\\aligned_locations.csv'
     else:
         aligned_csv = in_csv
 
     aligned_df = pd.read_csv(aligned_csv)
-    aligned_df.sort_values('loc_1ft', inplace=True)
-    locs = aligned_df.loc[:, ['loc_1ft']].squeeze()
+    aligned_df.sort_values(join_field, inplace=True)
+    locs = aligned_df.loc[:, [join_field]].squeeze()
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
@@ -318,7 +320,7 @@ def fourier_analysis(in_folder, out_folder, key_zs, fields=['W_s_Z_s', 'W_s', 'Z
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
-def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s_Z_s', 'W_s', 'Z_s'], threshold=0, in_csv='', by_power=False):
+def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fields=['W_s_Z_s', 'W_s', 'Z_s'], threshold=0, in_csv='', by_power=False):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
     INPUTS: in_folder containing all_stages_table.csv containing data for each selected key z. out_folder to save fig.
     key_zs can be either float or int.
@@ -335,6 +337,7 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s_Z_s', 
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
 
     if in_csv == '':
         aligned_csv = in_folder + '\\all_stages_table.csv'
@@ -342,7 +345,7 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s_Z_s', 
         aligned_csv = in_csv
 
     aligned_df = pd.read_csv(aligned_csv)
-    aligned_df.sort_values('loc_1ft', inplace=True)
+    aligned_df.sort_values(join_field, inplace=True)
 
     for value in value_dict.keys():
         for z in key_zs:
@@ -426,4 +429,25 @@ def harmonic_r_square_plot(in_folder, out_folder, key_zs=[], fields=['W_s_Z_s', 
     plt.close('all')
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
+comid_list = [17609707]
+SCO_list = [1]
+key_zs = [0.5, 2.0, 5.0]
 
+key_z_final_analysis = False
+for count, comid in enumerate(comid_list):
+    SCO_number = SCO_list[count]
+    sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
+    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+    out_folder = direct + r'\LINEAR_DETREND'
+    process_footprint = direct + '\\las_footprint.shp'
+    table_location = out_folder + "\\gcs_ready_tables"
+    channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
+    aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
+    landform_folder = out_folder + '\\landform_analysis'
+    confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
+    key_z_dict = {}
+
+    arcpy.env.overwriteOutput = True
+
+
+fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=0, in_csv='', by_power=False)
