@@ -212,7 +212,6 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
-        ifft_df = pd.DataFrame()
         if value == 'W_s_Z_s':
             value_for_fig = 'WsZs'
         else:
@@ -246,6 +245,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
         ymax = 0
         col = 1
         for count, signal in enumerate(signals):
+            ifft_df = pd.DataFrame()
             fft = np.fft.fft(signal)
             if n == 0:
                 ifft = np.fft.ifft(fft).real
@@ -257,15 +257,15 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                 cos_coefs = []
                 sin_coefs = []
                 for index, i in enumerate(fft):
-                    temp_fft = np.fft.fft(signal)
-                    np.put(fft, range(index + 2, len(fft)), 0.0)
-                    temp_ifft = np.fft.ifft(temp_fft).real
-                    ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
-                    if index == (n - 1):
-                        ifft_df['all_%s_harmonics' % n] = ifft
                     if i != 0.0:
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
+                        temp_fft = np.fft.fft(signal)
+                        np.put(fft, range(index + 2, len(fft)), 0.0)
+                        temp_ifft = np.fft.ifft(temp_fft).real
+                        ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
+                        if index == (n - 1):
+                            ifft_df['all_%s_harmonics' % n] = ifft
 
             elif n != 0 and by_power == True:
                 fft = np.fft.fft(signal)
@@ -276,18 +276,20 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                 ifft = np.fft.ifft(fft).real
                 cos_coefs = []
                 sin_coefs = []
-                for i in fft:
-                    temp_fft = np.fft.fft(signal)
-                    np.put(fft, range(index + 2, len(fft)), 0.0)
-                    temp_ifft = np.fft.ifft(temp_fft).real
-                    ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
-                    if index == (n - 1):
-                        ifft_df['all_%s_harmonics' % n] = ifft
+                for index, i in enumerate(fft):
                     if i != 0.0:
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
+                        temp_fft = np.fft.fft(signal)
+                        np.put(fft, range(index + 2, len(fft)), 0.0)
+                        temp_ifft = np.fft.ifft(temp_fft).real
+                        ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
+                        if index == (n - 1):
+                            ifft_df['all_%s_harmonics' % n] = ifft
 
-            ifft_df.to_csv(out_folder + '\\%s_%sft_harmonic_series.csv' % (value_for_fig, z_str))
+                z = key_zs[count]
+                z_str = key_z_analysis_functions.float_keyz_format(z)
+                ifft_df.to_csv(out_folder + '\\%s_%sft_harmonic_series.csv' % (value_for_fig, z_str))
 
             for ind, coef in enumerate(cos_coefs):
                 row = ind + 2
