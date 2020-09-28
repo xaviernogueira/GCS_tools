@@ -104,7 +104,7 @@ def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['
     labels = ['Base flow', 'Bank full', 'Valley Fill']
     join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
-    aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
+    aligned_df = pd.read_csv(in_folder + '\\aligned_locations.csv')
     aligned_df.sort_values(join_field, inplace=True)
     locs = aligned_df.loc[:, [join_field]].squeeze()
     spacing = locs[1] - locs[2]
@@ -171,7 +171,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     '''INPUTS:
         N (0 default, accepts int or list. Refers to the # of hamronic components included in the analysis,
         Set the parameter N=list(range(1, N)) for a incrementing range. N=0 does a normal fft and ifft.
-        in_csv allows the aligned csv to be explicitly referenced if not 'all_stages_table.csv'
+        in_csv allows the aligned csv to be explicitly referenced if not 'aligned_locations.csv'
         If by_power == True (bool, False is default)and n != 0, the n highest power frequencies are plotted, else the n lowest frequencies are used.'''
 
     print('Calculating Pearsons correlation between signals and inverse-FFT plots...')
@@ -355,7 +355,7 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
     if in_csv == '':
-        aligned_csv = in_folder + '\\all_stages_table.csv'
+        aligned_csv = in_folder + '\\aligned_locations.csv'
     else:
         aligned_csv = in_csv
 
@@ -447,22 +447,23 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
 comid_list = [17609707]
 SCO_list = [1]
 key_zs = [0.5, 2.0, 5.0]
+signal_process = False
 
-key_z_final_analysis = False
-for count, comid in enumerate(comid_list):
-    SCO_number = SCO_list[count]
-    sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
-    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-    out_folder = direct + r'\LINEAR_DETREND'
-    process_footprint = direct + '\\las_footprint.shp'
-    table_location = out_folder + "\\gcs_ready_tables"
-    channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
-    aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
-    landform_folder = out_folder + '\\landform_analysis'
-    confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
-    key_z_dict = {}
+if signal_process==True:
+    for count, comid in enumerate(comid_list):
+        SCO_number = SCO_list[count]
+        sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+        out_folder = direct + r'\LINEAR_DETREND'
+        process_footprint = direct + '\\las_footprint.shp'
+        table_location = out_folder + "\\gcs_ready_tables"
+        channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
+        aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
+        landform_folder = out_folder + '\\landform_analysis'
+        confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
+        key_z_dict = {}
 
-    arcpy.env.overwriteOutput = True
+        arcpy.env.overwriteOutput = True
 
 
-fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
+    fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
