@@ -102,7 +102,7 @@ def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
-    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
     aligned_df = pd.read_csv(in_folder + '\\all_stages_table.csv')
     aligned_df.sort_values(join_field, inplace=True)
@@ -182,7 +182,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
-    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
     wb = xl.Workbook()
     lab = n
@@ -212,6 +212,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     spacing = locs[1] - locs[2]
 
     for i, value in enumerate(value_dict.keys()):
+        ifft_df = pd.DataFrame()
         if value == 'W_s_Z_s':
             value_for_fig = 'WsZs'
         else:
@@ -255,7 +256,13 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                 ifft = np.fft.ifft(fft).real
                 cos_coefs = []
                 sin_coefs = []
-                for i in fft:
+                for index, i in enumerate(fft):
+                    temp_fft = np.fft.fft(signal)
+                    np.put(fft, range(index + 2, len(fft)), 0.0)
+                    temp_ifft = np.fft.ifft(temp_fft).real
+                    ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
+                    if index == (n - 1):
+                        ifft_df['all_%s_harmonics' % n] = ifft
                     if i != 0.0:
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
@@ -270,16 +277,22 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                 cos_coefs = []
                 sin_coefs = []
                 for i in fft:
+                    temp_fft = np.fft.fft(signal)
+                    np.put(fft, range(index + 2, len(fft)), 0.0)
+                    temp_ifft = np.fft.ifft(temp_fft).real
+                    ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
+                    if index == (n - 1):
+                        ifft_df['all_%s_harmonics' % n] = ifft
                     if i != 0.0:
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
+
+            ifft_df.to_csv(out_folder + '\\%s_%sft_harmonic_series.csv' % (value_for_fig, z_str))
 
             for ind, coef in enumerate(cos_coefs):
                 row = ind + 2
                 ws.cell(row=row, column=col).value = coef
                 ws.cell(row=row, column=col + 1).value = sin_coefs[ind]
-                ws.column_dimensions[col].width = 15
-                ws.column_dimensions[col + 1].width = 15
             col += 2
 
             print('Cos coefficients for %s Z=%sft: %s' % (value, key_zs[count], cos_coefs))
@@ -337,7 +350,7 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
-    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums())
+    join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
     if in_csv == '':
         aligned_csv = in_folder + '\\all_stages_table.csv'
@@ -450,4 +463,4 @@ for count, comid in enumerate(comid_list):
     arcpy.env.overwriteOutput = True
 
 
-fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=0, in_csv='', by_power=False)
+fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)

@@ -1127,8 +1127,8 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 comid_list = [17609699]
 SCO_list = [4]
 key_zs = [0.5, 2.2, 5.6]
+process=False
 
-key_z_final_analysis = False
 for count, comid in enumerate(comid_list):
     SCO_number = SCO_list[count]
     sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
@@ -1144,8 +1144,9 @@ for count, comid in enumerate(comid_list):
 
     arcpy.env.overwriteOutput = True
 
-    key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
-    aligned_file = prep_locations(detrend_folder=out_folder)
-    thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-    add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-    cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+    if process==True:
+        key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
+        aligned_file = prep_locations(detrend_folder=out_folder)
+        thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
+        add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
+        cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
