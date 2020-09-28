@@ -252,7 +252,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
 
             elif n != 0 and by_power == False:
                 fft = np.fft.fft(signal)
-                np.put(fft, range(n + 1, len(fft)), 0.0)
+                np.put(fft, range(n, len(fft)), 0.0)
                 ifft = np.fft.ifft(fft).real
                 cos_coefs = []
                 sin_coefs = []
