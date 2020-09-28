@@ -261,7 +261,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
                         temp_fft = np.fft.fft(signal)
-                        np.put(fft, range(index + 2, len(fft)), 0.0)
+                        np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
                         temp_ifft = np.fft.ifft(temp_fft).real
                         ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
                         if index == (n - 1):
@@ -281,15 +281,15 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                         cos_coefs.append(i.real)
                         sin_coefs.append(i.imag)
                         temp_fft = np.fft.fft(signal)
-                        np.put(fft, range(index + 2, len(fft)), 0.0)
+                        np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
                         temp_ifft = np.fft.ifft(temp_fft).real
                         ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
                         if index == (n - 1):
                             ifft_df['all_%s_harmonics' % n] = ifft
 
-                z = key_zs[count]
-                z_str = key_z_analysis_functions.float_keyz_format(z)
-                ifft_df.to_csv(out_folder + '\\%s_%sft_harmonic_series.csv' % (value_for_fig, z_str))
+            z = key_zs[count]
+            z_str = key_z_analysis_functions.float_keyz_format(z)
+            ifft_df.to_csv(out_folder + '\\%s_%sft_harmonic_series.csv' % (value_for_fig, z_str))
 
             for ind, coef in enumerate(cos_coefs):
                 row = ind + 2
