@@ -513,12 +513,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on=False
-detrend_or_diagnostic=False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+process_on = False
+detrend_or_diagnostic = False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17609699
+comid = 17594703
+
 SCO_number = 4
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))

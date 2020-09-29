@@ -337,6 +337,10 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
     gcs_folder = detrend_folder + '\\gcs_ready_tables'
     detrended_DEM = detrend_folder + '\\ras_detren.tif'
 
+    for folder in [width_poly_folder, gcs_folder]:  # Make necessary folders that aren't made yet
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
     if wetted_folder == '':
         wetted_folder = detrend_folder + '\\wetted_polygons\\small_increments'
 
@@ -551,7 +555,7 @@ def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_st
         if not os.path.exists(clipped_wetted_folder):
             os.makedirs(clipped_wetted_folder)
 
-        wetted_polys = [f for f in listdir(in_folder + '\\wetted_polygons') if f[:26] == 'flood_stage_poly_dissolved' and f[-3:] == 'shp']
+        wetted_polys = [f for f in listdir(in_folder) if f[:26] == 'flood_stage_poly_dissolved' and f[-3:] == 'shp']
 
         print('Calculating wetted areas...')
         wetted_areas = [None]*len(wetted_polys)
@@ -1124,30 +1128,32 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17609699]
+comid_list = [17570395]
 SCO_list = [4]
-key_zs = [0.5, 2.2, 5.6]
-key_z_process=False
+key_zs = [0.2, 1.1, 5.0]
+key_z_process = True
 
 if key_z_process == True:
-for count, comid in enumerate(comid_list):
-    SCO_number = SCO_list[count]
-    sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
-    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-    out_folder = direct + r'\LINEAR_DETREND'
-    process_footprint = direct + '\\las_footprint.shp'
-    table_location = out_folder + "\\gcs_ready_tables"
-    channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
-    aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
-    landform_folder = out_folder + '\\landform_analysis'
-    confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
-    key_z_dict = {}
+    for count, comid in enumerate(comid_list):
+        SCO_number = SCO_list[count]
+        sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+        out_folder = direct + r'\LINEAR_DETREND'
+        process_footprint = direct + '\\las_footprint.shp'
+        table_location = out_folder + "\\gcs_ready_tables"
+        channel_clip_poly = out_folder + '\\raster_clip_poly.shp'
+        aligned_csv_loc = out_folder + '\\landform_analysis\\aligned_locations.csv'
+        landform_folder = out_folder + '\\landform_analysis'
+        confine_table = r'Z:\users\xavierrn\Manual classification files\South_200m.shp'
+        wetted_top_folder = out_folder + '\\wetted_polygons'
+        key_z_dict = {}
 
-    arcpy.env.overwriteOutput = True
+        arcpy.env.overwriteOutput = True
 
-
-    key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
-    aligned_file = prep_locations(detrend_folder=out_folder)
-    thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-    add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-    cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+        #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
+        #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
+        key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
+        aligned_file = prep_locations(detrend_folder=out_folder)
+        thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
+        add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
+        cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])

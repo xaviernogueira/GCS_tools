@@ -246,6 +246,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
         col = 1
         for count, signal in enumerate(signals):
             ifft_df = pd.DataFrame()
+            ifft_df['raw_series'] = signal
             fft = np.fft.fft(signal)
             if n == 0:
                 ifft = np.fft.ifft(fft).real
