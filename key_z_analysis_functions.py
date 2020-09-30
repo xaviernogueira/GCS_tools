@@ -1015,7 +1015,9 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
     else:
         print('Invalid comids parameter. Must be of ints or int.')
 
-    w_to_d_list = []  # Initiate lists to store reach values
+    bf_w_list = [] # Initiate lists to store reach values
+    bf_d_list = []
+    w_to_d_list = []
     CV_d_list= []
     slopes_list = []
     classes_list = []
@@ -1051,7 +1053,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
             print('Invalid slope_table or slope_header parameter. ')
 
     for count, comid in enumerate(comid_list):
-        bf_z_str = float_keyz_format(bf_z)  # BF Z string formatting for column pulling
+        if isinstance(bf_z, list):
+            bf_z_str = float_keyz_format(bf_z[count])  # BF Z string formatting for column pulling
+        else:
+            bf_z_str = float_keyz_format(bf_z)
 
         if in_csv != '' and len(comid_list) == 1:
             bf_csv = in_csv
@@ -1084,6 +1089,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
         slopes_list.append(mean_slope)
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
+        mean_bf_w = np.nanmean(df.loc[:, 'W_%sft' % bf_z_str].to_numpy())
+        bf_w_list.append(mean_bf_w)
+        mean_bf_d = np.nanmean(df.loc[:, 'Depth_%sft' % bf_z_str].to_numpy())
+        bf_d_list.append(mean_bf_d)
         df['w_to_d'] = df['W_%sft' % bf_z_str] / df['Depth_%sft' % bf_z_str]
         mean_w_to_d = np.nanmean(df.loc[:, 'w_to_d'].to_numpy())
         w_to_d_list.append(mean_w_to_d)
@@ -1112,15 +1121,17 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
         classes_list.append(sc_class)
 
     print('Making output classification csv...')
-    col_list = ['COMID', 'W_to_D', 'Confinement', 'CV_bf_depth', 'Slope', 'Class']
+    col_list = ['COMID', 'Mean_BF_W', 'Mean_BF_D', 'W_to_D', 'Confinement', 'CV_bf_depth', 'Slope', 'Class']
     class_df = pd.DataFrame(columns=col_list)
     class_df.set_index('COMID')
     class_df[col_list[0]] = np.array(comid_list)
-    class_df[col_list[1]] = np.array(w_to_d_list)
-    class_df[col_list[2]] = np.array(confinement_list)
-    class_df[col_list[3]] = np.array(CV_d_list)
-    class_df[col_list[4]] = np.array(slopes_list)
-    class_df[col_list[5]] = np.array(classes_list)
+    class_df[col_list[1]] = np.array(bf_w_list)
+    class_df[col_list[2]] = np.array(bf_d_list)
+    class_df[col_list[3]] = np.array(w_to_d_list)
+    class_df[col_list[4]] = np.array(confinement_list)
+    class_df[col_list[5]] = np.array(CV_d_list)
+    class_df[col_list[6]] = np.array(slopes_list)
+    class_df[col_list[7]] = np.array(classes_list)
 
 
     class_df.to_csv(out_csv)
