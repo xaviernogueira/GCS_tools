@@ -263,6 +263,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                         sin_coefs.append(i.imag)
                         temp_fft = np.fft.fft(signal)
                         np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
+                        np.put(temp_fft, range(0, index + 1), 0.0)
                         temp_ifft = np.fft.ifft(temp_fft).real
                         ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
                         if index == (n - 1):
@@ -283,6 +284,7 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
                         sin_coefs.append(i.imag)
                         temp_fft = np.fft.fft(signal)
                         np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
+                        np.put(temp_fft, range(0, index + 1), 0.0)
                         temp_ifft = np.fft.ifft(temp_fft).real
                         ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
                         if index == (n - 1):

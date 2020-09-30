@@ -518,8 +518,7 @@ detrend_or_diagnostic = False  # False plots graphs to help make breakpoint deci
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17594703
-
+comid = 17570395
 SCO_number = 4
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))

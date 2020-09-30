@@ -1131,7 +1131,7 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 comid_list = [17570395]
 SCO_list = [4]
 key_zs = [0.2, 1.1, 5.0]
-key_z_process = True
+key_z_process = False
 
 if key_z_process == True:
     for count, comid in enumerate(comid_list):
