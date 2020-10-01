@@ -1015,13 +1015,13 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
     else:
         print('Invalid comids parameter. Must be of ints or int.')
 
-    bf_w_list = [] # Initiate lists to store reach values
+    bf_w_list = []  # Initiate lists to store reach values
     bf_d_list = []
     w_to_d_list = []
     CV_d_list= []
+    CV_w_list = []
     slopes_list = []
     classes_list = []
-
 
     if len(confinements) != 0:
         confinement_list = confinements
@@ -1060,7 +1060,7 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
         if in_csv != '' and len(comid_list) == 1:
             bf_csv = in_csv
-            print('Using optionally specified csv instead of file strucure: %s' % in_csv)
+            print('Using optionally specified csv instead of file structure: %s' % in_csv)
         else:
             bf_csv = in_folder + '\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % comid
         if os.path.exists(bf_csv):
@@ -1096,8 +1096,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
         df['w_to_d'] = df['W_%sft' % bf_z_str] / df['Depth_%sft' % bf_z_str]
         mean_w_to_d = np.nanmean(df.loc[:, 'w_to_d'].to_numpy())
         w_to_d_list.append(mean_w_to_d)
-        cv_d = variation(df.loc[:, 'Depth_%sft' % bf_z_str].to_numpy())
+        cv_d = variation(df.loc[:, 'Depth_%sft' % bf_z_str].to_numpy(), nan_policy='omit')
         CV_d_list.append(cv_d)
+        cv_w = variation(df.loc[:, 'W_%sft' % bf_z_str].to_numpy(), nan_policy='omit')
+        CV_w_list.append(cv_w)
 
         print('w/d is %s' % mean_w_to_d)
         print('Classifying comid %s using decision tree...' % comid)
@@ -1121,7 +1123,7 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
         classes_list.append(sc_class)
 
     print('Making output classification csv...')
-    col_list = ['COMID', 'Mean_BF_W', 'Mean_BF_D', 'W_to_D', 'Confinement', 'CV_bf_depth', 'Slope', 'Class']
+    col_list = ['COMID', 'Mean_bf_width', 'Mean_bf_depth', 'W_to_D', 'Confinement', 'CV_bf_depth', 'CV_bf_width', 'Slope', 'Class']
     class_df = pd.DataFrame(columns=col_list)
     class_df.set_index('COMID')
     class_df[col_list[0]] = np.array(comid_list)
@@ -1130,8 +1132,9 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
     class_df[col_list[3]] = np.array(w_to_d_list)
     class_df[col_list[4]] = np.array(confinement_list)
     class_df[col_list[5]] = np.array(CV_d_list)
-    class_df[col_list[6]] = np.array(slopes_list)
-    class_df[col_list[7]] = np.array(classes_list)
+    class_df[col_list[6]] = np.array(CV_w_list)
+    class_df[col_list[7]] = np.array(slopes_list)
+    class_df[col_list[8]] = np.array(classes_list)
 
 
     class_df.to_csv(out_csv)
@@ -1139,10 +1142,11 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17570395]
-SCO_list = [4]
+comid_list = [17609755]
+SCO_list = [5]
 key_zs = [0.2, 1.1, 5.0]
-key_z_process = False
+bf_zs = [1.0]
+key_z_process = True
 
 if key_z_process == True:
     for count, comid in enumerate(comid_list):
@@ -1163,8 +1167,8 @@ if key_z_process == True:
 
         #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
         #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
-        key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
-        aligned_file = prep_locations(detrend_folder=out_folder)
-        thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-        add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-        cart_sc_classifier(comids=comid_list, bf_z=key_zs[1], in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+        #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
+        #aligned_file = prep_locations(detrend_folder=out_folder)
+        #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
+        #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
+        cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
