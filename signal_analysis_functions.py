@@ -338,6 +338,8 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     plt.close('all')
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
+
+
 def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fields=['W_s_Z_s', 'W_s', 'Z_s'], threshold=0, in_csv='', by_power=False):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
     INPUTS: in_folder containing all_stages_table.csv containing data for each selected key z. out_folder to save fig.
