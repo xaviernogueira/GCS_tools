@@ -363,6 +363,7 @@ if __name__ == '__main__':
     E7.insert(END, 'ALL')
     E7.grid(row=6, column=2)
 
+    in_csv = E1.get()
     in_csv = str.replace(in_csv, "\\", "\\\\")
 
     b = Button(root, text='   Run    ',
