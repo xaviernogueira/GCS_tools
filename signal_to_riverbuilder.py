@@ -61,11 +61,7 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
             amp = abs(np.max(temp_ifft))
             amp_list.append(amp)
 
-            if index != fft_freqs.size - 1:
-                freq = round(fft_freqs[index + 1] * reach_length, 0)
-            else:
-                freq = round((fft_freqs[index] * reach_length) + 1.0, 0)
-            freq_list.append(freq)
+            freq_list.append(float(index + 1.0))
             ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
 
             sub_index = 0
