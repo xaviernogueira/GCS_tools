@@ -9,6 +9,8 @@ from tkinter import filedialog
 import re
 import os
 import sys
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def string_to_list(string):
@@ -152,7 +154,7 @@ def by_power_binned(signal, n, spacing):
     full_indices = np.argsort(psd).tolist()
     replace_indices = [i for i in full_indices if i not in indices]
 
-    np.put(fft, indices, 0.0)
+    np.put(fft, replace_indices, 0.0)
     fft_freqs = np.fft.fftfreq(signal.size, spacing)
 
     out_list = ifft_out(signal, fft, ifft_df, n, spacing)
@@ -181,9 +183,10 @@ def river_builder_harmonics(in_csv, index_field, units='', fields=[], field_name
     to_riverbuilder (False"""
 
     in_df = pd.read_csv(in_csv)
-    out_folder = os.listdir(in_csv)
+    out_folder = os.path.dirname(in_csv)
+    print('CSV imported...')
 
-    fields = [i for i in list(in_df.columns.values) if i != index_field]
+    fields = [i for i in in_df.columns.values.tolist() if i != index_field]
 
     try:
         in_df.sort_values(index_field, inplace=True)
@@ -356,12 +359,30 @@ if __name__ == '__main__':
     E4.insert(END, '')
     E4.grid(row=3, column=2)
 
-    in_csv = in_csv.replace(r"C:\Users\Josh\Desktop\20130216", "\\", "\\\\")
+    L5 = Label(root, text='R^2 threshold:')
+    L5.grid(sticky=E, row=4, column=1)
+    E5 = Entry(root, bd=5)
+    E5.insert(END, 0.90)
+    E5.grid(row=4, column=2)
+
+    L6 = Label(root, text='N harmonics override (optional, leave at 0):')
+    L6.grid(sticky=E, row=5, column=1)
+    E6 = Entry(root, bd=5)
+    E6.insert(END, 0)
+    E6.grid(row=5, column=2)
+
+    L7 = Label(root, text='Specify single method (optional, leave at ALL):')
+    L7.grid(sticky=E, row=6, column=1)
+    E7 = Entry(root, bd=5)
+    E7.insert(END, 'ALL')
+    E7.grid(row=6, column=2)
+
+    in_csv = str.replace(in_csv, "\\", "\\\\")
 
     b = Button(root, text='   Run    ',
-               command=lambda: river_builder_harmonics(in_csv=in_csv, index_field=E2.get(), units=E3.get(), field_names=string_to_list(str(E4.get())), r_2=0.95, n=0, methods='ALL')
+               command=lambda: river_builder_harmonics(in_csv=in_csv, index_field=E2.get(), units=E3.get(), field_names=string_to_list(str(E4.get())), r_2=float(E5.get()), n=int(E6.get()), methods=E7.get())
                )
-    b.grid(sticky=W, row=4, column=2)
+    b.grid(sticky=W, row=7, column=2)
     root.grid_rowconfigure(4, minsize=80)
 
     root.mainloop()
