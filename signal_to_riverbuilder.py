@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import openpyxl as xl
 import matplotlib
 import matplotlib.pyplot as plt
 import tkinter
@@ -306,15 +305,6 @@ def river_builder_harmonics(in_csv, index_field, units='', fields=[], field_name
             text_file.close()
 
     print('Analysis complete. Results @ %s' % out_folder)
-
-
-
-out_folder = r'Z:\users\xavierrn'
-in_csv = out_folder + r'\SFE_316_signals.csv'
-index_field = 'Station_ft'
-units = 'ft'
-field_list = ['W_base_ft', 'W_bf_ft', 'Zd']
-field_names = ['Baseflow width', 'Bankfull width', 'Detrended Z']
 
 
 if __name__ == '__main__':
