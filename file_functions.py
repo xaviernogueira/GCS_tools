@@ -61,7 +61,7 @@ def browse(root, entry, select='file', ftypes=[('All files', '*')]):
         entry.insert(END, l)
 
     elif select == 'folder':
-        dirname = tkFileDialog.askdirectory(parent=root, initialdir=entry.get(), title='Choose a directory')
+        dirname = filedialog.askdirectory(parent=root, initialdir=entry.get(), title='Choose a directory')
         if len(dirname) > 0:
             entry.delete(0, END)
             entry.insert(END, dirname + '/')

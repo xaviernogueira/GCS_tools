@@ -5,9 +5,36 @@ import matplotlib
 import matplotlib.pyplot as plt
 import tkinter
 from tkinter import *
+from tkinter import filedialog
+import re
 import os
 import sys
 
+
+def string_to_list(string):
+    out_list = list(string.split(','))
+    return out_list
+
+# opens window in GUI to browse for folder or file
+def browse(root, entry, select='file', ftypes=[('All files', '*')]):
+    """GUI button command: opens browser window and adds selected file/folder to entry"""
+    if select == 'file':
+        filename = filedialog.askopenfilename(parent=root, title='Choose a file', filetypes=ftypes)
+        if filename != None:
+            entry.delete(0, END)
+            entry.insert(END, filename)
+
+    elif select == 'files':
+        files = filedialog.askopenfilenames(parent=root, title='Choose files', filetypes=ftypes)
+        l = root.tk.splitlist(files)
+        entry.delete(0, END)
+        entry.insert(END, l)
+
+    elif select == 'folder':
+        dirname = filedialog.askdirectory(parent=root, initialdir=entry.get(), title='Choose a directory')
+        if len(dirname) > 0:
+            entry.delete(0, END)
+            entry.insert(END, dirname + '/')
 
 def ifft_out(signal, fft, ifft_df, n, spacing):
     cos_coefs = []
@@ -85,7 +112,6 @@ def by_power(signal, n, spacing):
     indices = np.argsort(psd).tolist()
     n_indices = indices[:-n]
     np.put(fft, n_indices, 0.0)
-    ifft = np.fft.ifft(fft).real
     fft_freqs = np.fft.fftfreq(signal.size, spacing)
 
     out_list = ifft_out(signal, fft, ifft_df, n, spacing)
@@ -127,7 +153,6 @@ def by_power_binned(signal, n, spacing):
     replace_indices = [i for i in full_indices if i not in indices]
 
     np.put(fft, indices, 0.0)
-    ifft = np.fft.ifft(fft).real
     fft_freqs = np.fft.fftfreq(signal.size, spacing)
 
     out_list = ifft_out(signal, fft, ifft_df, n, spacing)
@@ -141,7 +166,7 @@ def by_power_binned(signal, n, spacing):
     return [ifft, n, out_list[1], out_list[2], ifft_df, freqs, amps, phases]
 
 
-def river_builder_harmonics(in_csv, out_folder, index_field, units='', fields=[], field_names=[], r_2=0.95, n=0, methods='ALL'):
+def river_builder_harmonics(in_csv, index_field, units='', fields=[], field_names=[], r_2=0.95, n=0, methods='ALL'):
     """This function plots a N number of Fourier coefficients reconstrution of input signals. Exports coefficients to csv or text file.
     in_csv= A csv file location with evenly spaced values (string).
     sort_by (optional) allows an unsorted csv to be sorted by a input index field header (string)
@@ -156,6 +181,9 @@ def river_builder_harmonics(in_csv, out_folder, index_field, units='', fields=[]
     to_riverbuilder (False"""
 
     in_df = pd.read_csv(in_csv)
+    out_folder = os.listdir(in_csv)
+
+    fields = [i for i in list(in_df.columns.values) if i != index_field]
 
     try:
         in_df.sort_values(index_field, inplace=True)
@@ -165,9 +193,6 @@ def river_builder_harmonics(in_csv, out_folder, index_field, units='', fields=[]
         print('Could not sort values by  the input index field header: %s. Please either remove sort_by parameter, or correct the input field header.' % index_field)
         sys.exit()
 
-    if len(fields) == 0:
-        print('Error! No field headers input.')
-        sys.exit()
 
     if methods == 'ALL':
         methods_dict = {'by_fft': [], 'by_power': [], 'by_power_binned': []}  # Each list associated with each method stores [ifft, n, sin_coefs, cos_coefs, ifft_df]
@@ -257,7 +282,7 @@ def river_builder_harmonics(in_csv, out_folder, index_field, units='', fields=[]
             ifft_df.to_csv(out_folder + '\\%s_harmonics_%s.csv' % (field, method))
 
             plt.plot(index_array, in_df.loc[:, str(field)].squeeze(), color='blue', label='Signal')
-            plt.plot(index_array, list[0][0], color='red', linestyle='--', label='Reconstructed signal')
+            plt.plot(index_array, list[0], color='red', linestyle='--', label='Reconstructed signal')
 
             if units != '':
                 add_units = 'in %s' % units
@@ -278,7 +303,7 @@ def river_builder_harmonics(in_csv, out_folder, index_field, units='', fields=[]
             plt.cla()
 
             for num, amp in enumerate(list[-2]):
-                text_file.write('COS%s=(%s, %s, %s, MASK0)' % (num, amp, list[-3][num], list[-1][num]))  # Writes in the form of COS#=(a, f, ps, MASK0) for river builder inputs
+                text_file.write('COS%s=(%s, %s, %s, MASK0)\n' % (num, amp, list[-3][num], list[-1][num]))  # Writes in the form of COS#=(a, f, ps, MASK0) for river builder inputs
             text_file.close()
 
     print('Analysis complete. Results @ %s' % out_folder)
@@ -292,7 +317,56 @@ units = 'ft'
 field_list = ['W_base_ft', 'W_bf_ft', 'Zd']
 field_names = ['Baseflow width', 'Bankfull width', 'Detrended Z']
 
-river_builder_harmonics(in_csv, out_folder, index_field, units=units, fields=field_list, field_names=field_names, r_2=0.95, n=0, methods='ALL')
+
+if __name__ == '__main__':
+
+    # make the GUI
+    root = Tk()
+    root.wm_title('River Builder Input Prepper')
+
+    # specify relevant directories/files
+
+    L1 = Label(root, text='In csv:')
+    L1.grid(sticky=E, row=0, column=1)
+    E1 = Entry(root, bd=5)
+    E1.insert(END, '/'.join(sys.path[0].split('\\')[:-1]) + '/')
+    E1.grid(row=0, column=2)
+    b1 = Button(root, text='Browse',
+                command=lambda: browse(root, E1, select='file', ftypes=[('Comma-delimited text', '*.csv'),
+                                                                        ('All files', '*')]
+                                       )
+                )
+    b1.grid(sticky=W, row=0, column=3)
+
+    L2 = Label(root, text='Index field:')
+    L2.grid(sticky=E, row=1, column=1)
+    E2 = Entry(root, bd=5)
+    E2.insert(END, '')
+    E2.grid(row=1, column=2)
+
+    L3 = Label(root, text='Units (ft or m):')
+    L3.grid(sticky=E, row=2, column=1)
+    E3 = Entry(root, bd=5)
+    E3.insert(END, '')
+    E3.grid(row=2, column=2)
+
+    L4 = Label(root, text='Signal labels (optional, comma separated!)')
+    L4.grid(sticky=E, row=3, column=1)
+    E4 = Entry(root, bd=5)
+    E4.insert(END, '')
+    E4.grid(row=3, column=2)
+
+    in_csv = in_csv.replace(r"C:\Users\Josh\Desktop\20130216", "\\", "\\\\")
+
+    b = Button(root, text='   Run    ',
+               command=lambda: river_builder_harmonics(in_csv=in_csv, index_field=E2.get(), units=E3.get(), field_names=string_to_list(str(E4.get())), r_2=0.95, n=0, methods='ALL')
+               )
+    b.grid(sticky=W, row=4, column=2)
+    root.grid_rowconfigure(4, minsize=80)
+
+    root.mainloop()
+
+
 
 
 
