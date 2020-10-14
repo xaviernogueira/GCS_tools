@@ -55,9 +55,11 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
             np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
             np.put(temp_fft, range(0, index + 1), 0.0)
             temp_ifft = np.fft.ifft(temp_fft).real
+            plt.plot(temp_ifft)  # Temporary for testing
+            plt.show()
             if n == 1:
                 ifft = temp_ifft
-            amp = abs(np.max(temp_ifft))
+            amp = (np.amax(temp_ifft) - np.amin(temp_ifft)) / 2
             amp_list.append(amp)
 
             freq_list.append(float(index + 1.0))
@@ -177,7 +179,7 @@ def river_builder_harmonics(in_csv, index_field, units='', fields=[], field_name
     by_bins (False is default) if True splits the FFT components into N bins, and selects the highest power frequency from each
     to_riverbuilder (False"""
 
-    in_df = pd.read_csv(in_csv)
+    in_df = pd.read_csv(in_csv, engine='python')
     out_folder = os.path.dirname(in_csv)
     print('CSV imported...')
 
