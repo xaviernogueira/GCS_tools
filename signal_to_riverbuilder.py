@@ -55,8 +55,6 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
             np.put(temp_fft, range(index + 2, len(temp_fft)), 0.0)
             np.put(temp_fft, range(0, index + 1), 0.0)
             temp_ifft = np.fft.ifft(temp_fft).real
-            plt.plot(temp_ifft)  # Temporary for testing
-            plt.show()
             if n == 1:
                 ifft = temp_ifft
             amp = (np.amax(temp_ifft) - np.amin(temp_ifft)) / 2
@@ -303,7 +301,8 @@ def river_builder_harmonics(in_csv, index_field, units='', fields=[], field_name
             plt.cla()
 
             for num, amp in enumerate(list[-2]):
-                text_file.write('COS%s=(%s, %s, %s, MASK0)\n' % (num, amp, list[-3][num], list[-1][num]))  # Writes in the form of COS#=(a, f, ps, MASK0) for river builder inputs
+                if amp != 0.0:
+                    text_file.write('COS%s=(%s, %s, %s, MASK0)\n' % (num, amp, list[-3][num], list[-1][num]))  # Writes in the form of COS#=(a, f, ps, MASK0) for river builder inputs
             text_file.close()
 
     print('Analysis complete. Results @ %s' % out_folder)
