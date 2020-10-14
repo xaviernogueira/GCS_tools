@@ -9,6 +9,7 @@ import re
 import os
 import sys
 import warnings
+import math
 warnings.filterwarnings("ignore")
 
 
@@ -37,6 +38,40 @@ def browse(root, entry, select='file', ftypes=[('All files', '*')]):
             entry.delete(0, END)
             entry.insert(END, dirname + '/')
 
+def slope(x1, y1, x2, y2):
+    '''Return slope of two points.'''
+    if x1 != x2:
+        return (y2-y1) / (x2-x1)
+    elif y2 > y1:
+        return math.inf
+    elif y2 < y1:
+        return -math.inf
+    else:
+        return 0
+
+def slope_v(x_v, y_v):
+    '''Return an array of slope.
+        si = (y(i+1) - y(i))/(x(i+1) - x(i))
+        s(-1) will be the same as s(-2) to make it the same length.
+
+    Inputs:
+    x_v - array. x values.
+    y_v - array. y values.
+
+    Output:
+    s_v - array. slopes.
+    '''
+    x1_v = x_v[:-1]
+    x2_v = x_v[1:]
+
+    y1_v = y_v[:-1]
+    y2_v = y_v[1:]
+
+    fun = np.vectorize(slope)
+    s_v = fun(x1_v, y1_v, x2_v, y2_v)
+    s_v = np.append(s_v, s_v[-1:])
+    return s_v
+
 def ifft_out(signal, fft, ifft_df, n, spacing):
     cos_coefs = []
     sin_coefs = []
@@ -60,7 +95,14 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
             amp = (np.amax(temp_ifft) - np.amin(temp_ifft)) / 2
             amp_list.append(amp)
 
-            freq_list.append(float(index + 1.0))
+            slope = slope_v(np.arange(0, signal.size), temp_ifft)
+            slope_pre = slope[0:-1]
+            slope_post = slope[1:]
+            slope_change = np.multiply(slope_pre, slope_post)
+
+            frequency = len(np.where(slope_change <= 0)[0])/2
+            freq_list.append(frequency)
+            
             ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
 
             sub_index = 0
