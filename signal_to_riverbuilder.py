@@ -57,7 +57,7 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
             temp_ifft = np.fft.ifft(temp_fft).real
             if n == 1:
                 ifft = temp_ifft
-            amp = abs(np.max(temp_ifft))
+            amp = (np.amax(temp_ifft) - np.amin(temp_ifft)) / 2
             amp_list.append(amp)
 
             freq_list.append(float(index + 1.0))
@@ -318,14 +318,11 @@ if __name__ == '__main__':
     L1 = Label(root, text='In csv:')
     L1.grid(sticky=E, row=0, column=1)
     E1 = Entry(root, bd=5)
-    E1.insert(END, '/'.join(sys.path[0].split('\\')[:-1]) + '/')
+    E1.insert(END, '')
     E1.grid(row=0, column=2)
-    b1 = Button(root, text='Browse',
-                command=lambda: browse(root, E1, select='file', ftypes=[('Comma-delimited text', '*.csv'),
-                                                                        ('All files', '*')]
-                                       )
-                )
-    b1.grid(sticky=W, row=0, column=3)
+    #b1 = Button(root, text='Browse',
+                #command=lambda: browse(root, E1, select='file', ftypes=[('Comma-delimited text', '*.csv'), ('All files', '*')]))
+    #b1.grid(sticky=W, row=0, column=3)
 
     L2 = Label(root, text='Index field:')
     L2.grid(sticky=E, row=1, column=1)
@@ -363,11 +360,8 @@ if __name__ == '__main__':
     E7.insert(END, 'ALL')
     E7.grid(row=6, column=2)
 
-    in_csv = E1.get()
-    in_csv = str.replace(in_csv, "\\", "\\\\")
-
     b = Button(root, text='   Run    ',
-               command=lambda: river_builder_harmonics(in_csv=in_csv, index_field=E2.get(), units=E3.get(), field_names=string_to_list(str(E4.get())), r_2=float(E5.get()), n=int(E6.get()), methods=E7.get())
+               command=lambda: river_builder_harmonics(in_csv=str.replace(E1.get(), "\\", "\\\\"), index_field=E2.get(), units=E3.get(), field_names=string_to_list(str(E4.get())), r_2=float(E5.get()), n=int(E6.get()), methods=E7.get())
                )
     b.grid(sticky=W, row=7, column=2)
     root.grid_rowconfigure(4, minsize=80)
