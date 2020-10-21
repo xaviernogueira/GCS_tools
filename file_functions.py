@@ -336,6 +336,7 @@ def find_suffix(csv_location):
         base_snip = base[0]
         while base_snip != 'f' and base_snip != 'm':
             index += 1
+            base_snip = base[index]
 
         suffix = str(base[index:])
 

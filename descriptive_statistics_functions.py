@@ -65,8 +65,9 @@ def analysis_setup(table_director, key_zs=[]):
             stage = base_name[:4]
 
         stages.append(stage)
-        if float(stage) > max_stage and len(key_zs) == 0:
-            max_stage = stage
+        if  len(key_zs) == 0:
+            if float(stage) > max_stage:
+                max_stage = stage
 
         stage_stats_xl_name = (stat_table_location + '\\%sft_stats_table.xlsx' % stage)
         wb = xl.Workbook()
@@ -590,8 +591,9 @@ stages_dict = out_list[0]
 stages_stats_xl_dict = out_list[1]
 max_stage = out_list[2]
 stats_table_location = out_list[3]
+stages = out_list[4]
 
-stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=False)
+stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=False)
 #compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
 #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
