@@ -19,19 +19,31 @@ import file_functions
 from file_functions import *
 
 
-#This py file updates functions in the GCS_analysis for Python 3#
-def analysis_setup(table_directory):
+def analysis_setup(table_director, key_zs=[]):
     '''This function takes a directory containing csv files with landform analysis for each flow, deletes all extra in the directory files and creates output xl sheets for statistical results.
     Args: Table directory, Returns: [stages_dict, stages_stats_xl_dict, GCS stats directory]. Stages_dict stores pandas data frames for each stage, stages_stats_xl_dict stores stage level xlsx tables.
     Keys for both dictionaries are StageXft where X is stage height'''
-
+    print('Prepping csv file inputs...')
     list_of_files_in_out_folder = [f for f in listdir(table_directory) if isfile(join(table_directory, f))]
     csv_tables = []
-    for file in list_of_files_in_out_folder:
-        if file[-4:] == ".csv":
-            csv_tables.append(table_directory + "\\" + file)
-        else:
-            os.remove(table_directory + "\\" + file)
+
+    if len(key_zs) >= 1:
+        ind = 0
+        while list_of_files_in_out_folder[ind][-4:] != '.csv':
+            ind += 1
+        suffix = find_suffix(list_of_files_in_out_folder[ind])
+
+        for z in key_zs:
+            z_str = float_keyz_format(z)
+            csv_tables.append(table_directory + "\\%s%s" % (z_str, suffix))
+
+    else:
+        for file in list_of_files_in_out_folder:
+            if file[-4:] == ".csv":
+                csv_tables.append(table_directory + "\\" + file)
+            else:
+                os.remove(table_directory + "\\" + file)
+
     print("List of tables ready to be formatted: %s" % csv_tables)
     stat_table_location = table_directory + "\\GCS_stat_tables_and_plots"
     if not os.path.exists(stat_table_location):
@@ -53,7 +65,7 @@ def analysis_setup(table_directory):
             stage = base_name[:4]
 
         stages.append(stage)
-        if float(stage) > max_stage:
+        if float(stage) > max_stage and len(key_zs) == 0:
             max_stage = stage
 
         stage_stats_xl_name = (stat_table_location + '\\%sft_stats_table.xlsx' % stage)
@@ -65,7 +77,6 @@ def analysis_setup(table_directory):
         stage_df['code'].fillna(0, inplace=True)
         stages_dict['Stage_%sft' % stage] = stage_df
         stages_stats_xl_dict['Stage_%sft' % stage] = stage_stats_xl_name
-    print("Max stage is %sft" % max_stage)
 
     return [stages_dict, stages_stats_xl_dict, max_stage, stat_table_location, stages]
 
@@ -78,13 +89,13 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         stage_df = stages_dict['Stage_%sft' % stage]
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
-        list_of_fields = ['W', 'Z', 'W_s_Z_s','W_s','Z_s']
+        list_of_fields = ['W', 'Z', 'W_s_Z_s', 'W_s', 'Z_s']
         means = []
         stds = []
         high = []
         low = []
         medians = []
-        for field in list_of_fields[:3]: # add the mean and std_deviation of each field in list_of_fields to a list
+        for field in list_of_fields[:3]:  # add the mean and std_deviation of each field in list_of_fields to a list
             means.append(np.mean(stage_df.loc[:, field].to_numpy()))
             stds.append(np.std(stage_df.loc[:, field].to_numpy()))
             high.append(np.max(stage_df.loc[:, field].to_numpy()))
@@ -95,13 +106,13 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         ws = wb.active
         ws.title = 'Descriptive stats'
 
-        ws.cell(row=2, column=1).value = 'MEAN' #Setting up titles on xl
+        ws.cell(row=2, column=1).value = 'MEAN'  # Setting up titles on xl
         ws.cell(row=3, column=1).value = 'STD'
         ws.cell(row=4, column=1).value = 'MAX'
         ws.cell(row=5, column=1).value = 'MIN'
         ws.cell(row=6, column=1).value = 'MEDIAN'
 
-        for field in list_of_fields[:3]: #add values in each field column
+        for field in list_of_fields[:3]:  # add values in each field column
             field_index = int(list_of_fields.index(field))
 
             ws.cell(row=1, column=(2 + field_index)).value = field
@@ -120,14 +131,14 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         ws.column_dimensions['G'].width = 15
         ws.column_dimensions['A'].width = 16
 
-        w_codes_list = [] #initiate lists of arrays to store data for multiple box plot
+        w_codes_list = []  # initiate lists of arrays to store data for multiple box plot
         z_codes_list = []
         cwz_codes_list = []
-        list_of_field_lists = [w_codes_list,z_codes_list,cwz_codes_list]
-        box_plot_dict = dict(zip(list_of_fields,list_of_field_lists)) #This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
+        list_of_field_lists = [w_codes_list, z_codes_list, cwz_codes_list]
+        box_plot_dict = dict(zip(list_of_fields, list_of_field_lists)) #  This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
 
         total_rows = len(stage_df.index)
-        above_1_list = [0, 0, 0] #'W', 'Z', 'W_s_Z_s'
+        above_1_list = [0, 0, 0]  # 'W', 'Z', 'W_s_Z_s'
         above_half_list = [0, 0, 0]
         for index, row in stage_df.iterrows():
             if abs(row['W_s_Z_s']) >= stds[2]:
@@ -136,7 +147,7 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
             elif abs(row['W_s_Z_s']) >= (0.5*stds[2]):
                 above_half_list[2] += 1
 
-            for field in list_of_fields[3:]: #List splice: ['W_s', 'Z_s']
+            for field in list_of_fields[3:]:  # List splice: ['W_s', 'Z_s']
                 field_index = int(list_of_fields[3:].index(field))
                 if abs(row[field]) >= 1:
                     above_1_list[field_index] += 1
@@ -147,16 +158,16 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         ws.cell(row=7, column=1).value = "% >= 0.5 STD"
         ws.cell(row=8, column=1).value = "% >= 1 STD"
 
-        for index in range(len(above_1_list)): #Calculates % of W, Z, and W_s_Z_s that are greater than 0.5 and 1 of their standard deviations
+        for index in range(len(above_1_list)):  # Calculates % of W, Z, and W_s_Z_s that are greater than 0.5 and 1 of their standard deviations
             percent_above_half = float((above_half_list[index]/total_rows)*100)
             percent_above_1 = float((above_1_list[index]/total_rows)*100)
             ws.cell(row=7, column=(2 + index)).value = percent_above_half
             ws.cell(row=8, column=(2 + index)).value = percent_above_1
 
         row_num = 2
-        for code in list_of_codes: #Calculating same descriptive stats for each landform, each table is spaced 7 cells apart
+        for code in list_of_codes:  # Calculating same descriptive stats for each landform, each table is spaced 7 cells apart
             code_df = stage_df.loc[stage_df['code'] == code, ['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s']]
-            ws.cell(row=row_num, column=7).value = (str(landform_dict[code])) #Preparing the table
+            ws.cell(row=row_num, column=7).value = (str(landform_dict[code]))  # Preparing the table
             ws.cell(row=row_num + 1, column=7).value = 'MEAN'
             ws.cell(row=row_num + 2, column=7).value = 'STD'
             ws.cell(row=row_num + 3, column=7).value = 'MAX'
@@ -195,7 +206,7 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
                     if field_index <= 2 and box_and_whisker == True:
                         box_plot_dict[field].append(code_df.loc[:, field].to_numpy())
 
-            ws.cell(row_num + 6, column=8).value = float(code_df.shape[0]/total_rows)*100 #Calculates % of XS with the given landform designation
+            ws.cell(row_num + 6, column=8).value = float(code_df.shape[0]/total_rows)*100  # Calculates % of XS with the given landform designation
 
             row_num += 8
 
@@ -223,8 +234,8 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
     print("All descriptive stats completed!")
 
 def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
-    list_of_lists = [[],[],[]] #W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
-    list_of_landforms = [[],[],[],[],[]] #-2,-1,0,1,2
+    list_of_lists = [[],[],[]] # W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
+    list_of_landforms = [[],[],[],[],[]] # -2,-1,0,1,2
     wz_corr_lists = [[], [], [], [], []]  # Pearson correlation coefficients for Ws and Zs for each increasing flood stage for landforms [-2,-1,0,1,2]
 
     for stage in range(1, max_stage + 1):
@@ -240,7 +251,7 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
             row_num1 = 8 + (8*num)
             row_num2 = 3 + (8*num)
             list_of_landforms[num].append(float(ws.cell(row=row_num1, column=8).value))
-            wz_corr_lists[num].append(float(ws.cell(row_num2,column=10).value))
+            wz_corr_lists[num].append(float(ws.cell(row_num2, column=10).value))
         wb.close()
 
         directory = os.path.dirname(stage_stat_xl)
@@ -248,24 +259,24 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         if not os.path.exists(plot_dirs):
             os.makedirs(plot_dirs)
 
-    x_values = np.arange(start=1, stop=max_stage+1, step=1) #Setting up subplots showing W, Z, and C(W,Z) vs stage
+    x_values = np.arange(start=1, stop=max_stage+1, step=1) #  Setting up subplots showing W, Z, and C(W,Z) vs stage
 
     ax1 = plt.subplot(311)
-    plt.plot(x_values, np.array(list_of_lists[0]),color='g')
+    plt.plot(x_values, np.array(list_of_lists[0]), color='g')
     plt.ylabel('Mean width (US ft)')
     plt.ylim(0, np.max(np.array(list_of_lists[0])))
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.grid(True)
 
     ax2 = plt.subplot(312, sharex=ax1)
-    plt.plot(x_values,np.array(list_of_lists[1]),color='m')
+    plt.plot(x_values,np.array(list_of_lists[1]), color='m')
     plt.ylabel('Mean detrended Z (US ft)')
     plt.ylim(0, np.max(np.array(list_of_lists[1])))
     plt.setp(ax2.get_xticklabels(), visible=False)
     plt.grid(True)
 
     ax3 = plt.subplot(313, sharex=ax1)
-    plt.plot(x_values,np.array(list_of_lists[2]),color='darkorange')
+    plt.plot(x_values, np.array(list_of_lists[2]), color='darkorange')
     plt.ylabel('Mean C(Ws,Zs)')
     plt.xlabel("Flood stage height (US ft)")
     plt.ylim(np.min(np.array(list_of_lists[2])), np.max(np.array(list_of_lists[2])))
@@ -327,7 +338,6 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
     ax.set_ylabel('C(Ws,Zs)')
     ax.set_title("Landform mean C(Ws,Zs) vs. flood stage height")
     ax.legend()
-    #ax.set_ylim(0, 100)
     ax.set_xlim(1, max_stage)
     plt.setp(ax.get_xticklabels(), fontsize=12)
     ax.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
@@ -344,7 +354,7 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
         print("Landform C(Ws,Zs) vs. flood stage plot saved @ %s" % plot_dirs)
 
 def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=False):
-    #Set up autocorrelation subplots
+    # Set up autocorrelation subplots
     plt.rcParams.update({'figure.max_open_warning': 0})
 
     for stage in range(1, max_stage+1):
@@ -565,29 +575,25 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-sc_class = 1
-comid = 17609707
-GCS_process_on=False
+sc_class = 2
+comid = 17586810
+GCS_process_on=True
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
 out_folder = direct + r'\LINEAR_DETREND'
 
-#key_z_auto_powerspec_corr(detrend_folder=out_folder, key_zs=[0.5, 2.0, 5.0], fields=['W_s', 'Z_s', 'W_s_Z_s'])
 
-if GCS_process_on == True:
-    table_directory = (
-                r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\gcs_ready_tables" % (
-        sc_class, comid))  # A folder with stage csv files in it. Other files can occupy the directory as well.
-    ##
-    out_list = analysis_setup(table_directory)
-    stages_dict = out_list[0]
-    stages_stats_xl_dict = out_list[1]
-    max_stage = out_list[2]
-    stats_table_location = out_list[3]
+table_directory = direct + '\\LINEAR_DETREND\\gcs_ready_tables'
 
-    stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=True)
-    compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
-    autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+out_list = analysis_setup(table_directory, key_zs=[0.6, 3.6, 8.1])
+stages_dict = out_list[0]
+stages_stats_xl_dict = out_list[1]
+max_stage = out_list[2]
+stats_table_location = out_list[3]
+
+stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, box_and_whisker=False)
+#compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+#autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
 

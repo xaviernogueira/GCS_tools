@@ -102,7 +102,7 @@ def ifft_out(signal, fft, ifft_df, n, spacing):
 
             frequency = len(np.where(slope_change <= 0)[0])/2
             freq_list.append(frequency)
-            
+
             ifft_df['harmonic_%s' % (index + 1)] = temp_ifft
 
             sub_index = 0

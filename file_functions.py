@@ -326,6 +326,42 @@ def delete_gis_files(file_loc):
     print('Couldnt find %s files sub-files. Not normally and issue but if overwrite errors raise this could be the culprit!' % counter)
 
 
+def find_suffix(csv_location):
+    """This function takes a csv table location and finds the suffix unaffected by stage.
+    Ex: C://documents//2p3ft_gcs_table.csv would return ft_gcs_table as a string"""
+    base = os.path.basename(csv_location)
+
+    if str.isnumeric(base[0]) == True:
+        index = 0
+        base_snip = base[0]
+        while base_snip != 'f' and base_snip != 'm':
+            index += 1
+
+        suffix = str(base[index:])
+
+    else:
+        print('csv filename not suitable. Please have stage height and units in name at the start of the filename. Ex: 2p3ft_gcs_table.csv or 1m_gcs_table.csv')
+
+    return suffix
+
+def float_keyz_format(z):
+    '''This function takes a float key z argument and retrusn its equivalent formatted string.
+    ex: 5.3 -> 5p3, or 10.0 -> 10p0'''
+
+    z_str = ''
+    if z >= 10.0 and isinstance(z, float):
+        z_str = (str(z)[0:2] + 'p' + str(z)[3])
+    elif z < 10.0 and isinstance(z, float):
+        z_str = (str(z)[0] + 'p' + str(z)[2])
+    elif isinstance(z, int):
+        z_str = str(z) + 'p0'
+
+    try:
+        return z_str
+    except z_str == '':
+        print('Key z list parameters not valid. Please fill list with int or float.')
+
+
 
 
 
