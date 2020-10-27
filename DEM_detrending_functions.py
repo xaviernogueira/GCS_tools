@@ -1,6 +1,7 @@
 import openpyxl as xl
 import arcpy
 import os as os
+import pandas as pd
 from arcpy import env
 from openpyxl import Workbook
 from openpyxl import load_workbook
@@ -9,50 +10,39 @@ from matplotlib import pyplot as plt
 import numpy as np
 import csv
 
-## FIX THIS TO RUN IN PANDAS AND USE CSV INSTEAD OF XLSX
-def prep_xl_file(table_location, listofcolumn=["D", "A", "L", "I", "J"]):
-    id = []
-    location = []
-    x = []
-    y = []
-    z = []
-    listoflist = [location, id, z, x, y]
 
-    xyz_table_location = table_location[:-3] + "xlsx"
-    if table_location[-4:] == ".csv":
-        print("Input table is a csv, conversion for openpyxl underway...")
-        wb = Workbook()
-        ws = wb.active
-        with open(table_location, 'r', errors='ignore') as f:
-            for row in csv.reader(f):
-                ws.append(row)
-        wb.save(xyz_table_location)
-        print("csv converted to xlsx @: %s" % xyz_table_location)
+def prep_xl_file(xyz_table_location, listofcolumn=['LOCATION', 'POINT_X', 'POINT_Y', 'Value']):
+    listoflist = [None, None, None, None]
+
+    if xyz_table_location[-4:] == ".csv":
+        elevation_df = pd.read_csv(xyz_table_location)
+        for j, header in enumerate(listofcolumn):
+            listoflist[j] = elevation_df.loc[:, [(header)]].squeeze().to_numpy()
+
     else:
+        listofcolumn = ['E', 'K', 'L', 'N']
         wb = load_workbook(xyz_table_location)
         ws = wb.active
-        print("Workbook " + str(xyz_table_location) + " loaded")
+        print("Workbook %s loaded" % xyz_table_location)
 
-    for i in range(0, len(listofcolumn)):
-        for cell in ws[listofcolumn[i]]:
-            listoflist[i].append(cell.value)
-        del listoflist[i][0]
+        for i, col in enumerate(listofcolumn):
+            temp_list = []
+            for cell in ws[col]:
+                temp_list.append(cell.value)
+            del temp_list[0]
+            listoflist[i] = np.array(temp_list)
+        wb.save(xyz_table_location)
 
-    print(listoflist)
+    location = np.int_(listoflist[0])
+    z = np.around(listoflist[-1], 9)
 
     point_spacing = int(location[1]) - int(location[0])
     print("Point spacing: " + str(point_spacing))
     number_of_points = int(int(location[-1]) / int(point_spacing))
 
-    location_np = np.array(location)
-    z_np = np.array(z)
-    location_np = np.int_(location_np)
-    z_np = np.float_(z_np)
-    z_np = np.around(z_np, 9)
-    print("Z array: %s" % z_np)
-    wb.save(xyz_table_location)
+    print("Z array: %s" % z)
 
-    return [location_np, z_np, xyz_table_location]
+    return [location, z, xyz_table_location]
 
 
 def quadratic_fit(location_np, location, z_np, ws):
@@ -121,7 +111,7 @@ def quadratic_fit(location_np, location, z_np, ws):
     print("Excel file ready for Arc processing!")
 
 
-def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform=0, chosen_fit_index=[]):
+def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transform=0, chosen_fit_index=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
     if xyz_table_location[-3:] == 'csv':
         xyz_table_location = (xyz_table_location[:-3] + "xlsx")
@@ -514,17 +504,16 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on = False
+process_on = True
 detrend_or_diagnostic = False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17586610
+comid = 17586552
+SCO_number = '00_new_adds'
 
-SCO_number = 3
-
-direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
-xyz_table = direct + '\\XY_elevation_table_20_smooth_3_spaced.xlsx'
+direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s\COMID%s" % (SCO_number, comid))
+xyz_table = direct + '\\XYZ_elevation_table.csv'
 centerline = direct + '\\las_files\\centerline\\smooth_centerline.shp'
 DEM = direct + '\\las_files\\ls_nodt.tif'
 process_footprint = direct + '\\las_footprint.shp'
@@ -532,7 +521,7 @@ detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = [380, 650]
+breakpoints = []
 transform_value = (0.0)  # Leave at 0.0
 xlimits = [0, 0]  # [xmin, xmax] default is [0, 0]
 ylimits = [0, 0]  # [ymin, ymax] default is [0, 0]
