@@ -247,6 +247,7 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transfor
     elif xyz_table_location[-4:] == '.csv':
         elevation_df = pd.read_csv(xyz_table_location)
         elevation_df['z_fit'] = np.array(z_fit_list)
+        elevation_df.to_csv(xyz_table_location)
 
     print("Excel file ready for wetted-polygon processing!")
 
@@ -348,11 +349,18 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
     if not os.path.exists(detrend_location):
         os.makedirs(detrend_location)
 
-    csv_name = fit_z_xl_file[:-5] + "_fitted.csv"
-    with open(csv_name, 'w', newline="") as f:
-        col = csv.writer(f)
-        for row in ws.rows:
-            col.writerow([cell.value for cell in row])
+    if fit_z_xl_file[-4:] == 'xlsx':
+        csv_name = fit_z_xl_file[:-5] + "_fitted.csv"
+        with open(csv_name, 'w', newline="") as f:
+            col = csv.writer(f)
+            for row in ws.rows:
+                col.writerow([cell.value for cell in row])
+
+    elif fit_z_xl_file[-4] == '.csv':
+        csv_name = fit_z_xl_file
+
+    else:
+        print('Invalid input table. Please re-save file as either an csv or xlsx')
 
     if window_size != 0:
         column = ('z_fit_window%s' % window_size)
@@ -367,11 +375,11 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
     points = arcpy.MakeXYEventLayer_management(csv_name, "POINT_X", "POINT_Y",
                                                    out_layer=("fitted_station_points_stage%s" % stage),
                                                    spatial_reference=spatial_ref, in_z_field=column)
-    points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points_stage%sft" % (stage)).replace('.csv', '.lyr'))
+    points = arcpy.SaveToLayerFile_management(points, ("fitted_station_points_stage%sft" % stage).replace('.csv', '.lyr'))
     points = arcpy.CopyFeatures_management(points)
     print("Creating Thiessen polygons...")
-    # Delete non-relevent fields tp reduce errors
-    fields = [f.name for f in arcpy.ListFields(points)]
+
+    fields = [f.name for f in arcpy.ListFields(points)]  # Delete non-relevent fields tp reduce errors
     dont_delete_fields = ['FID', 'Shape', 'POINT_X', 'POINT_Y', column]
     fields2delete = list(set(fields) - set(dont_delete_fields))
     points = arcpy.DeleteField_management(points, fields2delete)
@@ -519,7 +527,7 @@ detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = []
+breakpoints = [800, 1420, 2300]
 transform_value = (0.0)  # Leave at 0.0
 xlimits = [0, 0]  # [xmin, xmax] default is [0, 0]
 ylimits = [0, 0]  # [ymin, ymax] default is [0, 0]
