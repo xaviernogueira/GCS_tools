@@ -9,9 +9,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import csv
 
-
-def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
-
+## FIX THIS TO RUN IN PANDAS AND USE CSV INSTEAD OF XLSX
+def prep_xl_file(table_location, listofcolumn=["D", "A", "L", "I", "J"]):
     id = []
     location = []
     x = []
@@ -19,15 +18,16 @@ def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
     z = []
     listoflist = [location, id, z, x, y]
 
-    if xyz_table_location[-3:] == "csv":
+    xyz_table_location = table_location[:-3] + "xlsx"
+    if table_location[-4:] == ".csv":
         print("Input table is a csv, conversion for openpyxl underway...")
         wb = Workbook()
         ws = wb.active
-        with open(xyz_table_location, 'r', errors='ignore') as f:
+        with open(table_location, 'r', errors='ignore') as f:
             for row in csv.reader(f):
                 ws.append(row)
-        wb.save(xyz_table_location[:-3] + "xlsx")
-        print("csv converted to xlsx @: %s" % (xyz_table_location[:-3] + "xlsx"))
+        wb.save(xyz_table_location)
+        print("csv converted to xlsx @: %s" % xyz_table_location)
     else:
         wb = load_workbook(xyz_table_location)
         ws = wb.active
@@ -40,7 +40,6 @@ def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
 
     print(listoflist)
 
-    #define station point spacing, number of station points and index
     point_spacing = int(location[1]) - int(location[0])
     print("Point spacing: " + str(point_spacing))
     number_of_points = int(int(location[-1]) / int(point_spacing))
@@ -53,7 +52,8 @@ def prep_xl_file(xyz_table_location, listofcolumn=["D", "A", "L", "I", "J"]):
     print("Z array: %s" % z_np)
     wb.save(xyz_table_location)
 
-    return [location_np, z_np, xyz_table_location]  # If errors rise, switch wb back to ws as it was ebfore
+    return [location_np, z_np, xyz_table_location]
+
 
 def quadratic_fit(location_np, location, z_np, ws):
     print("Applying quadratic fit...")
@@ -120,6 +120,7 @@ def quadratic_fit(location_np, location, z_np, ws):
 
     print("Excel file ready for Arc processing!")
 
+
 def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform=0, chosen_fit_index=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
     if xyz_table_location[-3:] == 'csv':
@@ -131,7 +132,7 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[],transform
     print("Applying linear fit...")
 
     if len(list_of_breakpoints) != 0:
-        list_of_breakpoints.insert(0,0)
+        list_of_breakpoints.insert(0, 0)
         list_of_breakpoints.append(int(location[-1]))
         print("Breakpoints imported...")
     else:
@@ -347,7 +348,7 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
     return [z_fit_list]
 
 
-def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, window_size=0,list_of_breakpoints=[]):
+def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, window_size=0, list_of_breakpoints=[]):
     # Turn fitted xl file to a csv
     wb = xl.load_workbook(fit_z_xl_file)
     ws = wb.active

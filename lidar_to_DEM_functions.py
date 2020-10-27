@@ -186,7 +186,6 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         print("Station lines file at: " + str(station_lines))
         print("Centerline at: " + str(centerline))
 
-
         station_points = arcpy.Intersect_analysis([station_lines, centerline], out_feature_class=(direct + "\\station_points_%s_smooth_%s_spaced.shp" % (smooth_distance, spacing)), join_attributes="ALL", output_type="POINT")
         station_points = arcpy.MultipartToSinglepart_management(station_points, (direct +"\\raw_station_points_%s_smooth %s_spaced.shp" % (smooth_distance, spacing)))
         station_points = arcpy.AddXY_management(station_points)
@@ -196,7 +195,18 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
             raster_name = (raster_folder + "\\filt_ras.tif")
         elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
         station_points = arcpy.JoinField_management(station_points, in_field="ORIG_FID", join_table=elevation_table, join_field="SrcID_Feat", fields=["Value"])
-        elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
+
+        #elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
+        elevation_table = direct + '\\XYZ_elevation_table.csv'
+        elevation_table = file_functions.tableToCSV(input_table=station_points, csv_filepath=elevation_table, fld_to_remove_override=[])  # Add fields to override, but first adjust detrending functions 'POINT_M', 'FID_smooth', 'Id', 'FID_smoo_1', 'InLine_FID', 'ORIG_FID'
+        elevation_df = pd.read_csv(elevation_table)
+
+        max_loc = elevation_df['LOCATION'].max()  # See if this thing works, hasn't been tested yet
+        if elevation_df.iloc[0]['Value'] < elevation_df.iloc[-1]['Value']:
+            loc_list = elevation_df.loc[:, [('Value')]].squeeze().to_list()
+            loc_np = [int(max_loc - i) for i in loc_list].to_numpy
+            elevation_df['LOCATION'] = loc_np
+        elevation_df.to_csv(elevation_table)
 
         print("Station points shapefile at: " + str(station_points))
         print("Elevation table at: " + str(elevation_table))
@@ -205,7 +215,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17567211, 17586552]
+comids = [17570347]
 
 for comid2 in comids:
     print("Processing COMID%s..." % comid2)
@@ -234,8 +244,8 @@ for comid2 in comids:
 
     ######## CALL FUNCTIONS ########
     #lidar_footptint(direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
-    #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
+    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
     #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, use_filtered_ras=False, centerline_verified=True)
 
 
