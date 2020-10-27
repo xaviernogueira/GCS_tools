@@ -339,8 +339,6 @@ def moving_window_linear_fit(location, z, xyz_table_location, window_size):
 
 def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, window_size=0, list_of_breakpoints=[]):
     # Turn fitted xl file to a csv
-    wb = xl.load_workbook(fit_z_xl_file)
-    ws = wb.active
     arcpy.env.workspace = detrend_location
     arcpy.overwriteoutput = True
     spatial_ref = arcpy.Describe(original_dem).spatialReference
@@ -350,13 +348,15 @@ def detrend_that_raster(detrend_location, fit_z_xl_file, original_dem, stage=0, 
         os.makedirs(detrend_location)
 
     if fit_z_xl_file[-4:] == 'xlsx':
+        wb = xl.load_workbook(fit_z_xl_file)
+        ws = wb.active
         csv_name = fit_z_xl_file[:-5] + "_fitted.csv"
         with open(csv_name, 'w', newline="") as f:
             col = csv.writer(f)
             for row in ws.rows:
                 col.writerow([cell.value for cell in row])
 
-    elif fit_z_xl_file[-4] == '.csv':
+    elif fit_z_xl_file[-4:] == '.csv':
         csv_name = fit_z_xl_file
 
     else:
@@ -511,7 +511,7 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on = True
-detrend_or_diagnostic = False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+detrend_or_diagnostic = True  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
@@ -527,7 +527,7 @@ detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = [800, 1420, 2300]
+breakpoints = [300, 820, 2075, 2200]
 transform_value = (0.0)  # Leave at 0.0
 xlimits = [0, 0]  # [xmin, xmax] default is [0, 0]
 ylimits = [0, 0]  # [ymin, ymax] default is [0, 0]
@@ -540,7 +540,7 @@ if process_on == True:
 
     if detrend_or_diagnostic==False:
         save_location = ''
-        diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
+        #diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
         fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
         make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],
                              location=save_location, transform=transform_value)
