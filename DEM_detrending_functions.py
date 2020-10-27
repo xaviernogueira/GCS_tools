@@ -113,11 +113,6 @@ def quadratic_fit(location_np, location, z_np, ws):
 
 def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transform=0, chosen_fit_index=[]):
     # Applies a linear fit to piecewise sections of the longitudinal profile, each piece is stored in split_list
-    if xyz_table_location[-3:] == 'csv':
-        xyz_table_location = (xyz_table_location[:-3] + "xlsx")
-
-    wb = load_workbook(xyz_table_location)
-    ws = wb.active
 
     print("Applying linear fit...")
 
@@ -131,13 +126,11 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transfor
     split_location_list = []
     split_z_list = []
 
-    # Split by breakpoints into a list of lists
-    point_spacing = int(location[1]) - int(location[0])
+    point_spacing = int(location[1]) - int(location[0])  # Split by breakpoints into a list of lists
 
-    #Format input numpy arrays
-    location = np.int_(location)
+    location = np.int_(location)  # Format input numpy arrays
     z = np.float_(z)
-    z = np.around(z, 9) # Round z to 9 decimal points
+    z = np.around(z, 9)  # Round z to 9 decimal points
 
     if len(list_of_breakpoints) > 0:
         fit_params = []
@@ -163,8 +156,7 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transfor
 
         print("Breakpoints added...")
 
-        # Get fit parameters for each section of the data
-        if len(split_z_list) == len(split_location_list):
+        if len(split_z_list) == len(split_location_list):  # Get fit parameters for each section of the data
             for i in range(len(split_location_list)):
                 temp_loc_array_unformatted = np.array(split_location_list[i])
                 temp_loc_array = np.int_(temp_loc_array_unformatted)
@@ -234,21 +226,27 @@ def linear_fit(location, z, xyz_table_location, list_of_breakpoints=[], transfor
     sd_res = np.std(residual)
     res_z_score = [(z_res_value - mean_res) * 1.0 / sd_res for z_res_value in residual]
 
-    # Add fitted z values to the xyz table
-    cell_test = ws["F1"]
-    cell_test.value = ("z_fit")
+    if xyz_table_location[-4:] == 'xlsx':  # Add fitted z values to the xyz table
+        wb = load_workbook(xyz_table_location)
+        ws = wb.active
+        cell_test = ws["F1"]
+        cell_test.value = ("z_fit")
 
-    if ws["F1"].value == cell_test.value:
-        for i in z_fit_list:
-            index = int(z_fit_list.index(i))
-            row_index = index + 2
-            cell = ws.cell(row=row_index, column=6)
-            cell.value = float(z_fit_list[index])
-    else:
-        print("Something is wrong with writing to the excel sheet")
-    ws["A1"].value == "OID"
+        if ws["F1"].value == cell_test.value:
+            for i in z_fit_list:
+                index = int(z_fit_list.index(i))
+                row_index = index + 2
+                cell = ws.cell(row=row_index, column=6)
+                cell.value = float(z_fit_list[index])
+        else:
+            print("Something is wrong with writing to the excel sheet")
 
-    wb.save(filename=xyz_table_location)
+        ws["A1"].value == "OID"
+        wb.save(filename=xyz_table_location)
+
+    elif xyz_table_location[-4:] == '.csv':
+        elevation_df = pd.read_csv(xyz_table_location)
+        elevation_df['z_fit'] = np.array(z_fit_list)
 
     print("Excel file ready for wetted-polygon processing!")
 
