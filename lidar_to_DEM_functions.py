@@ -216,7 +216,7 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
 
 
 
-comids = [17586552,17567211]
+comids = [17633478]
 
 
 for comid2 in comids:

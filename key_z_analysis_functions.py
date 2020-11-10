@@ -2,6 +2,7 @@ import arcpy
 import csv
 import os
 import scipy
+import math
 from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
@@ -176,6 +177,42 @@ def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
     for file in del_files:
         file_functions.delete_gis_files(file)
 
+
+def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_lengths=[]):
+    """This function makes a centerline for each key z wetted polygon using arcpy.
+    Inputs: detrend folder (str), list of key zs (float or int).
+    Output: If centerline_verified=False: new folder detrend_folder/analysis_centerline_and_XS containing un-edited centerlines assigned to the integer stage
+    greater than each key z (ex: 1.5ft key z will be assigned a smooth_centerline_DS_2ft.shp
+    If centerline_verified=True and len(xs_lengths)=len(key_zs), XS lines will be made for each of the centerlines in the same folder."""
+
+    line_folder = detrend_folder + '\\analysis_centerline_and_XS'
+    del_files = []
+
+    if not os.path.exists(line_folder):
+        os.makedirs(line_folder)
+
+    if not centerline_verified:
+        for z in key_zs:
+            z_str = float_keyz_format(z)
+
+            if isinstance(z, float):
+                try:
+                    round_up = int(z)
+                except:
+                    round_up = math.ceil(z)
+            else:
+                round_up = int(z)
+    
+            wetted_poly = detrend_folder + '\\wetted_polygons\\small_increments\\wetted_poly_%sft.shp' % z_str
+
+        print('Deleting files: %s' % del_files)
+        for file in del_files:
+            file_functions.delete_gis_files(file)
+
+    elif centerline_verified == True and len(key_zs) == len(xs_lengths):
+
+    else:
+        print('Length of xs_lengths list does not equal key_zs list. Please make sure there is one XS length associated with each input key z!')
 
 def prep_locations(detrend_folder):
     '''This function takes a reach and creates a new csv with aligned location identifiers using a Thiessen Polygon methodology.
@@ -682,10 +719,10 @@ def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_st
     x4 = np.array(wetted_areas)
     if small_increments == 0:
         y4 = np.array(range(0, len(wetted_areas)))
-        title = (out_folder + '\\mean_XS_plot.png')
+        title = (out_folder + '\\cross_section_plot.png')
     else:
         y4 = np.arange(0, max_stage+small_increments, small_increments)
-        title = (out_folder + '\\mean_XS_plot_small_inc.png')
+        title = (out_folder + '\\cross_section_plot_small_inc.png')
     plt.figure()
     plt.plot(x4, y4)
     plt.xlabel('Wetted area (ft^2)')
@@ -700,7 +737,7 @@ def pdf_cdf_plotting(in_folder, out_folder, channel_clip_poly, key_zs=[], max_st
     if len(key_zs) != 0:
         for stage in key_zs:
             plt.axvline(x=stage, color='r', linestyle='--')
-            title = (out_folder + '\\mean_XS_plot.png')
+            title = (out_folder + '\\cross_section_plot.png')
     fig = plt.gcf()
     fig.set_size_inches(12, 6)
     plt.savefig(title, dpi=300, bbox_inches='tight')
@@ -1082,7 +1119,7 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
             mean_slope = np.mean(sub_slope_df.loc[:, slope_header].to_numpy())
         else:
             print('Using detrending XYZ table to calculate mean reach slope...')
-            xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
+            xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid  # change if necessary to another table name, or just have a way to feed it an elevation table
             list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
             mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[2], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
 
@@ -1142,18 +1179,18 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17586610,17610235,17595173,17607455,17586760]
-sc_class = 3
+comid_list = [22535438]
+sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.5, 1.7, 5.4]
-bf_zs = [1.7,1.9,1.0,1.4,2.7]
+key_zs = []
+bf_zs = []
 key_z_process = True
 
 if key_z_process == True:
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
-        sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
-        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+        sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s" % SCO_list[count]
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s\COMID%s" % (SCO_number, comid))
         out_folder = direct + r'\LINEAR_DETREND'
         process_footprint = direct + '\\las_footprint.shp'
         table_location = out_folder + "\\gcs_ready_tables"
@@ -1166,10 +1203,10 @@ if key_z_process == True:
 
         arcpy.env.overwriteOutput = True
 
-        #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
-        #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
+        prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
+        pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
         #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
         #aligned_file = prep_locations(detrend_folder=out_folder)
         #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
         #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-        cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=sc_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+        #cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=sc_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])

@@ -576,9 +576,9 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-GCS_process_on=False
+GCS_process_on = False
 
-if GCS_process_on=True:
+if GCS_process_on == True:
     sc_class = 2
     comid = 17586810
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
