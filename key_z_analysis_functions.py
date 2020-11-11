@@ -226,10 +226,6 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
                 arcpy.DeleteFeatures_management(spurs)
             arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
 
-        print('Deleting files: %s' % del_files)
-        for file in del_files:
-            file_functions.delete_gis_files(file)
-
         print('Key_z centerlines located @ %s')
         print('Please edit centerlines, and re-run function with XS lengths as a list and centerline_verified=True')
 
@@ -237,16 +233,19 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
         for count, z in enumerate(key_zs):
             round_up = round_ups[count]
             centerlines = [line_folder + '\\stage_centerline_%sft.shp' % round_up, line_folder + '\\stage_centerline_%sft_D.shp' % round_up, line_folder + '\\stage_centerline_%sft_DS.shp' % round_up]
-        arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
-        arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 20)
+            arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
+            arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 20)
 
-        del_files.append(centerlines[1])
-        create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=[int(round_ups[count])])
-
-
+            del_files.append(centerlines[1])
+            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=[int(round_ups[count])])
+        print('Cross sections made for each key z centerline. Please verify quality before continuing analysis')
 
     else:
         print('Length of xs_lengths list does not equal key_zs list. Please make sure there is one XS length associated with each input key z!')
+
+    print('Deleting files: %s' % del_files)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
 
 def prep_locations(detrend_folder):
     '''This function takes a reach and creates a new csv with aligned location identifiers using a Thiessen Polygon methodology.
