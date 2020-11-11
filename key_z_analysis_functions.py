@@ -178,15 +178,17 @@ def prep_small_inc(detrend_folder, interval=0.1, max_stage=20):
         file_functions.delete_gis_files(file)
 
 
-def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_lengths=[]):
+def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_lengths=[], xs_spacing=3):
     """This function makes a centerline for each key z wetted polygon using arcpy.
-    Inputs: detrend folder (str), list of key zs (float or int).
+    Inputs: detrend folder (str), list of key zs (float or int), xs_lengths list of cross section lengths in ft, and xs_spacing (int) is feet spacing of cross sections.
     Output: If centerline_verified=False: new folder detrend_folder/analysis_centerline_and_XS containing un-edited centerlines assigned to the integer stage
     greater than each key z (ex: 1.5ft key z will be assigned a smooth_centerline_DS_2ft.shp
     If centerline_verified=True and len(xs_lengths)=len(key_zs), XS lines will be made for each of the centerlines in the same folder."""
 
     line_folder = detrend_folder + '\\analysis_centerline_and_XS'
+    wetted_folder = detrend_folder + '\\wetted_polygons\\small_increments\\'
     del_files = []
+    round_ups = []
 
     if not os.path.exists(line_folder):
         os.makedirs(line_folder)
@@ -202,14 +204,46 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
                     round_up = math.ceil(z)
             else:
                 round_up = int(z)
-    
-            wetted_poly = detrend_folder + '\\wetted_polygons\\small_increments\\wetted_poly_%sft.shp' % z_str
+
+            round_ups.append(round_up)
+            wetted_poly = wetted_folder + '\\wetted_poly_%sft.shp' % z_str
+
+            temp_files = [wetted_folder + '\\temp_poly%s_%sft.shp' % (i, round_up) for i in range(1, 4)]
+            for j in temp_files:
+                del_files.append(j)
+            arcpy.Union_analysis(wetted_poly, temp_files[0], gaps="NO_GAPS")
+            arcpy.AddField_management('null_field', 'Short')
+            arcpy.Dissolve_management(temp_files[0], temp_files[1], dissolve_field='null_field', multi_part=True)
+            arcpy.SmoothPolygon_cartography(temp_files[1], temp_files[2], 'PAEK', 164)
+
+            centerline = line_folder + '\\stage_centerline_%sft.shp'
+
+            arcpy.PolygonToCenterline_topographic(temp_files[2], centerline)
+            arcpy.AddGeometryAttributes_management(centerline, 'LENGTH')
+            spurs = arcpy.SelectLayerByAttribute_management(centerline[0], where_clause=('LENGTH < %s' % str(50)),  # Deletes spurs less than 50 ft in length
+                                                            selection_type="NEW_SELECTION")
+            if int(arcpy.GetCount_management(spurs).getOutput(0)) > 0:
+                arcpy.DeleteFeatures_management(spurs)
+            arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
 
         print('Deleting files: %s' % del_files)
         for file in del_files:
             file_functions.delete_gis_files(file)
 
+        print('Key_z centerlines located @ %s')
+        print('Please edit centerlines, and re-run function with XS lengths as a list and centerline_verified=True')
+
     elif centerline_verified == True and len(key_zs) == len(xs_lengths):
+        for count, z in enumerate(key_zs):
+            round_up = round_ups[count]
+            centerlines = [line_folder + '\\stage_centerline_%sft.shp' % round_up, line_folder + '\\stage_centerline_%sft_D.shp' % round_up, line_folder + '\\stage_centerline_%sft_DS.shp' % round_up]
+        arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
+        arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 20)
+
+        del_files.append(centerlines[1])
+        create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=[int(round_ups[count])])
+
+
 
     else:
         print('Length of xs_lengths list does not equal key_zs list. Please make sure there is one XS length associated with each input key z!')

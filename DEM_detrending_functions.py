@@ -510,12 +510,13 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
-process_on = True
+process_on = False
 detrend_or_diagnostic = True  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17586552
+comid = 22535438
+
 SCO_number = '00_new_adds'
 
 direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s\COMID%s" % (SCO_number, comid))
@@ -527,7 +528,7 @@ detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = [300, 820, 2075, 2200]
+breakpoints = [100, 335, 375, 800, 1200]
 transform_value = (0.0)  # Leave at 0.0
 xlimits = [0, 0]  # [xmin, xmax] default is [0, 0]
 ylimits = [0, 0]  # [ymin, ymax] default is [0, 0]
