@@ -193,17 +193,20 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
     if not os.path.exists(line_folder):
         os.makedirs(line_folder)
 
+    for z in key_zs:
+        z_str = float_keyz_format(z)
+
+        if isinstance(z, float):
+            round_up = math.ceil(z)
+
+        else:
+            round_up = int(z)
+
+        round_ups.append(round_up)
+
     if not centerline_verified:
-        for z in key_zs:
-            z_str = float_keyz_format(z)
-
-            if isinstance(z, float):
-                round_up = math.ceil(z)
-
-            else:
-                round_up = int(z)
-
-            round_ups.append(round_up)
+        for count, z in enumerate(key_zs):
+            round_up = round_ups[count]
             wetted_poly = wetted_folder + '\\wetted_poly_%sft.shp' % z_str
 
             temp_files = [wetted_folder + '\\temp_poly%s_%sft.shp' % (i, round_up) for i in range(1, 4)]
@@ -223,19 +226,24 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
                 arcpy.DeleteFeatures_management(spurs)
             arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
 
-        print('Key_z centerlines located @ %s')
+        print('Key_z centerlines located @ %s' % line_folder)
         print('Please edit centerlines, and re-run function with XS lengths as a list and centerline_verified=True')
 
     else:
-        centerline_nums = find_centerline_nums(detrend_folder)
-        for count, num in enumerate(centerline_nums):
-
+        for count, z in enumerate(key_zs):
+            num = round_ups[count]
             centerlines = [line_folder + '\\stage_centerline_%sft.shp' % num, line_folder + '\\stage_centerline_%sft_D.shp' % num, line_folder + '\\stage_centerline_%sft_DS.shp' % num]
             arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
             arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 10)
 
+            no_dups = []
+            for i in round_ups:
+                if i not in no_dups:
+                    no_dups.append(i)
+            index = no_dups.index(num)
+
             del_files.append(centerlines[1])
-            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=num)
+            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[index], stage=num)
         print('Cross sections made for each key z centerline. Please verify quality before continuing analysis')
 
     print('Deleting files: %s' % del_files)
