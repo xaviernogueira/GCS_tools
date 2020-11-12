@@ -216,12 +216,11 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
             arcpy.Dissolve_management(temp_files[0], temp_files[1], dissolve_field='null_field', multi_part=True)
             arcpy.SmoothPolygon_cartography(temp_files[1], temp_files[2], 'PAEK', 164)
 
-            centerline = line_folder + '\\stage_centerline_%sft.shp'
+            centerline = line_folder + '\\stage_centerline_%sft.shp' % round_up
 
             arcpy.PolygonToCenterline_topographic(temp_files[2], centerline)
             arcpy.AddGeometryAttributes_management(centerline, 'LENGTH')
-            spurs = arcpy.SelectLayerByAttribute_management(centerline[0], where_clause=('LENGTH < %s' % str(50)),  # Deletes spurs less than 50 ft in length
-                                                            selection_type="NEW_SELECTION")
+            spurs = arcpy.SelectLayerByAttribute_management(centerline, where_clause=('LENGTH < %s' % str(50)), selection_type="NEW_SELECTION")
             if int(arcpy.GetCount_management(spurs).getOutput(0)) > 0:
                 arcpy.DeleteFeatures_management(spurs)
             arcpy.SelectLayerByAttribute_management(centerline, selection_type="CLEAR_SELECTION")
