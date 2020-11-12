@@ -245,8 +245,8 @@ for comid2 in comids:
     print("Imports ready, processing commencing...")
 
     ######## CALL FUNCTIONS ########
-    lidar_footptint(direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
-    define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
+    #lidar_footptint(direct, spatial_ref=spatial_ref, las_tools_bin=lastooldirect)
+    #define_ground_polygon(spatial_extent, NAIP_imagery_folder, centerline_buff=centerline_buff, spatial_ref=spatial_ref)
     #lidar_to_raster(las_folder=ground_merged_folder2, spatial_ref=spatial_ref, las_dataset_name=las_dataset_name, ft_spatial_ref=ft_spatial_ref)
     #detrend_prep(raster_name=raster_location, flow_polygon=upstream_source_poly, spatial_extent=spatial_extent, ft_spatial_ref=ft_spatial_ref, ft_spacing=3, use_filtered_ras=False, centerline_verified=True)
 

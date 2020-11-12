@@ -515,7 +515,7 @@ detrend_or_diagnostic = True  # False plots graphs to help make breakpoint decis
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 22535438
+comid = 17562556
 
 SCO_number = '00_new_adds'
 
@@ -528,7 +528,7 @@ detrend_workplace = direct + '\\LINEAR_DETREND'
 spatial_ref = arcpy.Describe(process_footprint).spatialReference
 ######
 
-breakpoints = [100, 335, 375, 800, 1200]
+breakpoints = [400, 715, 765, 1090, 1475, 1485, 1750, 1880]
 transform_value = (0.0)  # Leave at 0.0
 xlimits = [0, 0]  # [xmin, xmax] default is [0, 0]
 ylimits = [0, 0]  # [ymin, ymax] default is [0, 0]
