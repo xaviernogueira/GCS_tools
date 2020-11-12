@@ -199,7 +199,7 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
 
             if isinstance(z, float):
                 round_up = math.ceil(z)
-                
+
             else:
                 round_up = int(z)
 
@@ -226,19 +226,17 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
         print('Key_z centerlines located @ %s')
         print('Please edit centerlines, and re-run function with XS lengths as a list and centerline_verified=True')
 
-    elif centerline_verified == True and len(key_zs) == len(xs_lengths):
-        for count, z in enumerate(key_zs):
-            round_up = round_ups[count]
-            centerlines = [line_folder + '\\stage_centerline_%sft.shp' % round_up, line_folder + '\\stage_centerline_%sft_D.shp' % round_up, line_folder + '\\stage_centerline_%sft_DS.shp' % round_up]
+    else:
+        centerline_nums = find_centerline_nums(detrend_folder)
+        for count, num in enumerate(centerline_nums):
+
+            centerlines = [line_folder + '\\stage_centerline_%sft.shp' % num, line_folder + '\\stage_centerline_%sft_D.shp' % num, line_folder + '\\stage_centerline_%sft_DS.shp' % num]
             arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
-            arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 20)
+            arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 10)
 
             del_files.append(centerlines[1])
-            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=[int(round_ups[count])])
+            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[count], stage=num)
         print('Cross sections made for each key z centerline. Please verify quality before continuing analysis')
-
-    else:
-        print('Length of xs_lengths list does not equal key_zs list. Please make sure there is one XS length associated with each input key z!')
 
     print('Deleting files: %s' % del_files)
     for file in del_files:
@@ -920,10 +918,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17562556]
+comid_list = [17567211]
 sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
-key_zs = []
+key_zs = [0.1, 0.9, 2.6]
 bf_zs = []
 key_z_process = True
 
@@ -946,7 +944,7 @@ if key_z_process == True:
 
         #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
         #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
-        key_z_centerlines(detrend_folder=out_folder, key_zs=[0.3, 3.0], centerline_verified=False, xs_lengths=[], xs_spacing=3)
+        key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[60, 450], xs_spacing=3)
         #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
         #aligned_file = prep_locations(detrend_folder=out_folder)
         #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)

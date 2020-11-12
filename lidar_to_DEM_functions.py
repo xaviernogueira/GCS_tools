@@ -196,7 +196,6 @@ def detrend_prep(raster_name, flow_polygon, spatial_extent, ft_spatial_ref, ft_s
         elevation_table = arcpy.ExtractValuesToTable_ga(station_points, in_rasters=raster_name, out_table=(direct + "\\sp_elevation_table_%s_smooth %s_spaced.dbf" % (smooth_distance, spacing)))
         station_points = arcpy.JoinField_management(station_points, in_field="ORIG_FID", join_table=elevation_table, join_field="SrcID_Feat", fields=["Value"])
 
-        #elevation_table = arcpy.TableToExcel_conversion(station_points, (direct + "\\XY_elevation_table_%s_smooth_%s_spaced.xlsx" % (smooth_distance, spacing)))
         elevation_table = direct + '\\XYZ_elevation_table.csv'
         elevation_table = file_functions.tableToCSV(input_table=station_points, csv_filepath=elevation_table, fld_to_remove_override=[])  # Add fields to override, but first adjust detrending functions 'POINT_M', 'FID_smooth', 'Id', 'FID_smoo_1', 'InLine_FID', 'ORIG_FID'
         elevation_df = pd.read_csv(elevation_table)
