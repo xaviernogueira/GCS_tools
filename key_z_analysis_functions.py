@@ -235,6 +235,7 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
             centerlines = [line_folder + '\\stage_centerline_%sft.shp' % num, line_folder + '\\stage_centerline_%sft_D.shp' % num, line_folder + '\\stage_centerline_%sft_DS.shp' % num]
             arcpy.Dissolve_management(centerlines[0], centerlines[1], dissolve_field='ObjectID')
             arcpy.SmoothLine_cartography(centerlines[1], centerlines[2], 'PAEK', 10)
+            arcpy.AddField_management(centerlines[2], 'Id', 'Short')
 
             no_dups = []
             for i in round_ups:
@@ -243,7 +244,7 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
             index = no_dups.index(num)
 
             del_files.append(centerlines[1])
-            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[index], stage=num)
+            create_station_lines_function(centerlines[2], xs_spacing, xs_lengths[index], stage=int(num))
         print('Cross sections made for each key z centerline. Please verify quality before continuing analysis')
 
     print('Deleting files: %s' % del_files)
