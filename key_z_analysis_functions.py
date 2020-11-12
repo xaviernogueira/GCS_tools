@@ -870,11 +870,11 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
             if os.path.exists(in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid):
                 xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
-            elif os.path.exists(in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.csv' % comid):
-                xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.csv' % comid
+            elif os.path.exists(in_folder + '\\COMID%s\\XYZ_elevation_table.csv' % comid):
+                xyz_xlsx = in_folder + '\\COMID%s\\XYZ_elevation_table.csv' % comid
             else:
                 print('Cant find XYZ table to calculate slope, consider filling slope table parameter to use that value for CART classification')
-                
+
             list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
             mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[2], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
 
