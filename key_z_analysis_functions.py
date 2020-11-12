@@ -867,7 +867,14 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
             mean_slope = np.mean(sub_slope_df.loc[:, slope_header].to_numpy())
         else:
             print('Using detrending XYZ table to calculate mean reach slope...')
-            xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid  # change if necessary to another table name, or just have a way to feed it an elevation table
+
+            if os.path.exists(in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid):
+                xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.xlsx' % comid
+            elif os.path.exists(in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.csv' % comid):
+                xyz_xlsx = in_folder + '\\COMID%s\\XY_elevation_table_20_smooth_3_spaced.csv' % comid
+            else:
+                print('Cant find XYZ table to calculate slope, consider filling slope table parameter to use that value for CART classification')
+                
             list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
             mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[2], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
 
@@ -931,7 +938,7 @@ comid_list = [17567211]
 sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
 key_zs = [0.1, 0.9, 2.6]
-bf_zs = []
+bf_zs = [0.9]
 key_z_process = True
 
 if key_z_process == True:
@@ -953,9 +960,9 @@ if key_z_process == True:
 
         #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
         #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
-        key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[60, 450], xs_spacing=3)
+        #key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[60, 450], xs_spacing=3)
         #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
         #aligned_file = prep_locations(detrend_folder=out_folder)
         #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
         #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-        #cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=sc_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+        cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
