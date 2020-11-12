@@ -198,10 +198,8 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
             z_str = float_keyz_format(z)
 
             if isinstance(z, float):
-                try:
-                    round_up = int(z)
-                except:
-                    round_up = math.ceil(z)
+                round_up = math.ceil(z)
+                
             else:
                 round_up = int(z)
 
