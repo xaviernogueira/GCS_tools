@@ -194,8 +194,6 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
         os.makedirs(line_folder)
 
     for z in key_zs:
-        z_str = float_keyz_format(z)
-
         if isinstance(z, float):
             round_up = math.ceil(z)
 
@@ -206,6 +204,7 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
 
     if not centerline_verified:
         for count, z in enumerate(key_zs):
+            z_str = float_keyz_format(z)
             round_up = round_ups[count]
             wetted_poly = wetted_folder + '\\wetted_poly_%sft.shp' % z_str
 
@@ -934,12 +933,13 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17567211]
+comid_list = [17609947]
 sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.1, 0.9, 2.6]
-bf_zs = [0.9]
+key_zs = [0.2, 0.7, 2.6]
+bf_zs = [0.7]
 key_z_process = True
+finish_em_zel = False
 
 if key_z_process == True:
     for count, comid in enumerate(comid_list):
@@ -960,9 +960,11 @@ if key_z_process == True:
 
         #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
         #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
-        #key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[60, 450], xs_spacing=3)
-        #key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
-        #aligned_file = prep_locations(detrend_folder=out_folder)
-        #thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-        #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-        cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+        key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=False, xs_lengths=[], xs_spacing=3)
+
+        if finish_em_zel == True:
+            key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
+            aligned_file = prep_locations(detrend_folder=out_folder)
+            thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
+            add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
+            cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=out_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
