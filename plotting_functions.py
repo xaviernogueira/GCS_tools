@@ -19,8 +19,40 @@ import gcs_generating_functions
 import classify_landforms_GUI
 import DEM_detrending_functions
 
-def flip_tables(table_folder, key_zs):
+def flip_tables(table_folder, aligned_table):
     """This function can be used to flip the index on the gcs csv out tables when dist_down corresponds to dist upstream by error."""
+    table_list = [i for i in listdir(table_folder) if i[-4:] == '.csv']
+
+    for table in table_list:
+        table_loc = table_folder + '\\%s' % table
+        table_df = pd.read_csv(table_df)
+        max_dist = np.max(table_df.loc[:, 'dist_down'].to_numpy())
+        dist_list = table_df.loc[:, ['dist_down']].squeeze().to_list()
+        loc_np = np.array([int(max_dist - i) for i in dist_list])
+        table_df['dist_down'] = loc_np
+        table_df.sort_values('dist_down', inplace=True)
+        table_df.to_csv(table_loc)
+
+    print('non-aligned GCS tables distance down field flipped!')
+
+    aligned_df = pd.read_csv(aligned_table)
+    loc_fields = [j for j in list(aligned_df.columns.values) if j[:4] == 'loc']
+    loc_nums = [int(i[4]) for i in loc_fields]
+
+
+    for loc_field in loc_fields:
+        temp_max = np.max(table_df.loc[:, loc_field].to_numpy())
+        dist_list = table_df.loc[:, [loc_field]].squeeze().to_list()
+        loc_np = np.array([int(max_dist - i) for i in dist_list])
+        table_df[loc_field] = loc_np
+
+    min_loc = loc_fields[loc_nums.index(min(loc_nums))]
+    aligned_df.sort_values(str(min_loc), inplace=True)
+    aligned_df.to_csv(aligned_table)
+
+    print('Aligned locations table flipped successfully!')
+
+
 
 def csv_builder():
     """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
