@@ -59,15 +59,15 @@ def gcs_plotter(table_folder, out_folder, key_zs, fields=['W', 'Z', 'W_s', 'Z_s'
     """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
      If aligned_table is defined as the aligned csv, plots showing each key z profile as sub-plots for a given field are saved as well."""
 
-def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='', sort_by_field='', single_plots=False):
+def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
     in_csv must contained data readable by pandas. Out folder is where the plots are saved.
     Fields is a list of fields to make plots from. If single_plots==True(False is default), each field is on the same plots for a single sort_by_field.
-    sort_by_field (int, or str) is the field that contains values to separate plots or for comparison (ex: log(catchment area) or geo_class."""
+    sort_by_field (int, or str) is the field that contains values to separate plots or for comparison (ex: log(catchment area) or geo_class.
+    field_units is a list that MUST be filled with units corresponding to each input field
+    field_title comes into play when single_plots == True and designates the plot title and filename. Default is 'fields' """
     in_df = pd.read_csv(in_csv)
     box_dict = {}  # Either formatted as fields:[[sort_unique1],[],...] if single_plots==False OR sort_uniques:[[field1],[],...] if single_plots == True
-    if field_title == '':
-        field_title = 'fields'
 
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
@@ -112,6 +112,8 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='', sor
             plt.boxplot(box_dict[unique], patch_artist=True)
             plt.savefig(out_folder + plot_dir, dpi=400, bbox_inches='tight')
             plt.close(fig)
+
+    print('Box plots saved @ %s' % out_folder)
 
 
 
