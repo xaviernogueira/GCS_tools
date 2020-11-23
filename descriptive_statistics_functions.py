@@ -234,12 +234,25 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
 
     print("All descriptive stats completed!")
 
-def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
+def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=False):
     list_of_lists = [[],[],[]] # W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
     list_of_landforms = [[],[],[],[],[]] # -2,-1,0,1,2
     wz_corr_lists = [[], [], [], [], []]  # Pearson correlation coefficients for Ws and Zs for each increasing flood stage for landforms [-2,-1,0,1,2]
 
-    for stage in range(1, max_stage + 1):
+    if len(key_zs) != 0:
+        max_stage = max(key_zs)
+        stage_range = key_zs
+        z_format = True
+    else:
+        stage_range = range(1, max_stage + 1)
+        z_format = False
+
+    for stage in stage_range:
+        if z_format == True:
+            z_str = float_keyz_format(stage)
+        else:
+            z_str = str(stage)
+
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
         wb = xl.load_workbook(stage_stat_xl)
@@ -270,7 +283,7 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
     plt.grid(True)
 
     ax2 = plt.subplot(312, sharex=ax1)
-    plt.plot(x_values,np.array(list_of_lists[1]), color='m')
+    plt.plot(x_values, np.array(list_of_lists[1]), color='m')
     plt.ylabel('Mean detrended Z (US ft)')
     plt.ylim(0, np.max(np.array(list_of_lists[1])))
     plt.setp(ax2.get_xticklabels(), visible=False)
@@ -304,14 +317,14 @@ def compare_flows(stages_stats_xl_dict, max_stage,save_plots=False):
 
     for landform in list_of_landforms:
         landform_index = list_of_landforms.index(landform)
-        ax.plot(x_values,np.array(landform),color=list_of_land_colors[landform_index],label=list_of_land_labels[landform_index])
+        ax.plot(x_values,np.array(landform), color=list_of_land_colors[landform_index], label=list_of_land_labels[landform_index])
 
     ax.set_xlabel('Flood stage height (US ft)')
     ax.set_ylabel('% Abundance')
     ax.set_title("Landform abundance vs. flood stage height")
     ax.legend()
-    ax.set_ylim(0,100)
-    ax.set_xlim(1,max_stage)
+    ax.set_ylim(0, 100)
+    ax.set_xlim(1, max_stage)
     plt.setp(ax.get_xticklabels(), fontsize=12)
     ax.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
     plt.grid(True)
@@ -576,25 +589,26 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-GCS_process_on = False
+GCS_process_on = True
 
 if GCS_process_on == True:
-    sc_class = 2
-    comid = 17586810
+    sc_class = 1
+    comid = 17569535
+    key_zs = []
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
     out_folder = direct + r'\LINEAR_DETREND'
 
 
     table_directory = direct + '\\LINEAR_DETREND\\gcs_ready_tables'
 
-    out_list = analysis_setup(table_directory, key_zs=[0.6, 3.6, 8.1])
+    out_list = analysis_setup(table_directory, key_zs=key_zs)
     stages_dict = out_list[0]
     stages_stats_xl_dict = out_list[1]
     max_stage = out_list[2]
     stats_table_location = out_list[3]
     stages = out_list[4]
 
-    stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=False)
+    stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
     #compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
     #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 

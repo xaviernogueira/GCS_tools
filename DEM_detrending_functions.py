@@ -511,11 +511,12 @@ def make_residual_plot(location_np, residual, R_squared, stage=0, xmin=0, xmax=0
 
 ################## CALL FUNCTIONS AS NECESSARY ####################
 process_on = False
-detrend_or_diagnostic = True  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
+detrend_or_diagnostic = False  # False plots graphs to help make breakpoint decision, True saves plots and detrends the DEM.
 
 ###### INPUTS ######
 # excel file containing xyz data for station points
-comid = 17562556
+comid = 17570347
+
 
 SCO_number = '00_new_adds'
 
@@ -541,12 +542,13 @@ if process_on == True:
 
     if detrend_or_diagnostic==False:
         save_location = ''
-        #diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
-        fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
-        make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],
-                             location=save_location, transform=transform_value)
+        diagnostic_quick_plot(location_np=loc, z_np=z, xlim=0)
+        #fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints, transform=transform_value, chosen_fit_index=chosen_fit_index)
+        #make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],
+                             #location=save_location, transform=transform_value)
+
     else:
-        save_location=direct
+
         fit_list = linear_fit(location=loc, z=z, xyz_table_location=xyz_table, list_of_breakpoints=breakpoints,
                               transform=transform_value, chosen_fit_index=chosen_fit_index)
         make_linear_fit_plot(location_np=loc, z_np=z, fit_params=fit_list[0], stage=0, xmin=xlimits[0], xmax=xlimits[1], ymin=ylimits[0], ymax=ylimits[1],

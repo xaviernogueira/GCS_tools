@@ -19,6 +19,21 @@ import gcs_generating_functions
 import classify_landforms_GUI
 import DEM_detrending_functions
 
+def flip_tables(table_folder, key_zs):
+    """This function can be used to flip the index on the gcs csv out tables when dist_down corresponds to dist upstream by error."""
+
+def csv_builder():
+    """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
+
+def gcs_plotter(table_folder, out_folder, key_zs, fields=['W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s'], aligned_table=''):
+    """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
+     If aligned_table is defined as the aligned csv, plots showing each key z profile as sub-plots for a given field are saved as well."""
+
+def box_plots(in_csv, field, sort_by_field, dots=False):
+
+def landform_pie_charts(in_csv, comids=[]):
+    """This function plots relative landform abundance across key z stages as pie sub-plots. Values are averaged across input comids."""
+
 
 
 def nested_landform_analysis(aligned_csv, key_zs):
