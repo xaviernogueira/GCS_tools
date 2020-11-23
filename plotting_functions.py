@@ -52,8 +52,6 @@ def flip_tables(table_folder, aligned_table):
 
     print('Aligned locations table flipped successfully!')
 
-
-
 def csv_builder():
     """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
 
@@ -61,7 +59,27 @@ def gcs_plotter(table_folder, out_folder, key_zs, fields=['W', 'Z', 'W_s', 'Z_s'
     """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
      If aligned_table is defined as the aligned csv, plots showing each key z profile as sub-plots for a given field are saved as well."""
 
-def box_plots(in_csv, field, sort_by_field, dots=False):
+def box_plots(in_csv, out_folder, fields=[], sort_by_field='', single_plots=False):
+    """This function takes a csv and creates box and whisker plots for each field.
+    in_csv must contained data readable by pandas. Out folder is where the plots are saved.
+    Fields is a list of fields to make plots from. If single_plots==True(False is default), each field is on the same plots for a single sort_by_field.
+    sort_by_field (int, or str) is the field that contains values to separate plots or for comparison (ex: log(catchment area) or geo_class."""
+    in_df = pd.read_csv(in_csv)
+    box_dict = {}  # Either formatted as  fields:[[],[],...] if single_plots==False OR sort_uniques:[[],[],...] if single_plots == True
+
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+
+    sort_uniques = in_df[sort_by_field].unique()
+
+    
+    if single_plots == True:
+
+        for value, count in enumerate(sort_uniques):
+
+
+
+
 
 def landform_pie_charts(in_csv, comids=[]):
     """This function plots relative landform abundance across key z stages as pie sub-plots. Values are averaged across input comids."""

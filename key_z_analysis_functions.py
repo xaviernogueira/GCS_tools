@@ -423,7 +423,7 @@ def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_fol
     spacing = find_xs_spacing(detrend_folder)
 
     if len(key_zs) == 0 and max_stage != 0:  # Controls what range or list of stage values will be used to create gcs csvs
-        key_zs = [i for i in range(0, max_stage+1)]
+        key_zs = [i for i in range(0, max_stage + 1)]
 
     for z in key_zs:
         z_str = float_keyz_format(z)
@@ -876,7 +876,7 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
             #list_of_arrays = DEM_detrending_functions.prep_xl_file(xyz_table_location=xyz_xlsx)
             #mean_slope = abs(DEM_detrending_functions.linear_fit(list_of_arrays[0], list_of_arrays[1], list_of_arrays[2], list_of_breakpoints=[], transform=0, chosen_fit_index=[])[0][0][0])
-            mean_slope = 0.01024
+            mean_slope = 0.003657
         slopes_list.append(mean_slope)
 
         print('Calculating mean w/d and coefficient of variation for bank full depth for comid %s' % comid)
@@ -933,12 +933,12 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17585756]
-sc_class = 'O4'
+comid_list = [17573045]
+sc_class = 'O2'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.8, 2.0, 4.3]
+key_zs = [0.6, 3.1, 12]
 bf_zs = key_zs[1]
-key_z_process = False
+key_z_process = True
 finish_em_zel = True
 
 if key_z_process == True:
@@ -967,4 +967,4 @@ if key_z_process == True:
             aligned_file = prep_locations(detrend_folder=out_folder)
             thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
             add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-            cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=sc_folder + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+            cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=direct + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])

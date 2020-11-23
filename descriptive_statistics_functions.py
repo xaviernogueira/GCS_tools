@@ -229,7 +229,7 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
                 else:
                     ax.set_ylabel('C(Ws,Zs)')
                 plt.boxplot(box_plot_dict[field], patch_artist=True, labels=['Oversized', 'Const. Pool', 'Normal', 'Wide riffle', 'Nozzle'])
-                plt.savefig(plot_dirs + ('\\stage_%sft_%s_boxplot.png' % (stage, field)), dpi=400,bbox_inches='tight')
+                plt.savefig(plot_dirs + ('\\stage_%sft_%s_boxplot.png' % (stage, field)), dpi=400, bbox_inches='tight')
                 plt.close(fig)
 
     print("All descriptive stats completed!")
@@ -589,7 +589,7 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-GCS_process_on = True
+GCS_process_on = False
 
 if GCS_process_on == True:
     sc_class = 1
