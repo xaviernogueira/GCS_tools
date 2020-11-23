@@ -74,6 +74,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
 
     sort_uniques = in_df[sort_by_field].unique()
 
+    print('Making box and whisker plots...')
     if single_plots == False:
         for field in fields:
             box_dict[field] = []
@@ -89,7 +90,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel(sort_by_field)
             ax.set_ylabel(field_units[count])
 
-            plt.boxplot(box_dict[field], patch_artist=True)
+            plt.boxplot(box_dict[field], patch_artist=True, showfliers=False)
             plt.savefig(out_folder + plot_dir, dpi=400, bbox_inches='tight')
             plt.close(fig)
 
@@ -109,19 +110,11 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel('Fields')
             ax.set_ylabel(field_units[0])
 
-            plt.boxplot(box_dict[unique], patch_artist=True)
+            plt.boxplot(box_dict[unique], patch_artist=True, showfliers=False)
             plt.savefig(out_folder + plot_dir, dpi=400, bbox_inches='tight')
             plt.close(fig)
 
-    print('Box plots saved @ %s' % out_folder)
-
-
-
-
-
-
-
-
+    print('Plots saved @ %s' % out_folder)
 
 
 def landform_pie_charts(in_csv, comids=[]):
@@ -444,3 +437,7 @@ if analysis_plotting == True:
         key_z_dict = {}
 
         arcpy.env.overwriteOutput = True
+
+        sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
+        sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
+        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Catchment_area_km2'], field_units=['km2'], field_title='fields', sort_by_field='manual_class', single_plots=False)
