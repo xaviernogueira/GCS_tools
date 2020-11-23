@@ -222,7 +222,7 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
 
             for field in list_of_fields[:3]:
                 fig, ax = plt.subplots()
-                ax.set_title('Stage %s ft, %s boxplots by landform' % (str(int(stage)), field))
+                ax.set_title('Stage %s ft, %s boxplots by landform' % (str(stage), field))
                 ax.set_xlabel('Landform')
                 if field != 'W_s_Z_s':
                     ax.set_ylabel('US feet')
@@ -250,8 +250,10 @@ def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=Fals
     for stage in stage_range:
         if z_format == True:
             z_str = float_keyz_format(stage)
+            x_values = np.array(key_zs)
         else:
             z_str = str(stage)
+            x_values = np.arange(start=1, stop=max_stage + 1, step=1)
 
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
@@ -273,9 +275,7 @@ def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=Fals
         if not os.path.exists(plot_dirs):
             os.makedirs(plot_dirs)
 
-    x_values = np.arange(start=1, stop=max_stage+1, step=1) #  Setting up subplots showing W, Z, and C(W,Z) vs stage
-
-    ax1 = plt.subplot(311)
+    ax1 = plt.subplot(311) #  Setting up subplots showing W, Z, and C(W,Z) vs stage
     plt.plot(x_values, np.array(list_of_lists[0]), color='g')
     plt.ylabel('Mean width (US ft)')
     plt.ylim(0, np.max(np.array(list_of_lists[0])))
@@ -594,7 +594,7 @@ GCS_process_on = True
 if GCS_process_on == True:
     sc_class = 1
     comid = 17569535
-    key_zs = []
+    key_zs = [0.9, 3.0, 5.8]
     direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
     out_folder = direct + r'\LINEAR_DETREND'
 
@@ -609,7 +609,7 @@ if GCS_process_on == True:
     stages = out_list[4]
 
     stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
-    #compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+    compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
     #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
