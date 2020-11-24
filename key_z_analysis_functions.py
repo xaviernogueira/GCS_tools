@@ -933,10 +933,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17573045]
-sc_class = 'O2'
+comid_list = [17563602]
+sc_class = 'O5'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.6, 3.1, 12]
+key_zs = [0.6, 1.2, 6.0]
 bf_zs = key_zs[1]
 key_z_process = False
 finish_em_zel = True

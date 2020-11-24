@@ -59,7 +59,7 @@ def gcs_plotter(table_folder, out_folder, key_zs, fields=['W', 'Z', 'W_s', 'Z_s'
     """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
      If aligned_table is defined as the aligned csv, plots showing each key z profile as sub-plots for a given field are saved as well."""
 
-def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', single_plots=False):
+def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
     in_csv must contained data readable by pandas. Out folder is where the plots are saved.
     Fields is a list of fields to make plots from. If single_plots==True(False is default), each field is on the same plots for a single sort_by_field.
@@ -68,6 +68,9 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
     field_title comes into play when single_plots == True and designates the plot title and filename. Default is 'fields' """
     in_df = pd.read_csv(in_csv)
     box_dict = {}  # Either formatted as fields:[[sort_unique1],[],...] if single_plots==False OR sort_uniques:[[field1],[],...] if single_plots == True
+
+    if sort_by_title == '':  # Allows plot titles to be manually defined
+        sort_by_title = sort_by_field
 
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
@@ -87,7 +90,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             plot_dir = '\\%s_by_%s_boxplots.png' % (field, sort_by_field)
             fig, ax = plt.subplots()
             ax.set_title('%s sorted by %s' % (field, sort_by_field))
-            ax.set_xlabel(sort_by_field)
+            ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
 
             plt.boxplot(box_dict[field], patch_artist=True, showfliers=False)
@@ -183,30 +186,33 @@ def nested_landform_analysis(aligned_csv, key_zs):
     print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
 
 
-def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
+def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[], max_stage=20):
     '''IN: a list with either one or multiple comids. Key_zs list if filled makes subplots, if not a plot for each stage is made.
     If multiple comids are present, key_zs list structure is important. EXAMPLE: comids= [123,456,789], key_zs = [[baseflow, BF, flood],[baseflow, BF, flood],[baseflow, BF, flood]
     Heatmaps plotted and saved in landform folder, or new folder for class averaged figures'''
     titles = []
+    titles = {0: 'Baseflow', 1: 'Bankfull', 2: 'Valley Fill'}
 
     if len(comids) > 1:
-        print('Making hexagaon heatplot for geomorphic class %s' % geo_class)
+        if class_title == '':
+            class_title = 'multiple_reaches'
+        if len(geo_classes) != len(comids):
+            print('Enter a sub folder string associated with a COMID[comid]')
+        if len(key_zs) != len(comids):
+            print('Enter a sub list of key zs (ex: key_zs=[[0.5, 1.2, 4.9]...]) for each input reach comid')
+
         x_list_of_arrays = [[], [], []]  # Initialize list containing [baseflow, bankful, flood] values
         y_list_of_arrays = [[], [], []]
 
         for count, comid in enumerate(comids):
-            landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comid))
+            geo_class = geo_classes[count]
 
             for index, z in enumerate(key_zs[count]):
-                if isinstance(z, float) ==  True:
-                    if z >= 10.0:
-                        z = (str(z)[0:2] + 'p' + str(z)[3])
-                    else:
-                        z = (str(z)[0] + 'p' + str(z)[2])
+                z_str = float_keyz_format(z)
 
-                data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
-                x_temp = data.loc[:, [('W_s')]].squeeze().to_list()
-                y_temp = data.loc[:, [('Z_s')]].squeeze().to_list()
+                data = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (geo_class, comid, z_str))
+                x_temp = data.loc[:, ['W_s']].squeeze().to_list()
+                y_temp = data.loc[:, ['Z_s']].squeeze().to_list()
                 for value in range(len(x_temp)):
                     x_list_of_arrays[index].append(x_temp[value])
                     y_list_of_arrays[index].append(y_temp[value])
@@ -214,44 +220,20 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
         fig, axs = plt.subplots(ncols=int(len(key_zs[0])), sharey=True, figsize=(7, 7))
         fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
 
-        xmax = 0
-        ymax = 0
-        key_z_meanings = {0:'Baseflow',1:'Bankful',2:'Flood'}
-
-        for count, z in enumerate(key_zs[0]):
-            titles.append('Class %s, %s stage' % (geo_class, key_z_meanings[count]))
-
-            x = np.asarray(x_list_of_arrays[count])
-            y = np.asarray(y_list_of_arrays[count])
-            if count == 0:
-                xmax = float(np.percentile(x, 99))
-                ymax = float(np.percentile(y, 99))
-                xmin = float(np.percentile(x, 1))
-                ymin = float(np.percentile(y, 1))
-
-            if float(np.percentile(x, 99)) >= xmax:
-                xmax = float(np.percentile(x, 99))
-            if float(np.percentile(y, 99)) >= ymax:
-                ymax = float(np.percentile(y, 99))
-            if float(np.percentile(x, 1)) <= xmin:
-                xmin = float(np.percentile(x, 1))
-            if float(np.percentile(y, 1)) <= ymin:
-                ymin = float(np.percentile(y, 1))
-
         for count, ax in enumerate(axs):
             x = np.asarray(x_list_of_arrays[count])
             y = np.asarray(y_list_of_arrays[count])
 
             hb = ax.hexbin(x, y, gridsize=40, cmap='YlOrRd')
-            ax.set(xlim=(xmin, xmax), ylim=(xmin, ymax))
+            ax.set(xlim=(-3, 3), ylim=(-3, 3))
             ax.set_title(titles[count])
             ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
-        save_title = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % geo_class) + ('\\class%s_keyZs_heatplot.png' % geo_class)
+        save_title = out_folder + '\\class%s_heatplots.png' % class_title
         fig = plt.gcf()
-        fig.set_size_inches(16, 10)
+        fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.show()
         plt.clf()
@@ -262,102 +244,35 @@ def heat_plotter(comids, geo_class, key_zs=[], max_stage=20):
         fig, axs = plt.subplots(ncols=int(len(key_zs)), sharey=True, figsize=(7, 7))
         fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
 
-        xmax = 0
-        ymax = 0
-
-        for count, z in enumerate(key_zs):
-            titles.append('COMID%s, class %s, stage %sft' % (comids[0], geo_class, z))
-
-            if isinstance(z, float) == True:
-                if z >= 10.0:
-                    z = (str(z)[0:2] + 'p' + str(z)[3])
-                else:
-                    z = (str(z)[0] + 'p' + str(z)[2])
-
-            landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
-            data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % z)
-            data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
-
-            x = data.loc[:, [('W_s')]].to_numpy()
-            y = data.loc[:, [('Z_s')]].to_numpy()
-
-            if count == 0:
-                xmax = float(np.percentile(x, 99.5))
-                ymax = float(np.percentile(y, 99.5))
-                xmin = float(np.percentile(x, 0.5))
-                ymin = float(np.percentile(y, 0.5))
-
-            if float(np.percentile(x, 99.5)) >= xmax:
-                xmax = float(np.percentile(x, 99.5))
-            if float(np.percentile(y, 99.5)) >= ymax:
-                ymax = float(np.percentile(y, 99.5))
-            if float(np.percentile(x, 0.5)) <= xmin:
-                xmin = float(np.percentile(x, 0.5))
-            if float(np.percentile(y, 0.5)) <= ymin:
-                ymin = float(np.percentile(y, 0.5))
-
         for count, ax in enumerate(axs):
-            key_z = key_zs[count]
-            if isinstance(key_z, float) == True:
-                if key_z >= 10.0:
-                    key_z = (str(key_z)[0:2] + 'p' + str(key_z)[3])
-                else:
-                    key_z = (str(key_z)[0] + 'p' + str(key_z)[2])
-            landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
-            data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % key_z)
-            data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
+            z = key_zs[count]
+            z_str = float_keyz_format(z)
 
-            x = data.loc[:, [('W_s')]].to_numpy()
-            y = data.loc[:, [('Z_s')]].to_numpy()
-
-            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(xmin, xmax, ymin, ymax))
-            ax.set(xlim=(xmin, xmax), ylim=(xmin, ymax))
-            ax.set_title(titles[count])
-            ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
-            ax.set_xlabel('Standardized width (Ws)')
-            ax.set_ylabel('Standardized detrended elevation (Zs)')
-
-        save_title = landform_folder + '\\comid%s_KEY_Zs_heatplot.png' % comids[0]
-        fig = plt.gcf()
-        fig.set_size_inches(16, 10)
-        plt.savefig(save_title, dpi=300, bbox_inches='tight')
-        plt.show()
-        plt.clf()
-        plt.close('all')
-        print('Plot comparing key Zs %s for comid %s. Located @ %s' % (key_zs,comids[0],save_title))
-
-    else:
-        for stage in range(1, max_stage + 1):
-            print('Making hexagon heatplot for comid %s, geomorphic class %s, stage %sft...' % (comids, geo_class,stage))
-            landform_folder = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s\LINEAR_DETREND\landform_analysis" % (geo_class, comids[0]))
-            data = pd.read_csv(landform_folder[:-18] + '\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % stage)
+            data = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (geo_classes[0], comids[0], z_str))
             data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
 
             x = data.loc[:, ['W_s']].to_numpy()
             y = data.loc[:, ['Z_s']].to_numpy()
 
-            xmax = float(np.percentile(x,99))
-            ymax = float(np.percentile(y, 99))
-            xmin = float(np.percentile(x, 1))
-            ymin = float(np.percentile(y, 1))
+            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))
+            ax.set(xlim=(-3, 3), ylim=(-3, 3))
+            ax.set_title(titles[count])
+            ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
+            ax.set_xlabel('Standardized width (Ws)')
+            ax.set_ylabel('Standardized detrended elevation (Zs)')
 
-            save_title = landform_folder + '\\comid%s_stage%sft_heatplot.png' % (comids[0], stage)
-            titles.append('COMID%s, class %s, %sft stage' % (comids[0], geo_class, stage))
+        save_title = out_folder + '\\comid%s_heatplots.png' % comids[0]
+        fig = plt.gcf()
+        fig.set_size_inches(10, 10)
+        plt.savefig(save_title, dpi=300, bbox_inches='tight')
+        plt.show()
+        plt.clf()
+        plt.close('all')
+        print('Plot comparing key Zs %s for comid %s. Located @ %s' % (key_zs, comids[0], save_title))
 
-            plt.hexbin(x, y, gridsize=50, cmap='YlOrRd')
-            plt.axis([xmin, xmax, ymin, ymax])
-            plt.title(titles[stage-1])
-            plt.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
-            plt.xlabel('Standardized width (Ws)')
-            plt.ylabel('Standardized detrended elevation (Zs)')
+    else:
+        print('Error, please input key Z floats associated with flow stage')
 
-            fig = plt.gcf()
-            fig.set_size_inches(10, 10)
-            plt.savefig(save_title, dpi=300, bbox_inches='tight')
-            plt.clf()
-            plt.close('all')
-
-    print('Plots completed')
 
 def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     '''INPUTS: in_folder = Main directory (LINEAR_DETREND folder).
@@ -440,4 +355,4 @@ if analysis_plotting == True:
 
         sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
         sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
-        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Catchment_area_km2'], field_units=['km2'], field_title='fields', sort_by_field='manual_class', single_plots=False)
+        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Winter_Precipitation_mm'], field_units=['Mean winter precipitation (mm)'], field_title='fields', sort_by_field='round_log_catch', sort_by_title='Rounded log(Catchment area in km2)', single_plots=False)
