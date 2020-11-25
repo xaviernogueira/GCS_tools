@@ -7,6 +7,7 @@ from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
+#import seaborn as sns
 import numpy as np
 import file_functions
 import descriptive_statistics_functions
@@ -93,7 +94,10 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
 
-            plt.boxplot(box_dict[field], patch_artist=True, showfliers=False)
+            plot = plt.boxplot(box_dict[field], patch_artist=True, showfliers=False)
+            colors = ['royalblue', 'yellow', 'indianred', 'violet', 'limegreen']
+            for patch, color in zip(plot['boxes'], colors):
+                patch.set_facecolor(color)
             plt.savefig(out_folder + plot_dir, dpi=400, bbox_inches='tight')
             plt.close(fig)
 
@@ -113,7 +117,10 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel('Fields')
             ax.set_ylabel(field_units[0])
 
-            plt.boxplot(box_dict[unique], patch_artist=True, showfliers=False)
+            plot = plt.boxplot(box_dict[unique], patch_artist=True, showfliers=False)
+            colors = ['b', 'y', 'r', 'purple', 'g']
+            for patch, color in zip(plot['boxes'], colors):
+                patch.set_facecolor(color)
             plt.savefig(out_folder + plot_dir, dpi=400, bbox_inches='tight')
             plt.close(fig)
 
@@ -186,7 +193,7 @@ def nested_landform_analysis(aligned_csv, key_zs):
     print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
 
 
-def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[], max_stage=20):
+def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
     '''IN: a list with either one or multiple comids. Key_zs list if filled makes subplots, if not a plot for each stage is made.
     If multiple comids are present, key_zs list structure is important. EXAMPLE: comids= [123,456,789], key_zs = [[baseflow, BF, flood],[baseflow, BF, flood],[baseflow, BF, flood]
     Heatmaps plotted and saved in landform folder, or new folder for class averaged figures'''
@@ -201,7 +208,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
         if len(key_zs) != len(comids):
             print('Enter a sub list of key zs (ex: key_zs=[[0.5, 1.2, 4.9]...]) for each input reach comid')
 
-        x_list_of_arrays = [[], [], []]  # Initialize list containing [baseflow, bankful, flood] values
+        x_list_of_arrays = [[], [], []]  # Initialize list containing [baseflow, bankful, valley fill] values
         y_list_of_arrays = [[], [], []]
 
         for count, comid in enumerate(comids):
@@ -254,7 +261,8 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             x = data.loc[:, ['W_s']].to_numpy()
             y = data.loc[:, ['Z_s']].to_numpy()
 
-            hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))
+            #hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))  # MATPLOTLIB VERSION
+            hb = sns.jointplot(x=x, y=y, kind="hex", ratio=1, cmap='YlOrRd')
             ax.set(xlim=(-3, 3), ylim=(-3, 3))
             ax.set_title(titles[count])
             ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
@@ -263,7 +271,6 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
 
         save_title = out_folder + '\\comid%s_heatplots.png' % comids[0]
         fig = plt.gcf()
-        fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.show()
         plt.clf()
@@ -329,8 +336,8 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 
 
 ###### INPUTS ######
-comid_list = [22535438]
-sc_class = '00_new_adds'
+comid_list = [17569535]
+sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
 key_zs = []
 bf_zs = []
@@ -339,6 +346,7 @@ analysis_plotting = True
 if analysis_plotting == True:
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
+        base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
         sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s" % SCO_list[count]
         direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s\COMID%s" % (SCO_number, comid))
         out_folder = direct + r'\LINEAR_DETREND'
@@ -355,4 +363,5 @@ if analysis_plotting == True:
 
         sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
         sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
-        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Winter_Precipitation_mm'], field_units=['Mean winter precipitation (mm)'], field_title='fields', sort_by_field='round_log_catch', sort_by_title='Rounded log(Catchment area in km2)', single_plots=False)
+        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Winter_Precipitation_mm'], field_units=['Mean winter precipitation (mm)'], field_title='fields', sort_by_field='manual_class', sort_by_title='Rounded log(Catchment area in km2)', single_plots=False)
+        #heat_plotter(base_folder=base, comids=comid_list, out_folder=direct, class_title='', geo_classes=['\\SCO1'], key_zs=[0.9, 3.0, 5.8])
