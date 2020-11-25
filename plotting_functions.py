@@ -7,7 +7,7 @@ from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
-#import seaborn as sns
+import seaborn as sns
 import numpy as np
 import file_functions
 import descriptive_statistics_functions
@@ -94,7 +94,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
 
-            plot = plt.boxplot(box_dict[field], patch_artist=True, showfliers=False)
+            plot = plt.boxplot(box_dict[field], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['royalblue', 'yellow', 'indianred', 'violet', 'limegreen']
             for patch, color in zip(plot['boxes'], colors):
                 patch.set_facecolor(color)
@@ -117,7 +117,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_xlabel('Fields')
             ax.set_ylabel(field_units[0])
 
-            plot = plt.boxplot(box_dict[unique], patch_artist=True, showfliers=False)
+            plot = plt.boxplot(box_dict[unique], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['b', 'y', 'r', 'purple', 'g']
             for patch, color in zip(plot['boxes'], colors):
                 patch.set_facecolor(color)
@@ -261,18 +261,26 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             x = data.loc[:, ['W_s']].to_numpy()
             y = data.loc[:, ['Z_s']].to_numpy()
 
-            #hb = ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))  # MATPLOTLIB VERSION
-            hb = sns.jointplot(x=x, y=y, kind="hex", ratio=1, cmap='YlOrRd')
+            ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))
             ax.set(xlim=(-3, 3), ylim=(-3, 3))
+            ax.axhline(y=0.5, xmin=-3, xmax=-0.5, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=0.5, xmin=0.5, xmax=3, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=-3, xmax=-0.5, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=0.5, xmax=3, color='#9e9e9e', linestyle='--')
+
+            ax.axvline(x=-0.5, ymin=-3, ymax=-0.5, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=-0.5, ymin=0.5, ymax=3, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=-3, ymax=-0.5, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=0.5, ymax=3, color='#9e9e9e', linestyle='--')
+
             ax.set_title(titles[count])
-            ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
+            #ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
         save_title = out_folder + '\\comid%s_heatplots.png' % comids[0]
         fig = plt.gcf()
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
-        plt.show()
         plt.clf()
         plt.close('all')
         print('Plot comparing key Zs %s for comid %s. Located @ %s' % (key_zs, comids[0], save_title))
@@ -363,5 +371,5 @@ if analysis_plotting == True:
 
         sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
         sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
-        box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['Winter_Precipitation_mm'], field_units=['Mean winter precipitation (mm)'], field_title='fields', sort_by_field='manual_class', sort_by_title='Rounded log(Catchment area in km2)', single_plots=False)
-        #heat_plotter(base_folder=base, comids=comid_list, out_folder=direct, class_title='', geo_classes=['\\SCO1'], key_zs=[0.9, 3.0, 5.8])
+        #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['CV_bf_w'], field_units=['Bankfull width coefficient of variation'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+        heat_plotter(base_folder=base, comids=comid_list, out_folder=direct, class_title='', geo_classes=['\\SCO1'], key_zs=[0.9, 3.0, 5.8])
