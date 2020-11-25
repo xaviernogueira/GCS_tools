@@ -248,7 +248,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
         print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (geo_class, save_title))
 
     elif len(key_zs) != 0:
-        fig, axs = plt.subplots(ncols=int(len(key_zs)), sharey=True, figsize=(7, 7))
+        fig, axs = plt.subplots(ncols=int(len(key_zs)),  figsize=(10, 3))  
         fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
 
         for count, ax in enumerate(axs):
@@ -261,20 +261,20 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             x = data.loc[:, ['W_s']].to_numpy()
             y = data.loc[:, ['Z_s']].to_numpy()
 
+            ax.set_aspect('equal', adjustable='box')
             ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))
             ax.set(xlim=(-3, 3), ylim=(-3, 3))
-            ax.axhline(y=0.5, xmin=-0, xmax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=0.5, xmin=0, xmax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axhline(y=0.5, xmin=0.4167, xmax=1, color='#9e9e9e', linestyle='--')
-            ax.axhline(y=-0.5, xmin=-0, xmax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=0, xmax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axhline(y=-0.5, xmin=0.4167, xmax=1, color='#9e9e9e', linestyle='--')
 
-            ax.axvline(x=-0.5, ymin=-0, ymax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=-0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axvline(x=-0.5, ymin=0.4167, ymax=1, color='#9e9e9e', linestyle='--')
-            ax.axvline(x=0.5, ymin=-0, ymax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axvline(x=0.5, ymin=0.4167, ymax=1, color='#9e9e9e', linestyle='--')
 
             ax.set_title(titles[count])
-            #ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
