@@ -263,15 +263,15 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
 
             ax.hexbin(x, y, gridsize=30, cmap='YlOrRd', extent=(-3, 3, -3, 3))
             ax.set(xlim=(-3, 3), ylim=(-3, 3))
-            ax.axhline(y=0.5, xmin=-3, xmax=-0.5, color='#9e9e9e', linestyle='--')
-            ax.axhline(y=0.5, xmin=0.5, xmax=3, color='#9e9e9e', linestyle='--')
-            ax.axhline(y=-0.5, xmin=-3, xmax=-0.5, color='#9e9e9e', linestyle='--')
-            ax.axhline(y=-0.5, xmin=0.5, xmax=3, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=0.5, xmin=-0, xmax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=0.5, xmin=0.4167, xmax=1, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=-0, xmax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=0.4167, xmax=1, color='#9e9e9e', linestyle='--')
 
-            ax.axvline(x=-0.5, ymin=-3, ymax=-0.5, color='#9e9e9e', linestyle='--')
-            ax.axvline(x=-0.5, ymin=0.5, ymax=3, color='#9e9e9e', linestyle='--')
-            ax.axvline(x=0.5, ymin=-3, ymax=-0.5, color='#9e9e9e', linestyle='--')
-            ax.axvline(x=0.5, ymin=0.5, ymax=3, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=-0.5, ymin=-0, ymax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=-0.5, ymin=0.4167, ymax=1, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=-0, ymax=-0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=0.4167, ymax=1, color='#9e9e9e', linestyle='--')
 
             ax.set_title(titles[count])
             #ax.grid(b=True, which='major', color='#9e9e9e', linestyle='--')
