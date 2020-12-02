@@ -56,9 +56,39 @@ def flip_tables(table_folder, aligned_table):
 def csv_builder():
     """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
 
-def gcs_plotter(table_folder, out_folder, key_zs, fields=['W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s'], aligned_table=''):
+def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s'], aligned_table=''):
     """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
      If aligned_table is defined as the aligned csv, plots showing each key z profile as sub-plots for a given field are saved as well."""
+    key_zs.sort()
+    colors = ['black', 'blue', 'grey', 'orange', 'red']
+    landforms = ['Oversized', 'Const. Pool', 'Normal', 'Wide Bar', 'Nozzle']
+    for field in fields:
+        xs = []
+        ys = [[] for i in key_zs]
+        for count, z in enumerate(key_zs):
+            ys.append([])
+            z_str = float_keyz_format(z)
+            table_loc = table_folder + '\\%sft_WD_analysis_table.csv' % z_str
+            table_df = pd.read_csv(table_loc)
+            table_df.sort_values('dist_down', inplace=True)
+            xs.append(table_df.loc[:, 'dist_down'].to_numpy())
+            codes = table_df.loc[:, 'code'].to_numpy()
+
+            for num in range(-2, 3):  # Make arrays representing each landform type
+                table_df = pd.read_csv(table_loc)
+                table_df.sort_values('dist_down', inplace=True)
+                y_temp = table_df.loc[:, field].to_numpy()
+                y_temp[codes != num] = np.nan
+                ys[count].append(y_temp)
+
+        fig, ax = plt.subplots(len(key_zs), sharey=True)
+        ax[0].set_title('%s signals' % field)
+        ax[0].set_ylabel(field)
+        for count, z in enumerate(key_zs):
+            ax[count].set_xlabel('Thalweg distance downstream (ft)')
+
+
+
 
 def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
@@ -225,7 +255,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
                     y_list_of_arrays[index].append(y_temp[value])
 
         fig, axs = plt.subplots(ncols=int(len(key_zs[0])), figsize=(10, 3))
-        fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
+        fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
 
         for count, ax in enumerate(axs):
             x = np.asarray(x_list_of_arrays[count])
@@ -244,7 +274,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             ax.axvline(x=0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axvline(x=0.5, ymin=0.583, ymax=1, color='#9e9e9e', linestyle='--')
 
-            ax.text(0.18, 0.05, 'Const. Pool', horizontalalignment='center', verticalalignment='center',
+            ax.text(0.20, 0.05, 'Const. Pool', horizontalalignment='center', verticalalignment='center',
                     transform=ax.transAxes)
             ax.text(0.18, 0.95, 'Nozzle', horizontalalignment='center', verticalalignment='center',
                     transform=ax.transAxes)
@@ -259,14 +289,13 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
         fig = plt.gcf()
         fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
-        plt.show()
         plt.clf()
         plt.close('all')
-        print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (geo_class, save_title))
+        print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (class_title, save_title))
 
     elif len(key_zs) != 0:
         fig, axs = plt.subplots(ncols=int(len(key_zs)), figsize=(10, 3))
-        fig.subplots_adjust(hspace=0.5, left=0.07, right=0.93)
+        fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
 
         for count, ax in enumerate(axs):
             z = key_zs[count]
@@ -291,7 +320,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             ax.axvline(x=0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
             ax.axvline(x=0.5, ymin=0.583, ymax=1, color='#9e9e9e', linestyle='--')
 
-            ax.text(0.18, 0.05, 'Const. Pool', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+            ax.text(0.20, 0.05, 'Const. Pool', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
             ax.text(0.18, 0.95, 'Nozzle', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
             ax.text(0.82, 0.95, 'Wide Bar', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
             ax.text(0.82, 0.05, 'Oversized', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
@@ -366,14 +395,43 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 
 
 ###### INPUTS ######
-comid_list = [17569535]
-sc_class = 'O1'
+#  SCO1 fake grouping [22514218, 17607553,17609707,17609017,17610661]
+#  SCO2 fake grouping [17586504, 17610257, 17573013, 17573045, 17586810, 17609015]
+#  SCO3 fake grouping [17586610, 17610235, 17595173, 17607455, 17586760]
+#  SCO4 fake grouping [17563722, 17594703, 17609699, 17570395, 17585756, 17611423]
+#  SCO5 fake grouping [17609755, 17569841, 17563602, 17610541, 17610721, 17610671]
+#  SC00_new_adds fake grouping [17567211, 17633478, 17562556, 17609947, 17637906, 17570347]
+
+#  SCO1 class [17573013, 17573045, 17567211, 17633478, 17562556, 17609947]
+#  SCO2 class [17609707, 17586810, 17609015, 17586760, 17610671, 17637906]
+#  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
+#  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
+
+comid_list = [17633478]
+sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
-key_zs = []
+
+key_zs = [0.1, 1.0, 3.1]
+#  SCO1 fake grouping [[0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+#  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
+#  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
+#  SCO4 fake grouping [[0.7, 1.6, 4.8], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0]]
+#  SCO5 fake grouping [[0.2, 1.0, 3.5], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1], [0.4, 2.7, 8.0]]
+#  SC00_new_adds fake grouping [[0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
+
+# SCO1 class [[0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6]]
+# SCO2 class [[0.5, 2.0, 5.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3], [0.7, 2.7, 5.0], [0.4, 2.7, 8.0], [0.3, 1.2, 5.3]]
+# SCO3 class [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
+# SCO4 class [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
+
 bf_zs = []
 analysis_plotting = True
 
 if analysis_plotting == True:
+    arcpy.env.overwriteOutput = True
+    base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
+    sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
@@ -389,9 +447,6 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        arcpy.env.overwriteOutput = True
-
-        sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-        sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
         #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['CV_bf_w'], field_units=['Bankfull width coefficient of variation'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
-        heat_plotter(base_folder=base, comids=comid_list, out_folder=direct, class_title='', geo_classes=['\\SCO1'], key_zs=[0.9, 3.0, 5.8])
+        #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
+        gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs, key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W', 'Z', 'W_s', 'Z_s', 'W_s_Z_s'], aligned_table='')
