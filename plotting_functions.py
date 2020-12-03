@@ -20,14 +20,15 @@ import gcs_generating_functions
 import classify_landforms_GUI
 import DEM_detrending_functions
 
+
 def flip_tables(table_folder, aligned_table):
     """This function can be used to flip the index on the gcs csv out tables when dist_down corresponds to dist upstream by error."""
     table_list = [i for i in listdir(table_folder) if i[-4:] == '.csv']
 
     for table in table_list:
         table_loc = table_folder + '\\%s' % table
-        table_df = pd.read_csv(table_df)
-        max_dist = np.max(table_df.loc[:, 'dist_down'].to_numpy())
+        table_df = pd.read_csv(table_loc)
+        max_dist = np.nanmax(table_df.loc[:, 'dist_down'].to_numpy())
         dist_list = table_df.loc[:, ['dist_down']].squeeze().to_list()
         loc_np = np.array([int(max_dist - i) for i in dist_list])
         table_df['dist_down'] = loc_np
@@ -37,21 +38,25 @@ def flip_tables(table_folder, aligned_table):
     print('non-aligned GCS tables distance down field flipped!')
 
     aligned_df = pd.read_csv(aligned_table)
-    loc_fields = [j for j in list(aligned_df.columns.values) if j[:4] == 'loc']
-    loc_nums = [int(i[4]) for i in loc_fields]
-
+    loc_fields = [j for j in list(aligned_df.columns.values) if j[:3] == 'loc']
+    loc_nums = []
 
     for loc_field in loc_fields:
-        temp_max = np.max(table_df.loc[:, loc_field].to_numpy())
-        dist_list = table_df.loc[:, [loc_field]].squeeze().to_list()
-        loc_np = np.array([int(max_dist - i) for i in dist_list])
-        table_df[loc_field] = loc_np
+        if loc_field[5] == 'f':
+            loc_nums.append(loc_field[4])
+        else:
+            loc_nums.append(loc_field[4:6])
+        temp_max = np.nanmax(aligned_df.loc[:, loc_field].to_numpy())
+        dist_list = aligned_df.loc[:, [loc_field]].squeeze().to_list()
+        loc_np = np.array([int(temp_max - i) for i in dist_list])
+        aligned_df[loc_field] = loc_np
 
-    min_loc = loc_fields[loc_nums.index(min(loc_nums))]
+    min_loc = loc_fields[loc_nums.index(min(loc_nums, key=int))]
     aligned_df.sort_values(str(min_loc), inplace=True)
     aligned_df.to_csv(aligned_table)
 
     print('Aligned locations table flipped successfully!')
+
 
 def csv_builder():
     """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
@@ -86,13 +91,12 @@ def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'B
             full_ys.append(table_df.loc[:, field].to_numpy())
 
         fig, ax = plt.subplots(len(key_zs), sharey=True)
+        fig.subplots_adjust(hspace=0.4)
         fig_name = out_folder + '\\%s_GCS_plots.png' % field
         ax[0].set_title('%s signals' % field)
-        ax[0].set_ylabel(field)
+
         for count, z in enumerate(key_zs):
             x = xs[count]
-            print(len(x))
-            ax[count].set_xlabel('Thalweg distance downstream (ft)')
             ymax = 0
             ax[count].plot(x, full_ys[count], color=colors[2])
             for i, y in enumerate(ys[count]):
@@ -103,12 +107,14 @@ def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'B
                 elif ymax > 5:
                     ymax = 5
             ax[count].set_ylim(-1*ymax, ymax)
+            ax[count].set_ylabel(field)
             ax[count].set_title(key_z_meanings[count])
             ax[count].set_yticks(np.arange(-1 * ymax, ymax, 1), minor=False)
             ax[count].grid(True, which='both', color='gainsboro', linestyle='--')
             ax[count].set_xlim(0.0, np.max(x))
             ax[count].set_xticks(np.arange(0, np.max(x), 250))
 
+        ax[count].set_xlabel('Thalweg distance downstream (ft)')
         ax[count].legend(loc='lower center', ncol=len(landforms), fontsize=8)  # Adds legend to the bottom plot
         fig.set_size_inches(12, 6)
         plt.savefig(fig_name, dpi=300, bbox_inches='tight')
@@ -427,7 +433,7 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 
 
 ###### INPUTS ######
-#  SCO1 fake grouping [22514218, 17607553,17609707,17609017,17610661]
+#  SCO1 fake grouping [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
 #  SCO2 fake grouping [17586504, 17610257, 17573013, 17573045, 17586810, 17609015]
 #  SCO3 fake grouping [17586610, 17610235, 17595173, 17607455, 17586760]
 #  SCO4 fake grouping [17563722, 17594703, 17609699, 17570395, 17585756, 17611423]
@@ -439,12 +445,12 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 
-comid_list = [17567211, 17633478, 17562556, 17609947, 17637906, 17570347]
-sc_class = '00_new_adds'
+comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
-#  SCO1 fake grouping [[0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+key_zs = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+#  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
 #  SCO4 fake grouping [[0.7, 1.6, 4.8], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0]]
@@ -481,4 +487,5 @@ if analysis_plotting == True:
 
         #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['CV_bf_w'], field_units=['Bankfull width coefficient of variation'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
         #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
+        #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])

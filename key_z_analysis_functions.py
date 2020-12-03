@@ -933,10 +933,10 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17586610]
-sc_class = 'O3'
+comid_list = [17563602]
+sc_class = 'O5'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.5, 1.7, 5.4]
+key_zs = [0.6, 1.2, 6.0]
 bf_zs = key_zs[1]
 key_z_process = False
 finish_em_zel = True
@@ -967,4 +967,4 @@ if key_z_process == True:
             aligned_file = prep_locations(detrend_folder=out_folder)
             thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
             add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-            cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=direct + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+            #cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=direct + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
