@@ -139,31 +139,59 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         box_plot_dict = dict(zip(list_of_fields, list_of_field_lists)) #  This has W,Z, and W_s_Z_s as keys referncing lists that will store the data for each subplot
 
         total_rows = len(stage_df.index)
-        above_1_list = [0, 0, 0]  # 'W', 'Z', 'W_s_Z_s'
-        above_half_list = [0, 0, 0]
+        above_half_list = [0, 0, 0]  # 'W', 'Z', 'W_s_Z_s'
+        above_1_list = [0, 0, 0]
+        below_half_list = [0, 0, 0]
+        below_1_list = [0, 0, 0]
+        abs_above_half_list = [0, 0, 0]
+        abs_above_1_list = [0, 0, 0]
+
         for index, row in stage_df.iterrows():
             if abs(row['W_s_Z_s']) >= stds[2]:
-                above_1_list[2] += 1
-                above_half_list[2] += 1
+                abs_above_1_list[2] += 1
+                abs_above_half_list[2] += 1
             elif abs(row['W_s_Z_s']) >= (0.5*stds[2]):
-                above_half_list[2] += 1
+                abs_above_half_list[2] += 1
 
-            for field in list_of_fields[3:]:  # List splice: ['W_s', 'Z_s']
-                field_index = int(list_of_fields[3:].index(field))
-                if abs(row[field]) >= 1:
+            for field, field_index in enumerate(list_of_fields[3:]):  # List splice: ['W_s', 'Z_s']
+                if row[field] >= 1:
                     above_1_list[field_index] += 1
                     above_half_list[field_index] += 1
-                elif abs(row[field]) >= 0.5:
+                elif row[field] >= 0.5:
                     above_half_list[field_index] += 1
+
+                if row[field] <= 1:
+                    below_1_list[field_index] += 1
+                    below_half_list[field_index] += 1
+                elif row[field] <= 0.5:
+                    below_half_list[field_index] += 1
+
+                if abs(row[field]) >= 1:
+                    abs_above_1_list[field_index] += 1
+                    abs_above_half_list[field_index] += 1
+                elif abs(row[field]) >= 0.5:
+                    abs_above_half_list[field_index] += 1
 
         ws.cell(row=7, column=1).value = "% >= 0.5 STD"
         ws.cell(row=8, column=1).value = "% >= 1 STD"
+        ws.cell(row=9, column=1).value = "% <= 0.5 STD"
+        ws.cell(row=10, column=1).value = "% <= 1 STD"
+        ws.cell(row=11, column=1).value = "% abs(value) >= 0.5 STD"
+        ws.cell(row=12, column=1).value = "% abs(value) >= 1 STD"
 
         for index in range(len(above_1_list)):  # Calculates % of W, Z, and W_s_Z_s that are greater than 0.5 and 1 of their standard deviations
-            percent_above_half = float((above_half_list[index]/total_rows)*100)
-            percent_above_1 = float((above_1_list[index]/total_rows)*100)
-            ws.cell(row=7, column=(2 + index)).value = percent_above_half
-            ws.cell(row=8, column=(2 + index)).value = percent_above_1
+            above_half_percent = float((above_half_list[index] / total_rows) * 100)
+            above_1_percent = float((above_1_list[index] / total_rows) * 100)
+            below_half_percent = float((below_half_list[index] / total_rows) * 100)
+            below_1_percent = float((below_1_list[index] / total_rows) * 100)
+            abs_percent_above_half = float((abs_above_half_list[index] / total_rows) * 100)
+            abs_percent_above_1 = float((abs_above_1_list[index] / total_rows) * 100)
+            ws.cell(row=7, column=(2 + index)).value = above_half_percent
+            ws.cell(row=8, column=(2 + index)).value = above_1_percent
+            ws.cell(row=9, column=(2 + index)).value = below_half_percent
+            ws.cell(row=9, column=(2 + index)).value = below_1_percent
+            ws.cell(row=11, column=(2 + index)).value = abs_percent_above_half
+            ws.cell(row=12, column=(2 + index)).value = abs_percent_above_1
 
         row_num = 2
         for code in list_of_codes:  # Calculating same descriptive stats for each landform, each table is spaced 7 cells apart
@@ -234,9 +262,10 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
 
     print("All descriptive stats completed!")
 
+
 def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=False):
-    list_of_lists = [[],[],[]] # W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
-    list_of_landforms = [[],[],[],[],[]] # -2,-1,0,1,2
+    list_of_lists = [[], [], []]  # W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
+    list_of_landforms = [[] ,[], [], [], []]  # -2,-1,0,1,2
     wz_corr_lists = [[], [], [], [], []]  # Pearson correlation coefficients for Ws and Zs for each increasing flood stage for landforms [-2,-1,0,1,2]
 
     if len(key_zs) != 0:
