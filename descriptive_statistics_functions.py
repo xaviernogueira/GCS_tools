@@ -158,10 +158,10 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
             elif row['W_s_Z_s'] >= (0.5 * std):
                 above_half_list[2] += 1
 
-            if row['W_s_Z_s'] <= std:
+            if row['W_s_Z_s'] <= -std:
                 below_1_list[2] += 1
                 below_half_list[2] += 1
-            elif row['W_s_Z_s'] <= (0.5 * std):
+            elif row['W_s_Z_s'] <= -(0.5 * std):
                 below_half_list[2] += 1
 
             if abs(row['W_s_Z_s']) >= std:
@@ -281,10 +281,43 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
 
     print("All descriptive stats completed!")
 
+def pull_stat_values(stages_stats_xl_dict, stages, stats_table_location):
+    """This function pulls stats values and prints them to a csv, enabling rapid transfer to study csv"""
+    roots = ['cwz_above_0', 'ws_above_0p5', 'zs_above_0p5', 'cwz_above_0p5', 'ws_above_1', 'zs_above_1', 'cwz_above_1',
+                'ws_below_0p5', 'zs_below_0p5', 'cwz_below_0p5', 'ws_below_1', 'zs_below_1', 'cwz_below_1', 'abs_ws_above_0p5',
+                'abs_zs_above_0p5', 'abs_cwz_above_0p5', 'abs_ws_above_1', 'abs_zs_above_1', 'abs_cwz_above_1']
+    y_labels = ['base', 'bf', 'vf']
+    full_x_labels = []
+
+    for label in y_labels:
+        for root in roots:
+            full_x_labels.append('%s_%s' % (label, root))
+
+    data_list = []
+
+    for stage in stages:
+        print("Pulling values to csv...")
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+
+        wb = xl.load_workbook(stage_stat_xl)
+        ws = wb.active
+        data_list.append(float(ws.cell(row=14, column=2).value))
+
+        for row_num in range(7, 13):
+            for col_num in range(2, 4):
+                data_list.append(float(ws.cell(row=row_num, column=col_num).value))
+
+    data = {'label': full_x_labels,
+            'value': data_list}
+    df = pd.DataFrame.from_dict(data)
+    out_path = stats_table_location + '\\out_statistics_csv.csv'
+    df.to_csv(out_path)
+    print('All stats values are combined @ %s' % out_path)
+
 
 def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=False):
     list_of_lists = [[], [], []]  # W, Z, C(Ws,Zs), used to make line plots of mean values vs stage
-    list_of_landforms = [[] ,[], [], [], []]  # -2,-1,0,1,2
+    list_of_landforms = [[], [], [], [], []]  # -2,-1,0,1,2
     wz_corr_lists = [[], [], [], [], []]  # Pearson correlation coefficients for Ws and Zs for each increasing flood stage for landforms [-2,-1,0,1,2]
 
     if len(key_zs) != 0:
@@ -657,6 +690,7 @@ if GCS_process_on == True:
     stages = out_list[4]
 
     stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
+    pull_stat_values(stages_stats_xl_dict, stages, stats_table_location)
     #compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
     #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
