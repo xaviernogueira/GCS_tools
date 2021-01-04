@@ -208,7 +208,7 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
             ws.cell(row=7, column=(2 + index)).value = above_half_percent
             ws.cell(row=8, column=(2 + index)).value = above_1_percent
             ws.cell(row=9, column=(2 + index)).value = below_half_percent
-            ws.cell(row=9, column=(2 + index)).value = below_1_percent
+            ws.cell(row=10, column=(2 + index)).value = below_1_percent
             ws.cell(row=11, column=(2 + index)).value = abs_percent_above_half
             ws.cell(row=12, column=(2 + index)).value = abs_percent_above_1
 
@@ -657,7 +657,7 @@ if GCS_process_on == True:
     stages = out_list[4]
 
     stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
-    compare_flows(stages_stats_xl_dict, max_stage, save_plots=True)
+    compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
     #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
