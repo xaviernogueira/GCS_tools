@@ -177,10 +177,10 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
                 elif row[field] >= 0.5:
                     above_half_list[field_index] += 1
 
-                if row[field] <= 1:
+                if row[field] <= -1:
                     below_1_list[field_index] += 1
                     below_half_list[field_index] += 1
-                elif row[field] <= 0.5:
+                elif row[field] <= -0.5:
                     below_half_list[field_index] += 1
 
                 if abs(row[field]) >= 1:
@@ -191,8 +191,8 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
 
         ws.cell(row=7, column=1).value = "% >= 0.5 STD"
         ws.cell(row=8, column=1).value = "% >= 1 STD"
-        ws.cell(row=9, column=1).value = "% <= 0.5 STD"
-        ws.cell(row=10, column=1).value = "% <= 1 STD"
+        ws.cell(row=9, column=1).value = "% <= -0.5 STD"
+        ws.cell(row=10, column=1).value = "% <= -1 STD"
         ws.cell(row=11, column=1).value = "% abs(value) >= 0.5 STD"
         ws.cell(row=12, column=1).value = "% abs(value) >= 1 STD"
         ws.cell(row=14, column=1).value = "% C(Ws,Zs) > 0"
@@ -303,7 +303,7 @@ def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=Fals
             z_str = str(stage)
             x_values = np.arange(start=1, stop=max_stage + 1, step=1)
 
-        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
+        stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % z_str]
 
         wb = xl.load_workbook(stage_stat_xl)
         ws = wb.active
@@ -343,7 +343,7 @@ def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=Fals
     plt.xlabel("Flood stage height (US ft)")
     plt.ylim(np.min(np.array(list_of_lists[2])), np.max(np.array(list_of_lists[2])))
     plt.setp(ax3.get_xticklabels(), fontsize=12)
-    ax3.xaxis.set_major_locator(MaxNLocator(nbins=40,integer=True))
+    ax3.xaxis.set_major_locator(MaxNLocator(nbins=40, integer=True))
     plt.grid(True)
 
     if save_plots == False:
@@ -657,7 +657,7 @@ if GCS_process_on == True:
     stages = out_list[4]
 
     stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
-    compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
+    #compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
     #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
