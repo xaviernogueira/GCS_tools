@@ -296,7 +296,7 @@ def pull_stat_values(stages_stats_xl_dict, stages, stats_table_location):
     data_list = []
 
     for stage in stages:
-        print("Pulling values to csv...")
+        print("Pulling values to csv for stage %s..." % stage)
         stage_stat_xl = stages_stats_xl_dict['Stage_%sft' % stage]
 
         wb = xl.load_workbook(stage_stat_xl)
@@ -304,7 +304,7 @@ def pull_stat_values(stages_stats_xl_dict, stages, stats_table_location):
         data_list.append(float(ws.cell(row=14, column=2).value))
 
         for row_num in range(7, 13):
-            for col_num in range(2, 4):
+            for col_num in range(2, 5):
                 data_list.append(float(ws.cell(row=row_num, column=col_num).value))
 
     data = {'label': full_x_labels,
