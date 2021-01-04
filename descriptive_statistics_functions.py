@@ -145,12 +145,29 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         below_1_list = [0, 0, 0]
         abs_above_half_list = [0, 0, 0]
         abs_above_1_list = [0, 0, 0]
+        cwz_above_zero = 0
 
         for index, row in stage_df.iterrows():
-            if abs(row['W_s_Z_s']) >= stds[2]:
+            std = stds[2]
+            if row['W_s_Z_s'] >= 0:
+                cwz_above_zero += 1
+
+            if row['W_s_Z_s'] >= std:
+                above_1_list[2] += 1
+                above_half_list[2] += 1
+            elif row['W_s_Z_s'] >= (0.5 * std):
+                above_half_list[2] += 1
+
+            if row['W_s_Z_s'] <= std:
+                below_1_list[2] += 1
+                below_half_list[2] += 1
+            elif row['W_s_Z_s'] <= (0.5 * std):
+                below_half_list[2] += 1
+                
+            if abs(row['W_s_Z_s']) >= std:
                 abs_above_1_list[2] += 1
                 abs_above_half_list[2] += 1
-            elif abs(row['W_s_Z_s']) >= (0.5*stds[2]):
+            elif abs(row['W_s_Z_s']) >= (0.5*std):
                 abs_above_half_list[2] += 1
 
             for field, field_index in enumerate(list_of_fields[3:]):  # List splice: ['W_s', 'Z_s']
@@ -178,6 +195,8 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
         ws.cell(row=10, column=1).value = "% <= 1 STD"
         ws.cell(row=11, column=1).value = "% abs(value) >= 0.5 STD"
         ws.cell(row=12, column=1).value = "% abs(value) >= 1 STD"
+        ws.cell(row=14, column=1).value = "% C(Ws,Zs) > 0"
+        ws.cell(row=14, column=2).value = float((cwz_above_zero / total_rows) * 100)
 
         for index in range(len(above_1_list)):  # Calculates % of W, Z, and W_s_Z_s that are greater than 0.5 and 1 of their standard deviations
             above_half_percent = float((above_half_list[index] / total_rows) * 100)
