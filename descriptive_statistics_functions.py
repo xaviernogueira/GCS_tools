@@ -163,14 +163,14 @@ def stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, 
                 below_half_list[2] += 1
             elif row['W_s_Z_s'] <= (0.5 * std):
                 below_half_list[2] += 1
-                
+
             if abs(row['W_s_Z_s']) >= std:
                 abs_above_1_list[2] += 1
                 abs_above_half_list[2] += 1
             elif abs(row['W_s_Z_s']) >= (0.5*std):
                 abs_above_half_list[2] += 1
 
-            for field, field_index in enumerate(list_of_fields[3:]):  # List splice: ['W_s', 'Z_s']
+            for field_index, field in enumerate(list_of_fields[3:]):  # List splice: ['W_s', 'Z_s']
                 if row[field] >= 1:
                     above_1_list[field_index] += 1
                     above_half_list[field_index] += 1
@@ -323,7 +323,7 @@ def compare_flows(stages_stats_xl_dict, key_zs=[], max_stage=20, save_plots=Fals
         if not os.path.exists(plot_dirs):
             os.makedirs(plot_dirs)
 
-    ax1 = plt.subplot(311) #  Setting up subplots showing W, Z, and C(W,Z) vs stage
+    ax1 = plt.subplot(311)  #  Setting up subplots showing W, Z, and C(W,Z) vs stage
     plt.plot(x_values, np.array(list_of_lists[0]), color='g')
     plt.ylabel('Mean width (US ft)')
     plt.ylim(0, np.max(np.array(list_of_lists[0])))
@@ -637,7 +637,7 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-GCS_process_on = False
+GCS_process_on = True
 
 if GCS_process_on == True:
     sc_class = 1
