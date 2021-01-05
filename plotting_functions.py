@@ -477,7 +477,7 @@ for label in y_labels:
 single_plot_lists = []
 for root in roots:
     temp_list = []
-    for label in label:
+    for label in y_labels:
         temp_list.append('%s_%s' % (label, root))
     single_plot_lists.append(temp_list)
 
@@ -487,7 +487,7 @@ if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\class_comparison_box_plots_scaled_0_to_100'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\GCS_single_class_boxplots'
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
