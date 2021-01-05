@@ -123,11 +123,6 @@ def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'B
     print('GCS plots saved @ %s' % out_folder)
 
 
-
-
-
-
-
 def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
     in_csv must contained data readable by pandas. Out folder is where the plots are saved.
@@ -153,7 +148,9 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
 
             for unique in sort_uniques:
                 temp_df = in_df.query('%s == "%s"' % (sort_by_field, unique))
-                box_dict[field].append(temp_df.loc[:, field].to_numpy())
+                temp_np = temp_df.loc[:, field].to_numpy()
+                filtered_np = temp_np[~np.isnan(temp_np)]
+                box_dict[field].append(filtered_np)
 
         for count, field in enumerate(fields):
             plot_dir = '\\%s_by_%s_boxplots.png' % (field, sort_by_field)
@@ -445,7 +442,7 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 
-comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+comid_list = [17569535]
 sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
 
@@ -463,13 +460,22 @@ key_zs = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0
 # SCO4 class [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
 
 bf_zs = []
-analysis_plotting = False
+roots = ['cwz_above_0', 'ws_above_0p5', 'zs_above_0p5', 'cwz_above_0p5', 'ws_above_1', 'zs_above_1', 'cwz_above_1',
+                'ws_below_0p5', 'zs_below_0p5', 'cwz_below_0p5', 'ws_below_1', 'zs_below_1', 'cwz_below_1', 'abs_ws_above_0p5',
+                'abs_zs_above_0p5', 'abs_cwz_above_0p5', 'abs_ws_above_1', 'abs_zs_above_1', 'abs_cwz_above_1']
+y_labels = ['base', 'bf', 'vf']
+full_x_labels = []
+
+for label in y_labels:
+    for root in roots:
+        full_x_labels.append('%s_%s' % (label, root))
+analysis_plotting = True
 
 if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Sampling_plots'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\class_comparison_box_plots'
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
@@ -485,7 +491,8 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=['CV_bf_w'], field_units=['Bankfull width coefficient of variation'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+        for col in full_x_labels:
+            box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=[col], field_units=['Percent %'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
         #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
-        gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
+        #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])

@@ -670,29 +670,30 @@ def autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_pl
 
 
 #INPUTS#
-GCS_process_on = True
+GCS_process_on = False
 
 if GCS_process_on == True:
-    sc_class = 1
-    comid = 17569535
-    key_zs = [0.9, 3.0, 5.8]
-    direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
-    out_folder = direct + r'\LINEAR_DETREND'
+    sc_class = 0
+    comids = [17609947, 17637906, 17570347]
+    key_z_list = [[0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
 
+    for index, comid in enumerate(comids):
+        key_zs = key_z_list[index]
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (sc_class, comid))
+        out_folder = direct + r'\LINEAR_DETREND'
+        table_directory = direct + '\\LINEAR_DETREND\\gcs_ready_tables'
 
-    table_directory = direct + '\\LINEAR_DETREND\\gcs_ready_tables'
+        out_list = analysis_setup(table_directory, key_zs=key_zs)
+        stages_dict = out_list[0]
+        stages_stats_xl_dict = out_list[1]
+        max_stage = out_list[2]
+        stats_table_location = out_list[3]
+        stages = out_list[4]
 
-    out_list = analysis_setup(table_directory, key_zs=key_zs)
-    stages_dict = out_list[0]
-    stages_stats_xl_dict = out_list[1]
-    max_stage = out_list[2]
-    stats_table_location = out_list[3]
-    stages = out_list[4]
-
-    stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
-    pull_stat_values(stages_stats_xl_dict, stages, stats_table_location)
-    #compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
-    #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
+        stage_level_descriptive_stats(stages_dict, stages_stats_xl_dict, max_stage, stages=stages, box_and_whisker=True)
+        pull_stat_values(stages_stats_xl_dict, stages, stats_table_location)
+        #compare_flows(stages_stats_xl_dict, key_zs, max_stage, save_plots=True)
+        #autocorr_and_powerspec(stages_dict, stages_stats_xl_dict, max_stage, save_plots=True)
 
 
 
