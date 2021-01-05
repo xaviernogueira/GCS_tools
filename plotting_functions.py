@@ -158,6 +158,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_title('%s sorted by %s' % (field, sort_by_field))
             ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
+            ax.set_ylim(0, 100)
 
             plot = plt.boxplot(box_dict[field], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['royalblue', 'yellow', 'indianred', 'violet', 'limegreen']
@@ -173,7 +174,10 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             box_dict[unique] = []
             temp_df = in_df.query('%s == "%s"' % (sort_by_field, unique))
             for field in fields:
-                box_dict[unique].append(temp_df.loc[:, field].to_numpy())
+                temp_np = temp_df.loc[:, field].to_numpy()
+                filtered_np = temp_np[~np.isnan(temp_np)]
+                box_dict[unique].append(filtered_np)
+                #box_dict[unique].append(temp_df.loc[:, field].to_numpy())
 
         for count, unique in enumerate(sort_uniques):
             plot_dir = '\\%s_%s_by_stage_boxplots.png' % (unique, field_title)
@@ -469,13 +473,21 @@ full_x_labels = []
 for label in y_labels:
     for root in roots:
         full_x_labels.append('%s_%s' % (label, root))
+
+single_plot_lists = []
+for root in roots:
+    temp_list = []
+    for label in label:
+        temp_list.append('%s_%s' % (label, root))
+    single_plot_lists.append(temp_list)
+
 analysis_plotting = True
 
 if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\class_comparison_box_plots'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\class_comparison_box_plots_scaled_0_to_100'
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
@@ -491,8 +503,8 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        for col in full_x_labels:
-            box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=[col], field_units=['Percent %'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+        for list in single_plot_lists:
+            box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=True)
         #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
