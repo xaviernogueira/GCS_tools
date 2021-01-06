@@ -177,16 +177,17 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
                 temp_np = temp_df.loc[:, field].to_numpy()
                 filtered_np = temp_np[~np.isnan(temp_np)]
                 box_dict[unique].append(filtered_np)
-                #box_dict[unique].append(temp_df.loc[:, field].to_numpy())
 
         for count, unique in enumerate(sort_uniques):
             plot_dir = '\\%s_%s_by_stage_boxplots.png' % (unique, field_title)
             fig, ax = plt.subplots()
-            ax.set_title('%s field values' % unique)
-            ax.set_xlabel('Fields')
+            ax.set_title('%s %s values' % (unique, field_title))
+            ax.set_xlabel('Stage')
             ax.set_ylabel(field_units[0])
+            ax.set_xticks([1, 2, 3], ['Base', 'BF', 'VF'])
+            ax.set_xticklabels(['Base', 'BF', 'VF'])
 
-            plot = plt.boxplot(box_dict[unique], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
+            plot = plt.boxplot(box_dict[unique], widths=0.6, medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['b', 'y', 'r', 'purple', 'g']
             for patch, color in zip(plot['boxes'], colors):
                 patch.set_facecolor(color)
@@ -196,8 +197,52 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
     print('Plots saved @ %s' % out_folder)
 
 
-def landform_pie_charts(in_csv, comids=[]):
-    """This function plots relative landform abundance across key z stages as pie sub-plots. Values are averaged across input comids."""
+def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_classes=[], all_key_zs=[]):
+    """This function plots relative landform abundance across key z stages as pie sub-plots. If len(comids) > 1, values are averaged across multiple COMIDS.
+    base_folder must contain COMID#### folders. comids must be a list of ints. out_folder is the path to which figures are saved. class_title, if comids in list
+    represent a geomorphic class can be set to a string for plot labeling. geo_classes must be a list with the same length of comids, containing \\SC0# strings.
+    key_zs must be a list of lists containing key z stage heights for each input comid."""
+    titles = {0: 'Baseflow', 1: 'Bankfull', 2: 'Valley Fill'}
+    labels = ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle']
+    colors = ['black', 'blue', 'grey', 'orange', 'red']
+
+    if len(comids) == 1:
+        percents = []  # [oversized, cons. pool, normal, wide bar, nozzle] as a sub list for each key z stage
+        if isinstance(all_key_zs[0], float):
+            key_zs = all_key_zs
+        elif isinstance(all_key_zs[0], list):
+            key_zs = all_key_zs[0]
+
+        geo_class = geo_classes[0]
+
+        for index, z in enumerate(key_zs):
+            z_str = float_keyz_format(z)
+            temp_percents = []
+
+            data = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comids[0], z_str))
+
+            wb = xl.load_workbook(data)
+            ws = wb.active
+
+            for row_num in range(8, 40, 8):
+                temp_percents.append(float(ws.cell(row=row_num, column=8).value))
+            percents.append(np.array(temp_percents))
+
+        fig, axs = plt.subplots(ncols=int(len(key_zs)), figsize=(10, 3))
+        fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
+
+        for count, ax in enumerate(axs):
+            ax[count] = plt.pie(percents[count], labels=labels, colors=colors)
+
+        save_title = out_folder + '\\comid%s_piecharts.png' % comids[0]
+        fig = plt.gcf()
+        fig.set_size_inches(10, 10)
+        plt.savefig(save_title, dpi=300, bbox_inches='tight')
+        plt.clf()
+        plt.close('all')
+        print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (class_title, save_title))
+
+
 
 
 
@@ -266,7 +311,6 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
     '''IN: a list with either one or multiple comids. Key_zs list if filled makes subplots, if not a plot for each stage is made.
     If multiple comids are present, key_zs list structure is important. EXAMPLE: comids= [123,456,789], key_zs = [[baseflow, BF, flood],[baseflow, BF, flood],[baseflow, BF, flood]
     Heatmaps plotted and saved in landform folder, or new folder for class averaged figures'''
-    titles = []
     titles = {0: 'Baseflow', 1: 'Bankfull', 2: 'Valley Fill'}
 
     if len(comids) > 1:
@@ -446,11 +490,11 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 
-comid_list = [17569535]
-sc_class = 'O1'
+comid_list = [17586610]
+sc_class = 'O3'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+key_zs = [[0.5, 1.7, 5.4]]
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
@@ -487,7 +531,8 @@ if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\GCS_single_class_boxplots'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\GCS_rounded_LOG_boxplots'
+
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
@@ -503,8 +548,9 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        for list in single_plot_lists:
-            box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title='fields', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=True)
-        #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
+        #for list in single_plot_lists:
+            #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
+        #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
+        landform_pie_charts(base_folder=base, comids=comid, out_folder=landform_folder, class_title='', geo_classes=['\\SC03'], all_key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
