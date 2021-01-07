@@ -206,6 +206,9 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
     labels = ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle']
     colors = ['black', 'blue', 'grey', 'orange', 'red']
 
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+
     if isinstance(comids, int) or len(comids) == 1:
         if isinstance(comids, int):
             comid = comids
@@ -233,10 +236,14 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
             percents.append(np.array(temp_percents))
 
         fig, axs = plt.subplots(ncols=int(len(key_zs)), figsize=(10, 3))
-        fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
+        fig.subplots_adjust(wspace=0.2, left=0.07, right=0.93)
 
         for count, ax in enumerate(axs):
-            ax[count] = plt.pie(percents[count], labels=labels, colors=colors)
+            ax.pie(percents[count], labels=labels, labeldistance=None, autopct='%1.1f%%', textprops={'color': "w"}, colors=colors)
+            ax.set_title(titles[count])
+            ax.title.set_position([0.5, 0.92])
+
+        axs[1].legend(bbox_to_anchor=(0.32, 0.07), bbox_transform=ax.transAxes, ncol=len(labels), fontsize=8)  # Adds legend to the bottom plot
 
         save_title = out_folder + '\\comid%s_piecharts.png' % comid
         fig = plt.gcf()
@@ -246,7 +253,51 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
         plt.close('all')
         print('Pie plots for COMID%s landform abundances @ %s' % (comid, save_title))
 
+    if isinstance(comids, list) and len(comids) > 1:
+        totals = [[], [], []]
+        for list in totals:
+            for land in labels:
+                list.append(0)
 
+        for count, comid in enumerate(comids):
+            geo_class = geo_classes[count]
+            key_zs = all_key_zs[count]
+
+            for index, z in enumerate(key_zs):
+                z_str = float_keyz_format(z)
+                temp_percents = []
+
+                data = base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
+
+                wb = xl.load_workbook(data)
+                ws = wb.active
+
+                for ind, row_num in enumerate(range(8, 48, 8)):
+                    totals[index][ind] += float(ws.cell(row=row_num, column=8).value)
+
+            percents = []
+            for list in totals:
+                percents.append([float(i/5) for i in list])
+
+            fig, axs = plt.subplots(ncols=int(len(key_zs)), figsize=(10, 3))
+            fig.subplots_adjust(wspace=0.2, left=0.07, right=0.93)
+
+            for count, ax in enumerate(axs):
+                ax.pie(percents[count], labels=labels, labeldistance=None, autopct='%1.1f%%', textprops={'color': "w"},
+                       colors=colors)
+                ax.set_title(titles[count])
+                ax.title.set_position([0.5, 0.92])
+
+            axs[1].legend(bbox_to_anchor=(0.32, 0.07), bbox_transform=ax.transAxes, ncol=len(labels),
+                          fontsize=8)  # Adds legend to the bottom plot
+
+            save_title = out_folder + '\\%s_piecharts.png' % class_title
+            fig = plt.gcf()
+            fig.set_size_inches(10, 10)
+            plt.savefig(save_title, dpi=300, bbox_inches='tight')
+            plt.clf()
+            plt.close('all')
+            print('Pie plots for %s landform abundances @ %s' % (class_title, save_title))
 
 
 
@@ -494,11 +545,11 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 
-comid_list = [17586610]
-sc_class = 'O3'
+comid_list = [17573013, 17573045, 17567211, 17633478, 17562556, 17609947]
+sc_class = '01'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.5, 1.7, 5.4]]
+key_zs = [[0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6]]
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
@@ -535,7 +586,7 @@ if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\GCS_rounded_LOG_boxplots'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Landform_pie_charts'
 
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
@@ -555,6 +606,6 @@ if analysis_plotting == True:
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
         #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
-        landform_pie_charts(base_folder=base, comids=comid, out_folder=landform_folder, class_title='', geo_classes=['\\SCO3'], all_key_zs=key_zs)
+        landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC1', geo_classes=['\\SCO2', '\\SCO2', '\\SC00_new_adds', '\\SC00_new_adds', '\\SC00_new_adds', '\\SC00_new_adds'], all_key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
