@@ -255,9 +255,9 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
 
     if isinstance(comids, list) and len(comids) > 1:
         totals = [[], [], []]
-        for list in totals:
+        for i in totals:
             for land in labels:
-                list.append(0)
+                i.append(0)
 
         for count, comid in enumerate(comids):
             geo_class = geo_classes[count]
