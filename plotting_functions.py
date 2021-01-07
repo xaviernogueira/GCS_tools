@@ -7,6 +7,7 @@ from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
+import plotly.graph_objects as go
 import seaborn as sns
 import numpy as np
 import file_functions
@@ -57,9 +58,6 @@ def flip_tables(table_folder, aligned_table):
 
     print('Aligned locations table flipped successfully!')
 
-
-def csv_builder():
-    """MOVE TO ANALYSIS SCRIPT OR JUST DO MANUALLY. This function builds a csv with a column containing reach values for each necessary plotting function"""
 
 def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     """This function makes longitudinal profile plots for given fields across each key z saving them to a folder.
@@ -350,7 +348,7 @@ def nested_landform_analysis(aligned_csv, key_zs):
     ws.column_dimensions['D'].width = 20
 
     for count, unique_set in enumerate(nest_abundances):
-        string = '%s, %s, %s' % (code_dict[unique_set[0][0]],code_dict[unique_set[0][1]],code_dict[unique_set[0][2]])
+        string = '%s, %s, %s' % (code_dict[unique_set[0][0]], code_dict[unique_set[0][1]], code_dict[unique_set[0][2]])
         ws.cell(row=2 + count, column=1).value = str(string)
         ws.cell(row=2 + count, column=2).value = unique_set[1]
         ws.cell(row=2 + count, column=3).value = round((unique_set[1] / len(nested_landforms)) * 100, 2)
@@ -358,6 +356,24 @@ def nested_landform_analysis(aligned_csv, key_zs):
     wb.save(nested_analysis_xl)
     wb.close()
     print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
+
+
+def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_classes=[], all_key_zs=[]):
+    ### COME BACK TO THIS WITH A SHARP MIND ###
+    fig = go.Figure(go.Sankey(
+        arrangement="snap",
+        node={
+            "label": ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle'],
+            "x": [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9, 0.9],
+            "y": [0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9],
+            'pad': 15},  # 10 Pixels
+        link={
+            "source": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "target": [6, 7, 4, 3, 0, 2, 2, 3],
+            "value": [1, 2, 1, 1, 1, 1, 1, 2]}))
+
+    fig.show()
+
 
 
 def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
@@ -475,6 +491,90 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
     else:
         print('Error, please input key Z floats associated with flow stage')
 
+def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
+    titles = {0: 'Baseflow', 1: 'Bankfull', 2: 'Valley Fill'}
+
+    if len(comids) > 1:
+        if class_title == '':
+            class_title = 'multiple_reaches'
+        if len(geo_classes) != len(comids):
+            print('Enter a sub folder string associated with a COMID[comid]')
+        if len(key_zs) != len(comids):
+            print('Enter a sub list of key zs (ex: key_zs=[[0.5, 1.2, 4.9]...]) for each input reach comid')
+
+        x_list_of_arrays = [[], [], []]  # Initialize list containing [baseflow, bankful, valley fill] values
+        y_list_of_arrays = [[], [], []]
+        c_list_of_arrays = [[], [], []]
+
+        for count, comid in enumerate(comids):
+            geo_class = geo_classes[count]
+            df = pd.read_csv(
+                base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (
+                geo_class, comid))
+            data = df.dropna()
+
+            for index, z in enumerate(key_zs[count]):
+                z_str = float_keyz_format(z)
+                x_temp = data.loc[:, ['W_s_%sft' % z_str]].squeeze().to_list()
+                y_temp = data.loc[:, ['Z_s_%sft' % z_str]].squeeze().to_list()
+                c_temp = data.loc[:, ['W_s_Z_s_%sft' % z_str]]
+                for value in range(len(x_temp)):
+                    x_list_of_arrays[index].append(x_temp[value])
+                    y_list_of_arrays[index].append(y_temp[value])
+                    c_list_of_arrays[index].append(c_temp[value])
+
+        permutations = itertools.permutations([0, 1, 2], 2)
+        w = 3  # plots go from -3 to 3
+        y_axis, x_axis = np.mgrid[-w:w:100, -w:w:100]
+
+        fig, axs = plt.subplots(ncols=int(len(key_zs[0])), figsize=(10, 3))
+        fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
+
+        for count, ax in enumerate(axs):
+            perm = permutations[count]
+            x_velocities = []
+            y_velocities = []
+            delta_cov = []  # Change in covariance
+
+            for ind, value in x_list_of_arrays[max(perm)]:
+                x_velocities.append(float(value - x_list_of_arrays[min(perm)][ind]))
+                y_velocities.append(float(y_list_of_arrays[max(perm)][ind] - y_list_of_arrays[min(perm)][ind]))
+                delta_cov.append(float(delta_cov[max(perm)][ind] - delta_cov[min(perm)][ind]))
+
+            ax.streamplot(x_axis, y_axis, x_velocities, y_velocities, density=1, color=delta_cov, cmap='coolwarm')
+
+            ax.set_aspect('equal', adjustable='box')
+            ax.set(xlim=(-3, 3), ylim=(-3, 3))
+            ax.axhline(y=0.5, xmin=0, xmax=0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=0.5, xmin=0.583, xmax=1, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=0, xmax=0.4167, color='#9e9e9e', linestyle='--')
+            ax.axhline(y=-0.5, xmin=0.583, xmax=1, color='#9e9e9e', linestyle='--')
+
+            ax.axvline(x=-0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=-0.5, ymin=0.583, ymax=1, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=0, ymax=0.4167, color='#9e9e9e', linestyle='--')
+            ax.axvline(x=0.5, ymin=0.583, ymax=1, color='#9e9e9e', linestyle='--')
+
+            ax.text(0.20, 0.05, 'Const. Pool', horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes)
+            ax.text(0.18, 0.95, 'Nozzle', horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes)
+            ax.text(0.82, 0.95, 'Wide Bar', horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes)
+            ax.text(0.82, 0.05, 'Oversized', horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes)
+            ax.set_xlabel('Standardized width (Ws)')
+            ax.set_ylabel('Standardized detrended elevation (Zs)')
+
+        save_title = out_folder + '\\class%s_vectorplot.png' % class_title
+        fig = plt.gcf()
+        fig.set_size_inches(10, 10)
+        plt.savefig(save_title, dpi=300, bbox_inches='tight')
+        plt.clf()
+        plt.close('all')
+        print('Vector plot comparing key Zs for all class %s reaches completed. Located @ %s' % (class_title, save_title))
+
+
 
 def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s']):
     '''INPUTS: in_folder = Main directory (LINEAR_DETREND folder).
@@ -542,12 +642,13 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO2 class [17609707, 17586810, 17609015, 17586760, 17610671, 17637906]
 #  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
+#  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
 
-comid_list = [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
+comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
 sc_class = '01'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
+key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
@@ -559,6 +660,8 @@ key_zs = [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0
 # SCO2 class [[0.5, 2.0, 5.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3], [0.7, 2.7, 5.0], [0.4, 2.7, 8.0], [0.3, 1.2, 5.3]]
 # SCO3 class [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
 # SCO4 class [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
+# SCO5 class [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.2]]
+
 
 bf_zs = []
 roots = ['cwz_above_0', 'ws_above_0p5', 'zs_above_0p5', 'cwz_above_0p5', 'ws_above_1', 'zs_above_1', 'cwz_above_1',
@@ -603,7 +706,8 @@ if analysis_plotting == True:
 
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
-        #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
-        landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC3', geo_classes=['\\SCO2', '\\SCO4', '\\SCO4', '\\SCO4', '\\SCO5', '\\SC00_new_adds'], all_key_zs=key_zs)
+    #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
+    #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
+    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
