@@ -206,7 +206,11 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
     labels = ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle']
     colors = ['black', 'blue', 'grey', 'orange', 'red']
 
-    if len(comids) == 1:
+    if isinstance(comids, int) or len(comids) == 1:
+        if isinstance(comids, int):
+            comid = comids
+        else:
+            comid = comids[0]
         percents = []  # [oversized, cons. pool, normal, wide bar, nozzle] as a sub list for each key z stage
         if isinstance(all_key_zs[0], float):
             key_zs = all_key_zs
@@ -219,12 +223,12 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
             z_str = float_keyz_format(z)
             temp_percents = []
 
-            data = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comids[0], z_str))
+            data = base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
 
             wb = xl.load_workbook(data)
             ws = wb.active
 
-            for row_num in range(8, 40, 8):
+            for row_num in range(8, 48, 8):
                 temp_percents.append(float(ws.cell(row=row_num, column=8).value))
             percents.append(np.array(temp_percents))
 
@@ -234,13 +238,13 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
         for count, ax in enumerate(axs):
             ax[count] = plt.pie(percents[count], labels=labels, colors=colors)
 
-        save_title = out_folder + '\\comid%s_piecharts.png' % comids[0]
+        save_title = out_folder + '\\comid%s_piecharts.png' % comid
         fig = plt.gcf()
         fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.clf()
         plt.close('all')
-        print('Plot comparing key Zs for all class %s reaches completed. Located @ %s' % (class_title, save_title))
+        print('Pie plots for COMID%s landform abundances @ %s' % (comid, save_title))
 
 
 
@@ -551,6 +555,6 @@ if analysis_plotting == True:
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
         #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
-        landform_pie_charts(base_folder=base, comids=comid, out_folder=landform_folder, class_title='', geo_classes=['\\SC03'], all_key_zs=key_zs)
+        landform_pie_charts(base_folder=base, comids=comid, out_folder=landform_folder, class_title='', geo_classes=['\\SCO3'], all_key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
