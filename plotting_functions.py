@@ -7,7 +7,7 @@ from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
-import plotly.graph_objects as go
+from itertools import combinations
 import seaborn as sns
 import numpy as np
 import file_functions
@@ -492,7 +492,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
         print('Error, please input key Z floats associated with flow stage')
 
 def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
-    titles = {0: 'Baseflow', 1: 'Bankfull', 2: 'Valley Fill'}
+    titles = {0: 'Base->BF', 1: 'BF->VF', 2: 'Base->VF'}
 
     if len(comids) > 1:
         if class_title == '':
@@ -517,13 +517,13 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
                 z_str = float_keyz_format(z)
                 x_temp = data.loc[:, ['W_s_%sft' % z_str]].squeeze().to_list()
                 y_temp = data.loc[:, ['Z_s_%sft' % z_str]].squeeze().to_list()
-                c_temp = data.loc[:, ['W_s_Z_s_%sft' % z_str]]
+                c_temp = data.loc[:, ['W_s_Z_s_%sft' % z_str]].squeeze().to_list()
                 for value in range(len(x_temp)):
                     x_list_of_arrays[index].append(x_temp[value])
                     y_list_of_arrays[index].append(y_temp[value])
                     c_list_of_arrays[index].append(c_temp[value])
 
-        permutations = itertools.permutations([0, 1, 2], 2)
+        permutations = list(combinations([0, 1, 2], 2))
         w = 3  # plots go from -3 to 3
         y_axis, x_axis = np.mgrid[-w:w:100, -w:w:100]
 
@@ -531,17 +531,19 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
         fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
 
         for count, ax in enumerate(axs):
-            perm = permutations[count]
+            perm = np.array(list(permutations[count]))
+            max, min = np.amax(perm), np.amin(perm)
             x_velocities = []
             y_velocities = []
             delta_cov = []  # Change in covariance
 
-            for ind, value in x_list_of_arrays[max(perm)]:
-                x_velocities.append(float(value - x_list_of_arrays[min(perm)][ind]))
-                y_velocities.append(float(y_list_of_arrays[max(perm)][ind] - y_list_of_arrays[min(perm)][ind]))
-                delta_cov.append(float(delta_cov[max(perm)][ind] - delta_cov[min(perm)][ind]))
+            for ind in range(len(x_list_of_arrays[0])):
+                x_velocities.append(float(x_list_of_arrays[max][ind] - x_list_of_arrays[min][ind]))
+                y_velocities.append(float(y_list_of_arrays[max][ind] - y_list_of_arrays[min][ind]))
+                delta_cov.append(float(delta_cov[max][ind] - delta_cov[min][ind]))
 
             ax.streamplot(x_axis, y_axis, x_velocities, y_velocities, density=1, color=delta_cov, cmap='coolwarm')
+            ax.set_title(titles[count])
 
             ax.set_aspect('equal', adjustable='box')
             ax.set(xlim=(-3, 3), ylim=(-3, 3))
@@ -708,6 +710,6 @@ if analysis_plotting == True:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
     #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
-    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
+    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])
