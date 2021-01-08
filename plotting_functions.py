@@ -524,8 +524,11 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
                     c_list_of_arrays[index].append(c_temp[value])
 
         permutations = list(combinations([0, 1, 2], 2))
-        w = 3  # plots go from -3 to 3
-        y_axis, x_axis = np.mgrid[-w:w:100, -w:w:100]
+        permutations[1], permutations[2] = permutations[2], permutations[1]
+
+        x = np.arange(-3, 3, 0.05)  # plots go from -3 to 3
+        y = np.arange(-3, 3, 0.05)
+        x_axis, y_axis = np.meshgrid(x, y)
 
         fig, axs = plt.subplots(ncols=int(len(key_zs[0])), figsize=(10, 3))
         fig.subplots_adjust(hspace=0.5, wspace=0.3, left=0.07, right=0.93)
@@ -537,12 +540,12 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
             y_velocities = []
             delta_cov = []  # Change in covariance
 
-            for ind in range(len(x_list_of_arrays[0])):
+            for ind in range(0, len(x_list_of_arrays[0])):
                 x_velocities.append(float(x_list_of_arrays[max][ind] - x_list_of_arrays[min][ind]))
                 y_velocities.append(float(y_list_of_arrays[max][ind] - y_list_of_arrays[min][ind]))
-                delta_cov.append(float(delta_cov[max][ind] - delta_cov[min][ind]))
+                delta_cov.append(float(c_list_of_arrays[max][ind] - c_list_of_arrays[min][ind]))
 
-            ax.streamplot(x_axis, y_axis, x_velocities, y_velocities, density=1, color=delta_cov, cmap='coolwarm')
+            ax.quiver(x_list_of_arrays[min], y_list_of_arrays[min], x_velocities, y_velocities, delta_cov, cmap='seismic', width=0.022, units='xy', scale=10)
             ax.set_title(titles[count])
 
             ax.set_aspect('equal', adjustable='box')
@@ -568,8 +571,8 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
+
         save_title = out_folder + '\\class%s_vectorplot.png' % class_title
-        fig = plt.gcf()
         fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.clf()
