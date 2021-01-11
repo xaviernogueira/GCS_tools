@@ -7,6 +7,9 @@ from scipy.stats import variation
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
+import matplotlib.colors as colors_module
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import matplotlib.cm
 from itertools import combinations
 import seaborn as sns
 import numpy as np
@@ -508,9 +511,7 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
 
         for count, comid in enumerate(comids):
             geo_class = geo_classes[count]
-            df = pd.read_csv(
-                base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (
-                geo_class, comid))
+            df = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
             data = df.dropna()
 
             for index, z in enumerate(key_zs[count]):
@@ -545,7 +546,8 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
                 y_velocities.append(float(y_list_of_arrays[max][ind] - y_list_of_arrays[min][ind]))
                 delta_cov.append(float(c_list_of_arrays[max][ind] - c_list_of_arrays[min][ind]))
 
-            ax.quiver(x_list_of_arrays[min], y_list_of_arrays[min], x_velocities, y_velocities, delta_cov, cmap='seismic', width=0.022, units='xy', scale=10)
+            #  Delta_cov values are normalized from -3 to 3
+            ax.quiver(x_list_of_arrays[min], y_list_of_arrays[min], x_velocities, y_velocities, delta_cov, norm=colors_module.Normalize(vmin=-3, vmax=3), cmap='seismic', width=0.022, units='xy', scale=10)
             ax.set_title(titles[count])
 
             ax.set_aspect('equal', adjustable='box')
@@ -570,7 +572,6 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
                     transform=ax.transAxes)
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
-
 
         save_title = out_folder + '\\class%s_vectorplot.png' % class_title
         fig.set_size_inches(10, 10)
@@ -650,7 +651,7 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
 
 comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
-sc_class = '01'
+sc_class = '05'
 SCO_list = [sc_class for i in comid_list]
 
 key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
@@ -665,7 +666,7 @@ key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0
 # SCO2 class [[0.5, 2.0, 5.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3], [0.7, 2.7, 5.0], [0.4, 2.7, 8.0], [0.3, 1.2, 5.3]]
 # SCO3 class [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
 # SCO4 class [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
-# SCO5 class [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.2]]
+# SCO5 class [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
 
 
 bf_zs = []
