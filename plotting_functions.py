@@ -409,12 +409,9 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
 
         for j, zipped in enumerate(both):  # Calculates totals of occurences for each possible base->bf, and bf->vf combination
             for pair in zipped:
-                if ignore_normal == False:
                     i = unique_nests[j].index(pair)
                     unique_nest_counts[j][i] += 1
-                elif 0 not in pair:
-                    i = unique_nests[j].index(pair)
-                    unique_nest_counts[j][i] += 1
+
 
         nest_abundances = [list(zip(unique_nests[0], unique_nest_counts[0])), list(zip(unique_nests[1], unique_nest_counts[1]))]
         nodes = {
@@ -427,9 +424,14 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
         for j, nests in enumerate(nest_abundances):
             index_adjust = 2 + j * 5
             for i in nests:
-                source.append(int(i[0][0] + index_adjust))
-                target.append(int(i[0][1] + index_adjust + 5))
-                value.append(float(i[1] + index_adjust))
+                if ignore_normal == False:
+                    source.append(int(i[0][0] + index_adjust))
+                    target.append(int(i[0][1] + index_adjust + 5))
+                    value.append(float(i[1] + index_adjust))
+                elif 0 not in i[0]:
+                    source.append(int(i[0][0] + index_adjust))
+                    target.append(int(i[0][1] + index_adjust + 5))
+                    value.append(float(i[1] + index_adjust))
 
 
     fig = go.Figure(go.Sankey(
