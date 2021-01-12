@@ -10,6 +10,9 @@ from matplotlib import pyplot as plt
 import matplotlib.colors as colors_module
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import matplotlib.cm
+import plotly
+import plotly.graph_objects as go
+import plotly.express as pex
 from itertools import combinations
 import seaborn as sns
 import numpy as np
@@ -299,7 +302,6 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
         print('Pie plots for %s landform abundances @ %s' % (class_title, save_title))
 
 
-
 def nested_landform_analysis(aligned_csv, key_zs):
     '''IN: An aligned csv with landform codes for each XS.
     A list (key_zs) containing three stages. All key_zs must already be aligned into table.
@@ -313,15 +315,16 @@ def nested_landform_analysis(aligned_csv, key_zs):
 
     key_zs.sort()
     aligned_df = pd.read_csv(aligned_csv)
+    data = aligned_df.dropna()
 
     code_df_list = []  # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
     for key_z in key_zs:
-        if isinstance(key_z, float) == True:
+        if isinstance(key_z, float):
             if key_z >= 10.0:
                 key_z = (str(key_z)[0:2] + 'p' + str(key_z)[3])
             else:
                 key_z = (str(key_z)[0] + 'p' + str(key_z)[2])
-        code_df_temp = aligned_df.loc[:, [('code_%sft' % key_z)]].squeeze()
+        code_df_temp = data.loc[:, [('code_%sft' % key_z)]].squeeze()
         code_df_list.append(code_df_temp.values.tolist())
 
     nested_landforms = list(zip(code_df_list[0], code_df_list[1], code_df_list[2]))
@@ -494,10 +497,11 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
     else:
         print('Error, please input key Z floats associated with flow stage')
 
+
 def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
     titles = {0: 'Base->BF', 1: 'BF->VF', 2: 'Base->VF'}
 
-    if len(comids) > 1:
+    if len(comids) >= 1:
         if class_title == '':
             class_title = 'multiple_reaches'
         if len(geo_classes) != len(comids):
@@ -546,8 +550,8 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
                 y_velocities.append(float(y_list_of_arrays[max][ind] - y_list_of_arrays[min][ind]))
                 delta_cov.append(float(c_list_of_arrays[max][ind] - c_list_of_arrays[min][ind]))
 
-            #  Delta_cov values are normalized from -3 to 3
-            ax.quiver(x_list_of_arrays[min], y_list_of_arrays[min], x_velocities, y_velocities, delta_cov, norm=colors_module.Normalize(vmin=-3, vmax=3), cmap='seismic', width=0.022, units='xy', scale=10)
+            #  Delta_cov values are normalized from -5 to 5
+            ax.quiver(x_list_of_arrays[min], y_list_of_arrays[min], x_velocities, y_velocities, delta_cov, norm=colors_module.Normalize(vmin=-5, vmax=5), cmap='seismic', width=0.022, units='xy', scale=10)
             ax.set_title(titles[count])
 
             ax.set_aspect('equal', adjustable='box')
@@ -573,7 +577,9 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
-        save_title = out_folder + '\\class%s_vectorplot.png' % class_title
+        #fig.colorbar(matplotlib.cm.ScalarMappable(norm=colors_module.Normalize(vmin=-5, vmax=5), cmap='seismic'), ticks=range(-5, 6, 1), orientation='horizantal', ax=axs)
+        #save_title = out_folder + '\\class%s_vectorplot.png' % class_title
+        save_title = out_folder + '\\comid%s_vectorplot.png' % comid
         fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.clf()
@@ -650,11 +656,11 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 #  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
 
-comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
-sc_class = '05'
+comid_list = [17569535]
+sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
+key_zs = [0.9, 3.0, 5.8]
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
@@ -710,10 +716,11 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
+        nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs)
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
     #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
-    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
+    #vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])

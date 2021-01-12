@@ -530,8 +530,37 @@ def add_aligned_values(in_folder, join_csv, key_zs=[], fields=['dist_down', 'W',
         result.to_csv(join_csv)
         print('%sft stage GCS completed and merged to @ %s' % (z, join_csv))
 
-
     return join_csv
+
+def align_landforms(in_folder, join_csv, key_zs=[]):
+    """Quick function to add landform values to the aligned csvs, for whatever reason they were not already added"""
+    detrend_folder = os.path.dirname(os.path.realpath(in_folder))
+    centerlines_nums = find_centerline_nums(detrend_folder)
+    join_df = pd.read_csv(join_csv)
+
+    for z in key_zs:
+        join_df = pd.read_csv(join_csv)
+        z_str = float_keyz_format(z)
+        join_stage = loc_stage_finder(z, centerlines_nums)[0]
+        join_field = 'loc_%sft' % join_stage
+        gcs_df = pd.read_csv(in_folder + '\\%sft_WD_analysis_table.csv' % z_str)
+
+        fields = ['dist_down', 'code']
+        temp_df_mini = gcs_df.loc[:, fields]
+        rename_dict = {}
+
+        for field in fields:
+            if field == 'dist_down' or field == 'LOCATION':
+                rename_dict[field] = join_field
+            else:
+                rename_dict[field] = field + '_%sft' % z_str
+        temp_df_mini.rename(rename_dict, axis=1, inplace=True)
+        temp_df_mini.sort_values(by=[join_field], inplace=True)
+        result = join_df.merge(temp_df_mini, left_on=join_field, right_on=join_field, how='left')
+        result = result.loc[:, ~result.columns.str.contains('^Unnamed')]
+        result.to_csv(join_csv)
+        print('%sft stage landform codes  merged to @ %s' % (z, join_csv))
+
 
 def stage_corr_matrix_plot(in_folder, out_folder, key_zs=[], max_stage=20, in_csv=''): 
     ''' This function plots a NxN cross correlation matrix comparing each input standardized width signal.
@@ -933,13 +962,13 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17563602]
-sc_class = 'O5'
+comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [0.6, 1.2, 6.0]
+key_zs = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 bf_zs = key_zs[1]
 key_z_process = False
-finish_em_zel = True
+finish_em_zel = False
 
 if key_z_process == True:
     for count, comid in enumerate(comid_list):
@@ -961,6 +990,7 @@ if key_z_process == True:
         #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
         #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
         #key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[400,400,400], xs_spacing=3)
+        align_landforms(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count])
 
         if finish_em_zel == True:
             key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
