@@ -375,6 +375,8 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
 
     if len(comids) == 1 and class_title == '':
         class_title = str(comids[0])
+    elif class_title.isdigit() == True:
+        class_title = 'class%s' % class_title
 
     if not ignore_normal:
         title = '%s\\%s_sankey_plot' % (out_folder, class_title)
