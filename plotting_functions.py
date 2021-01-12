@@ -364,7 +364,7 @@ def nested_landform_analysis(aligned_csv, key_zs):
     print('Nested landform analysis complete. Results @ %s' % nested_analysis_xl)
 
 
-def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_classes=[], all_key_zs=[]):
+def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_classes=[], all_key_zs=[], ignore_normal=False):
     """Creates Sankey diagrams showing nested landform relationships. Can be done across a class, transition occurences are normalized as a % for each reach."""
     code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}  # code number and corresponding MU
     print('Sankey landform diagram plotting comencing...')
@@ -372,6 +372,10 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
     source = []
     target = []
     value = []
+    if ignore_normal == False:
+        title = '%s//%s_sankey_plot' % (out_folder, class_title)
+    else:
+        title = '%s//%s_sankey_plot_no_normal' % (out_folder, class_title)
 
     for k, comid in enumerate(comids):
         if len(comids) == 0:
@@ -383,8 +387,7 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
         key_zs = all_key_zs[k]
         key_zs.sort()
 
-        aligned_csv = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
-        aligned_df = pd.read_csv(aligned_csv)
+        aligned_df = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
         data = aligned_df.dropna()
 
         code_df_list = []  # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
@@ -420,21 +423,28 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
         for j, nests in enumerate(nest_abundances):
             index_adjust = 2 + j * 5
             for i in nests:
-                source.append(nests[0] + index_adjust)
-                target.append(nests[1] + index_adjust)
-                value.append(nests[2] + index_adjust)
+                if ignore_normal:
+                    if int(i[0][0]) != 0 and int(i[0][1]) != 0:
+                        source.append(int(i[0][0] + index_adjust))
+                        target.append(int(i[0][1] + index_adjust + 5))
+                        value.append(float(i[1] + index_adjust))
+                else:
+                    source.append(int(i[0][0] + index_adjust))
+                    target.append(int(i[0][1] + index_adjust + 5))
+                    value.append(float(i[1] + index_adjust))
 
+    fig = go.Figure(go.Sankey(
+        arrangement="snap",
+        node=nodes,  # 10 Pixels
+        link={
+            "source": source,
+            "target": target,
+            "value": value}))
 
-        fig = go.Figure(go.Sankey(
-            arrangement="snap",
-            node=nodes,  # 10 Pixels
-            link={
-                "source": source,
-                "target": target,
-                "value": value}))
-
-        fig.show()
-
+    fig.show()
+    fig.write_image(title + '.pdf')
+    fig.write_image(title + '.png')
+    print('Sankey plots saved @ %s' % title)
 
 
 def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[], key_zs=[]):
@@ -771,7 +781,8 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs)
+        nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=landform_folder, class_title='', geo_classes=['\\SCO1'], all_key_zs=[key_zs], ignore_normal=True)
+        #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs)
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
