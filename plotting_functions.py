@@ -365,20 +365,75 @@ def nested_landform_analysis(aligned_csv, key_zs):
 
 
 def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_classes=[], all_key_zs=[]):
-    ### COME BACK TO THIS WITH A SHARP MIND ###
-    fig = go.Figure(go.Sankey(
-        arrangement="snap",
-        node={
-            "label": ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle'],
-            "x": [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9, 0.9],
-            "y": [0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9],
-            'pad': 15},  # 10 Pixels
-        link={
-            "source": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            "target": [6, 7, 4, 3, 0, 2, 2, 3],
-            "value": [1, 2, 1, 1, 1, 1, 1, 2]}))
+    """Creates Sankey diagrams showing nested landform relationships. Can be done across a class, transition occurences are normalized as a % for each reach."""
+    code_dict = {-2: 'O', -1: 'CP', 0: 'NC', 1: 'WB', 2: 'NZ'}  # code number and corresponding MU
+    print('Sankey landform diagram plotting comencing...')
 
-    fig.show()
+    source = []
+    target = []
+    value = []
+
+    for k, comid in enumerate(comids):
+        if len(comids) == 0:
+            class_title = str(comid)
+        else:
+            class_title = 'class%s' % class_title
+
+        geo_class = geo_classes[k]
+        key_zs = all_key_zs[k]
+        key_zs.sort()
+
+        aligned_csv = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
+        aligned_df = pd.read_csv(aligned_csv)
+        data = aligned_df.dropna()
+
+        code_df_list = []  # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
+        for key_z in key_zs:
+            if isinstance(key_z, float):
+                if key_z >= 10.0:
+                    key_z = (str(key_z)[0:2] + 'p' + str(key_z)[3])
+                else:
+                    key_z = (str(key_z)[0] + 'p' + str(key_z)[2])
+            code_df_temp = data.loc[:, [('code_%sft' % key_z)]].squeeze()
+            code_df_list.append(code_df_temp.values.tolist())
+
+        base_to_bf = list(zip(code_df_list[0], code_df_list[1]))
+        bf_to_vf = list(zip(code_df_list[0], code_df_list[2]))
+        both = [base_to_bf, bf_to_vf]
+
+        unique_nests = [list(set(base_to_bf)), list(set(bf_to_vf))]
+        unique_nest_counts = [list(np.zeros(len(i), dtype=int)) for i in unique_nests]  # initialize list of lists to count abundance
+
+        for j, zipped in enumerate(both):  # Calculates totals of occurences for each possible base->bf, and bf->vf combination
+            for pair in zipped:
+                i = unique_nests[j].index(pair)
+                unique_nest_counts[j][i] += 1
+
+        nest_abundances = [list(zip(unique_nests[0], unique_nest_counts[0])), list(zip(unique_nests[1], unique_nest_counts[1]))]
+        nodes = {
+                "label": ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle'],
+                "x": [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9, 0.9],
+                "y": [0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9],
+                "color" : ['black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red'],
+                'pad': 15}
+
+        for j, nests in enumerate(nest_abundances):
+            index_adjust = 2 + j * 5
+            for i in nests:
+                source.append(nests[0] + index_adjust)
+                target.append(nests[1] + index_adjust)
+                value.append(nests[2] + index_adjust)
+
+
+        fig = go.Figure(go.Sankey(
+            arrangement="snap",
+            node=nodes,  # 10 Pixels
+            link={
+                "source": source,
+                "target": target,
+                "value": value}))
+
+        fig.show()
 
 
 
