@@ -372,17 +372,18 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
     source = []
     target = []
     value = []
-    if ignore_normal == False:
-        title = '%s//%s_sankey_plot' % (out_folder, class_title)
+
+    if len(comids) == 0:
+        class_title = str(comids[0])
     else:
-        title = '%s//%s_sankey_plot_no_normal' % (out_folder, class_title)
+        class_title = 'class%s' % class_title
+
+    if not ignore_normal:
+        title = '%s\\%s_sankey_plot' % (out_folder, class_title)
+    else:
+        title = '%s\\%s_sankey_plot_no_normal' % (out_folder, class_title)
 
     for k, comid in enumerate(comids):
-        if len(comids) == 0:
-            class_title = str(comid)
-        else:
-            class_title = 'class%s' % class_title
-
         geo_class = geo_classes[k]
         key_zs = all_key_zs[k]
         key_zs.sort()
@@ -412,27 +413,43 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
                     i = unique_nests[j].index(pair)
                     unique_nest_counts[j][i] += 1
 
-
         nest_abundances = [list(zip(unique_nests[0], unique_nest_counts[0])), list(zip(unique_nests[1], unique_nest_counts[1]))]
-        nodes = {
-                "label": ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle'],
-                "x": [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9, 0.9],
-                "y": [0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9],
-                "color" : ['black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red'],
+
+        if ignore_normal == False:
+            nodes = {
+                    "label": ['Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Normal', 'Wide Bar', 'Nozzle'],
+                    "x": [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9, 0.9],
+                    "y": [0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9, 0.1, 0.3, 0.5, 0.7, 0.9],
+                    "color": ['black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red', 'black', 'blue', 'grey', 'orange', 'red'],
+                    'pad': 15}
+        else:
+            nodes = {
+                "label": ['Oversized', 'Const.Pool',  'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool', 'Wide Bar', 'Nozzle', 'Oversized', 'Const.Pool',  'Wide Bar', 'Nozzle'],
+                "x": [0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9],
+                "y": [0.2, 0.4, 0.6, 0.8, 0.2, 0.4,  0.6, 0.8, 0.2, 0.4, 0.6, 0.8],
+                "color": ['black', 'blue', 'orange', 'red', 'black', 'blue', 'orange', 'red', 'black',
+                          'blue', 'orange', 'red'],
                 'pad': 15}
 
         for j, nests in enumerate(nest_abundances):
-            index_adjust = 2 + j * 5
+
             for i in nests:
                 if ignore_normal == False:
+                    index_adjust = 2 + j * 5
                     source.append(int(i[0][0] + index_adjust))
                     target.append(int(i[0][1] + index_adjust + 5))
                     value.append(float(i[1] + index_adjust))
                 elif 0 not in i[0]:
-                    source.append(int(i[0][0] + index_adjust))
-                    target.append(int(i[0][1] + index_adjust + 5))
+                    index_adjust = 2 + j * 4
+                    if int(i[0][0]) < 0:
+                        source.append(int(i[0][0] + index_adjust))
+                    else:
+                        source.append(int(i[0][0] + index_adjust - 1))
+                    if int(i[0][1]) < 0:
+                        target.append(int(i[0][1] + index_adjust + 4))
+                    else:
+                        target.append(int(i[0][1] + index_adjust + 3))
                     value.append(float(i[1] + index_adjust))
-
 
     fig = go.Figure(go.Sankey(
         arrangement="snap",
@@ -442,7 +459,7 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
             "target": target,
             "value": value}))
 
-    fig.show()
+    #fig.show()
     fig.write_image(title + '.pdf')
     fig.write_image(title + '.png')
     print('Sankey plots saved @ %s' % title)
@@ -782,7 +799,10 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-        nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=landform_folder, class_title='', geo_classes=['\\SCO1'], all_key_zs=[key_zs], ignore_normal=True)
+        nested_landform_sankey(base_folder=base, comids=[comid], out_folder=landform_folder, class_title='',
+                               geo_classes=['\\SCO1'], all_key_zs=[key_zs], ignore_normal=False)
+        #nested_landform_sankey(base_folder=base, comids=[comid], out_folder=landform_folder, class_title='',
+                               #geo_classes=['\\SCO1'], all_key_zs=[key_zs[count]], ignore_normal=True)
         #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs)
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
