@@ -108,7 +108,14 @@ def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['
     aligned_df.sort_values(join_field, inplace=True)
 
     locs = aligned_df.loc[:, [join_field]].squeeze()
-    spacing = abs(locs[1] - locs[2])
+    locs_list = locs.tolist()
+
+    spacing_list = []
+    for position, loc in enumerate(locs_list[1:]):  # Adjusted to deal with droppped nan value rows
+        spacing_list.append(loc - locs_list[position])
+    spacing = int(max(set(spacing_list), key=spacing_list.count))
+    if spacing < 0:
+        spacing == abs(int(spacing))
 
     for value in value_dict.keys():
         signals = []
