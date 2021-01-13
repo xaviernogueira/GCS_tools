@@ -319,8 +319,8 @@ def prep_locations(detrend_folder):
     out_aligned_df.to_csv(aligned_csv)
 
     print('Deleting files: %s' % del_files)
-    #for file in del_files:
-        #file_functions.delete_gis_files(file)
+    for file in del_files:
+        file_functions.delete_gis_files(file)
 
     print('Empty aligned csv created @ %s!' % aligned_csv)
     return aligned_csv
