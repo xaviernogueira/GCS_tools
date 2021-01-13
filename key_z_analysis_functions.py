@@ -250,12 +250,10 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
     for file in del_files:
         file_functions.delete_gis_files(file)
 
+
 def prep_locations(detrend_folder):
     '''This function takes a reach and creates a new csv with aligned location identifiers using a Thiessen Polygon methodology.
     Returns aligned_locations.csv in the \\landform_analysis sub-folder. This csv can be used to align any data field for any key z or stage range.'''
-    arcpy.env.overwriteOutput = True
-    del_files = []
-
     print('Creating aligned_locations.csv with aligned centerline locations / dist_down...')
     detrended_raster = detrend_folder + '\\ras_detren.tif'
     landform_folder = detrend_folder + '\\landform_analysis'
@@ -263,6 +261,9 @@ def prep_locations(detrend_folder):
 
     if not os.path.exists(landform_folder):
         os.makedirs(landform_folder)
+    arcpy.env.overwriteOutput = True
+    arcpy.env.extent = detrended_raster
+    del_files = []
 
     centerline_nums = find_centerline_nums(detrend_folder)
     spacing = find_xs_spacing(detrend_folder)
@@ -301,7 +302,7 @@ def prep_locations(detrend_folder):
         if counter == 1:
             arcpy.Identity_analysis(centerline_folder + "\\station_points_%sft.shp" % min(centerline_nums), theis_loc, out_feature_class=out_points, join_attributes='ALL')
         elif counter > 1:
-            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter-1))), theis_loc, out_feature_class=out_points, join_attributes='ALL')
+            arcpy.Identity_analysis(centerline_folder + ("\\align_points%s.shp" % (int(counter - 1))), theis_loc, out_feature_class=out_points, join_attributes='ALL')
 
     index_field = 'loc_%sft' % min(centerline_nums)
     aligned_csv = landform_folder + '\\aligned_locations.csv'  # Creates a csv with the aligned locations for each centerline. Allows joins to add any data to this for analysis.
@@ -318,8 +319,8 @@ def prep_locations(detrend_folder):
     out_aligned_df.to_csv(aligned_csv)
 
     print('Deleting files: %s' % del_files)
-    for file in del_files:
-        file_functions.delete_gis_files(file)
+    #for file in del_files:
+        #file_functions.delete_gis_files(file)
 
     print('Empty aligned csv created @ %s!' % aligned_csv)
     return aligned_csv
@@ -962,15 +963,14 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+comid_list = [17610661]
 sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
-bf_zs = key_zs[1]
-key_z_process = False
-finish_em_zel = False
+key_zs = [[0.5, 2.1, 8.5]]
+key_z_process = True
+align_time = True
 
-if key_z_process == True:
+if key_z_process:
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
         sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s" % SCO_list[count]
@@ -987,14 +987,11 @@ if key_z_process == True:
 
         arcpy.env.overwriteOutput = True
 
-        #prep_small_inc(detrend_folder=out_folder, interval=0.1, max_stage=20)
-        #pdf_cdf_plotting(in_folder=wetted_top_folder, out_folder=out_folder, channel_clip_poly=channel_clip_poly, key_zs=[], max_stage=20, small_increments=0.1)
-        #key_z_centerlines(detrend_folder=out_folder, key_zs=key_zs, centerline_verified=True, xs_lengths=[400,400,400], xs_spacing=3)
-        align_landforms(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count])
+        if align_time:
+            prep_locations(detrend_folder=out_folder)
+            #thalweg_zs(detrend_folder=out_folder, join_csv='')
+            #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=[], fields=['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s', 'code'], max_stage=20)
+            #align_landforms(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count])
 
-        if finish_em_zel == True:
-            key_zs_gcs(detrend_folder=out_folder, key_zs=key_zs, clip_poly=channel_clip_poly, max_stage=20)
-            aligned_file = prep_locations(detrend_folder=out_folder)
-            thalweg_zs(detrend_folder=out_folder, join_csv=aligned_file)
-            add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs)
-            #cart_sc_classifier(comids=comid_list, bf_z=bf_zs, in_folder=sc_folder, out_csv=direct + '\\classification_test.csv', confine_table=confine_table, conf_header='CONFINEMEN', slope_table='', slope_header='', in_csv=aligned_csv_loc, confinements=[])
+
+

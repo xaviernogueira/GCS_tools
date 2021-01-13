@@ -458,9 +458,9 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
 
-comid_list = [22514218, 17607553, 17609707, 17609017, 17610661]
-SCO_list = [1 for i in comid_list]
-key_zs_list = [[0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+comid_list = [17586504, 17610257, 17573013, 17573045, 17586810, 17609015]
+SCO_list = [2 for i in comid_list]
+key_zs_list = [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 signal_process = True
 
 if signal_process:
