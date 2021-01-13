@@ -20,7 +20,6 @@ from file_functions import *
 import key_z_analysis_functions
 
 
-
 def powerspec_plotting(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5):
     '''This function saves a plot of the PSD for each input key z to the out_folder using GCS csv files found in the in_folder.
     INPUTS: in_folder containing (KEY Z)ft_WD_analysis_table.csv files for each selected key z. out_folder to save fig.
@@ -105,9 +104,11 @@ def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['
     join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
 
     aligned_df = pd.read_csv(in_folder + '\\aligned_locations.csv')
+    aligned_df.dropna(inplace=True)
     aligned_df.sort_values(join_field, inplace=True)
+
     locs = aligned_df.loc[:, [join_field]].squeeze()
-    spacing = locs[1] - locs[2]
+    spacing = abs(locs[1] - locs[2])
 
     for value in value_dict.keys():
         signals = []
@@ -156,6 +157,7 @@ def cross_corr_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['
                 min_corr = np.min(corr)
             if np.max(corr) >= max_corr:
                 max_corr = np.max(corr)
+
         for i in range(0, len(comb)):
             ax[i + 1].set_ylim(min_corr, max_corr)
             ax[i + 1].set_yticks(np.arange(round(min_corr, -2), round(max_corr, -2), 50), minor=True)
@@ -339,7 +341,6 @@ def fourier_analysis(in_folder, out_folder, detrend_folder, key_zs, fields=['W_s
     print('Correlation plots of inverse Fourier Transform and original signals complete!')
 
 
-
 def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fields=['W_s_Z_s', 'W_s', 'Z_s'], threshold=0, in_csv='', by_power=False):
     '''This function plots the relationship between the R^2 of the IFFT w/ a given amount of harmonic terms, and the original signal for key zs.
     INPUTS: in_folder containing all_stages_table.csv containing data for each selected key z. out_folder to save fig.
@@ -421,8 +422,8 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
                         r2 = 0
                     key_z_r_squares.append(r2)
 
+            index = 0
             if threshold != 0:
-                index = 0
                 while key_z_r_squares[index] < threshold and index < len(key_z_r_squares):
                     index += 1
 
@@ -449,13 +450,15 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     plt.close('all')
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
-comid_list = [17609707]
-SCO_list = [1]
-key_zs = [0.5, 2.0, 5.0]
-signal_process = False
 
-if signal_process==True:
+comid_list = [22514218, 17607553, 17609707, 17609017, 17610661]
+SCO_list = [1 for i in comid_list]
+key_zs_list = [[0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
+signal_process = True
+
+if signal_process:
     for count, comid in enumerate(comid_list):
+        key_zs = key_zs_list[count]
         SCO_number = SCO_list[count]
         sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
         direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
@@ -470,5 +473,15 @@ if signal_process==True:
 
         arcpy.env.overwriteOutput = True
 
+        print(comid)
+        #powerspec_plotting(in_folder=table_location, out_folder=landform_folder, key_zs=key_zs, fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
+        #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
+        #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=True)
+        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               #threshold=0.90, in_csv='', by_power=False)
+        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               #threshold=0.90, in_csv='', by_power=True)
+        cross_corr_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv='')
 
-    fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
+        #  Go back and adjust harmonic r^2 code to export arrays to a csv in order to extract N values for each reach and threhsold or make a quick new function
+        #  Then go and use the N values to make fourier analysis plots with the associated N
