@@ -1,3 +1,5 @@
+import math
+
 import scipy as sp
 import scipy.signal as sig
 import numpy as np
@@ -366,6 +368,9 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
     join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
+    threshold_str = str(threshold).split('.')[-1]
+    if len(threshold_str) == 1:
+        threshold_str = threshold_str + '0'
 
     if in_csv == '':
         aligned_csv = in_folder + '\\aligned_locations.csv'
@@ -390,16 +395,16 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
 
         if by_power == False:
             if value != 'W_s_Z_s':
-                fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value
+                fig_name = out_folder + '\\%s_N_harmonics_r2_t%s_plot.png' % (value, threshold_str)
             else:
                 value_for_fig = 'W_s_Z_s'
-                fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value_for_fig
+                fig_name = out_folder + '\\%s_N_harmonics_r2_t%s_plot.png' % (value_for_fig, threshold_str)
         if by_power == True:
             if value != 'W_s_Z_s':
-                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_plot.png' % value
+                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_t%s_plot.png' % (value, threshold_str)
             else:
                 value_for_fig = 'W_s_Z_s'
-                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_plot.png' % value_for_fig
+                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_t%s_plot.png' % (value_for_fig, threshold_str)
 
         ax[len(comb)-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
@@ -466,9 +471,55 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     plt.close('all')
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
+def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s']):
+    """This is a simple function that outputs values for the full sample set csv. Outputs the N number of harmonics associated 0.90 and 0.95 R^2
+    thresholds (for by FFT, and PSD). Values can be used for box plotting.
+    Threshold must be a list of floats representing R^2 values (i.e 0.9)"""
+    out_dict = {}
+    prefixs = ['base', 'bf', 'vf'] # Used to match formatting on all sample csv
+    values_for_csv = ['ws', 'zs', 'cwz']  # Used to match formatting on all sample csv
+    cols = ['Base flow', 'Bank full', 'Valley Fill']  # Input csv column names
+    suffix_list = []
 
-comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
-SCO_list = [1 for i in comid_list]
+    for threshold in r2_thresholds:
+        threshold_str = str(threshold).split('.')[-1]
+        if len(threshold_str) == 1:
+            threshold_str = threshold_str + '0'
+        suffix_list.append(threshold_str)
+
+    for i, threshold in enumerate(r2_thresholds):
+        suffix = suffix_list[i]
+        for j, value in enumerate(values):
+            val_out = values_for_csv[j]
+            csvs = [in_folder + '\\%s_harmonics_r2_t%s.csv' % (value, threshold_str[i]),
+                    in_folder + '\\%s_harmonics_r2_by_PSD_t%s.csv' % (value, threshold_str[i])]  # First represents by FFT method, second is by PSD
+            adds = ['', 'PSD_']
+
+            for m, csv in enumerate(csvs):
+                add = adds[m]
+                df = pd.read_csv(csv)
+                for count, col in enumerate(cols):
+                    prefix = prefixs[count]
+                    col_as_list = df[col].to_list()
+                    index = 0
+                    if threshold != 0:
+                        while col_as_list[index] < threshold and index < len(col_as_list):
+                            index += 1
+                    out_dict['%s_%s_%sr%s' % (prefix, val_out, add, suffix)] = df['N'].to_list()[index]
+
+    out_df = pd.DataFrame.from_dict(out_dict)
+
+
+
+
+
+
+
+
+
+
+comid_list = [17586610, 17610235, 17595173, 17607455, 17586760]
+SCO_list = [3 for i in comid_list]
 key_zs_list = [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
 signal_process = True
 

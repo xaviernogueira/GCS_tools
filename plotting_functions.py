@@ -459,7 +459,6 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
             "target": target,
             "value": value}))
 
-    #fig.show()
     fig.write_image(title + '.pdf')
     fig.write_image(title + '.png', scale=5)
     print('Sankey plots saved @ %s' % title)
