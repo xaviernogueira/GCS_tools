@@ -384,6 +384,8 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
             value_dict[value].append(signal)
 
     for value in value_dict.keys():
+        out_df = pd.DataFrame()  # Stores N vs R^2 relationships
+
         fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
 
         if by_power == False:
@@ -394,10 +396,10 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
                 fig_name = out_folder + '\\%s_N_harmonics_r2_plot.png' % value_for_fig
         if by_power == True:
             if value != 'W_s_Z_s':
-                fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value
+                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_plot.png' % value
             else:
                 value_for_fig = 'W_s_Z_s'
-                fig_name = out_folder + '\\%s_N_harmonics_r2_plot_by_PSD.png.png' % value_for_fig
+                fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_plot.png' % value_for_fig
 
         ax[len(comb)-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
@@ -429,6 +431,11 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
                         r2 = 0
                     key_z_r_squares.append(r2)
 
+            if not 'N' in out_df.columns:
+                out_df['N'] = np.arange(round(len(fft)/3))
+
+            out_df[labels[count]] = np.asarray(key_z_r_squares)[:round(len(fft)/3)]
+
             index = 0
             if threshold != 0:
                 while key_z_r_squares[index] < threshold and index < len(key_z_r_squares):
@@ -443,6 +450,8 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
             ax[count].axhline(y=key_z_r_squares[index], xmax=xmax, color='r', linestyle='--')
             ax[count].axvline(x=np.arange(len(fft))[index], ymax=key_z_r_squares[index], color='r', linestyle='--')
 
+        print(fig_name[:-9] + '.csv')  # For testing purposes
+        out_df.to_csv(fig_name[:-9] + '.csv')
         ax[0].set_xticks(np.arange(0, round(len(fft)/3), 5))
         ax[0].set_yticks(np.arange(0, 1, 0.1))
         ax[0].set_xlim(0.0, round(len(fft)/3))
@@ -458,9 +467,9 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
 
-comid_list = [17586504, 17610257, 17573013, 17573045, 17586810, 17609015]
-SCO_list = [2 for i in comid_list]
-key_zs_list = [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
+comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+SCO_list = [1 for i in comid_list]
+key_zs_list = [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
 signal_process = True
 
 if signal_process:
@@ -484,11 +493,10 @@ if signal_process:
         #powerspec_plotting(in_folder=table_location, out_folder=landform_folder, key_zs=key_zs, fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=True)
-        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               #threshold=0.90, in_csv='', by_power=False)
-        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               #threshold=0.90, in_csv='', by_power=True)
-        cross_corr_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv='')
+        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               threshold=0.90, in_csv='', by_power=False)
+        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               threshold=0.90, in_csv='', by_power=True)
 
         #  Go back and adjust harmonic r^2 code to export arrays to a csv in order to extract N values for each reach and threhsold or make a quick new function
         #  Then go and use the N values to make fourier analysis plots with the associated N

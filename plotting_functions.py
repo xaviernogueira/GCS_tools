@@ -726,6 +726,10 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 
 
 ###### INPUTS ######
+#  SCO3 folder list
+#  SCO4 folder list ['\\SCO1', '\\SCO1', '\\SCO2', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO5', '\\SCO5']
+#  SCO5 folder list ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5']
+
 #  SCO1 fake grouping [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
 #  SCO2 fake grouping [17586504, 17610257, 17573013, 17573045, 17586810, 17609015]
 #  SCO3 fake grouping [17586610, 17610235, 17595173, 17607455, 17586760]
@@ -745,6 +749,7 @@ SCO_list = [sc_class for i in comid_list]
 
 key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
 folder_list = ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5']
+
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
 #  SCO3 fake grouping [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
@@ -777,7 +782,7 @@ for root in roots:
         temp_list.append('%s_%s' % (label, root))
     single_plot_lists.append(temp_list)
 
-analysis_plotting = False
+analysis_plotting = True
 
 if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
@@ -800,16 +805,20 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
+    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
+    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
+    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
+                       geo_classes=folder_list, key_zs=key_zs)
+
+        #signal_analysis_functions.cross_corr_analysis(in_folder=landform_folder, out_folder=landform_folder,
+                                                      #detrend_folder=out_folder, key_zs=key_zs[count],
+                                                      #fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv='')
         #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs[count])
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
-                               geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
-                               geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
 
         #for list in single_plot_lists:
             #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
     #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
-    #vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], key_zs=key_zs)
+
         #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
         #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])

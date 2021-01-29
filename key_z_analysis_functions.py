@@ -251,9 +251,12 @@ def key_z_centerlines(detrend_folder, key_zs=[], centerline_verified=False, xs_l
         file_functions.delete_gis_files(file)
 
 
-def prep_locations(detrend_folder):
+def prep_locations(detrend_folder, flip=False):
     '''This function takes a reach and creates a new csv with aligned location identifiers using a Thiessen Polygon methodology.
-    Returns aligned_locations.csv in the \\landform_analysis sub-folder. This csv can be used to align any data field for any key z or stage range.'''
+    Returns aligned_locations.csv in the \\landform_analysis sub-folder. This csv can be used to align any data field for any key z or stage range.
+    When flip==True (false is default) locations are flipped to correctlyly link to an ALREADY FLIPPED GCS stage table. If neither table is flipped, use
+    the flipped table function in plotting functions file!'''
+
     print('Creating aligned_locations.csv with aligned centerline locations / dist_down...')
     detrended_raster = detrend_folder + '\\ras_detren.tif'
     landform_folder = detrend_folder + '\\landform_analysis'
@@ -316,7 +319,27 @@ def prep_locations(detrend_folder):
     out_aligned_df = aligned_df.loc[:, keep_headers]
     out_aligned_df.sort_values(by=[index_field], inplace=True)
     out_aligned_df.set_index(index_field, inplace=True)
-    out_aligned_df.to_csv(aligned_csv)
+
+    if flip:
+        loc_fields = [j for j in list(out_aligned_df.columns.values) if j[:3] == 'loc']
+        loc_nums = []
+
+        for loc_field in loc_fields:
+            if loc_field[5] == 'f':
+                loc_nums.append(loc_field[4])
+            else:
+                loc_nums.append(loc_field[4:6])
+            temp_max = np.nanmax(out_aligned_df.loc[:, loc_field].to_numpy())
+            dist_list = out_aligned_df.loc[:, [loc_field]].squeeze().to_list()
+            loc_np = np.array([int(temp_max - i) for i in dist_list])
+            out_aligned_df[loc_field] = loc_np
+
+        min_loc = loc_fields[loc_nums.index(min(loc_nums, key=int))]
+        out_aligned_df.sort_values(str(min_loc), inplace=True)
+        out_aligned_df.to_csv(aligned_csv)
+
+    else:
+        out_aligned_df.to_csv(aligned_csv)
 
     print('Deleting files: %s' % del_files)
     for file in del_files:
@@ -394,7 +417,6 @@ def thalweg_zs(detrend_folder, join_csv=''):
         result_df.to_csv(join_csv)
         print('Thalweg z values joined to %s' % join_csv)
         return join_csv
-
 
 
 def key_zs_gcs(detrend_folder, key_zs=[], clip_poly='', max_stage=20, wetted_folder=''):
@@ -963,11 +985,11 @@ def cart_sc_classifier(comids, bf_z, in_folder, out_csv, confinements=[], confin
 
 
 ###### INPUTS ######
-comid_list = [17610661]
-sc_class = 'O1'
+comid_list = [17567211, 17633478, 17562556, 17609947, 17637906, 17570347]
+sc_class = '00_new_adds'
 SCO_list = [sc_class for i in comid_list]
-key_zs = [[0.5, 2.1, 8.5]]
-key_z_process = True
+key_zs = [[0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
+key_z_process = False
 align_time = True
 
 if key_z_process:
@@ -986,12 +1008,18 @@ if key_z_process:
         key_z_dict = {}
 
         arcpy.env.overwriteOutput = True
+        if os.path.exists(aligned_csv_loc):
+            os.remove(aligned_csv_loc)
 
+        if comid in [17610257, 17609015, 17607455, 17569841, 17563602, 17610671]:
+            flip_val = True
+        else:
+            flip_val = False
         if align_time:
-            prep_locations(detrend_folder=out_folder)
-            #thalweg_zs(detrend_folder=out_folder, join_csv='')
-            #add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=[], fields=['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s', 'code'], max_stage=20)
-            #align_landforms(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count])
+            prep_locations(detrend_folder=out_folder, flip=flip_val)
+            thalweg_zs(detrend_folder=out_folder, join_csv='')
+            add_aligned_values(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count], fields=['dist_down', 'W', 'W_s', 'Z', 'Z_s', 'W_s_Z_s', 'code'], max_stage=20)
+            align_landforms(in_folder=table_location, join_csv=aligned_csv_loc, key_zs=key_zs[count])
 
 
 
