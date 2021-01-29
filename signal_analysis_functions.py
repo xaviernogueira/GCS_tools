@@ -385,14 +385,14 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
 
     aligned_df = pd.read_csv(aligned_csv)
     aligned_df.sort_values(join_field, inplace=True)
+    aligned_df.dropna(0, inplace=True)
 
     for value in value_dict.keys():
         for z in key_zs:
             z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
 
-            signal_nan = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
-            signal = signal_nan[~(np.isnan(signal_nan))]
+            signal = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
             value_dict[value].append(signal)
 
     for value in value_dict.keys():
@@ -526,9 +526,9 @@ def class_average_harmonic_curve(class_comid_dict):
 
 
 
-comid_list = [17567211, 17633478, 17562556, 17609947, 17637906, 17570347]
+comid_list = [17633478, 17562556, 17609947, 17637906, 17570347]
 SCO_list = ['00_new_adds' for i in comid_list]
-key_zs_list = [[0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
+key_zs_list = [[0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
 signal_process = True
 
 if signal_process:
