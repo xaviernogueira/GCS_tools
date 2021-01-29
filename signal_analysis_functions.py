@@ -363,10 +363,16 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
     z_str_list = []
     key_zs.sort()
-    
+
+    if len(key_zs) >= 3:
+        comb = list(combinations(key_zs, 2))
+    else:
+        comb = key_zs
+
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
+
     join_field = 'loc_%sft' % min(key_z_analysis_functions.find_centerline_nums(detrend_folder))
     threshold_str = str(threshold).split('.')[-1]
     if len(threshold_str) == 1:
@@ -385,13 +391,14 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
             z_str = key_z_analysis_functions.float_keyz_format(z)
             z_str_list.append(z_str)
 
-            signal = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
+            signal_nan = aligned_df.loc[:, [value + '_%sft' % z_str]].squeeze()
+            signal = signal_nan[~(np.isnan(signal_nan))]
             value_dict[value].append(signal)
 
     for value in value_dict.keys():
         out_df = pd.DataFrame()  # Stores N vs R^2 relationships
 
-        fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
+        fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
 
         if by_power == False:
             if value != 'W_s_Z_s':
@@ -406,12 +413,12 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
                 value_for_fig = 'W_s_Z_s'
                 fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_t%s_plot.png' % (value_for_fig, threshold_str)
 
-        ax[len(key_zs)-1].set_xlabel('# of harmonic terms')
+        ax[-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
             key_z_r_squares = []
             signal = value_dict[value][count]
 
-            if by_power == False:
+            if not by_power:
                 fft = np.fft.fft(signal)
                 for i in range(len(fft)):
                     fft = np.fft.fft(signal)
