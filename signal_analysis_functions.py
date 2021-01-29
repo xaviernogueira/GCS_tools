@@ -363,7 +363,7 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     value_dict = {}  # Stores Ws and C(Ws,Zs) power spectral density values respectively
     z_str_list = []
     key_zs.sort()
-    comb = list(combinations(key_zs, 2))
+    
     for field in fields:
         value_dict[field] = []
     labels = ['Base flow', 'Bank full', 'Valley Fill']
@@ -391,7 +391,7 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     for value in value_dict.keys():
         out_df = pd.DataFrame()  # Stores N vs R^2 relationships
 
-        fig, ax = plt.subplots(len(comb), 1, sharex=True, sharey=True)
+        fig, ax = plt.subplots(len(key_zs), 1, sharex=True, sharey=True)
 
         if by_power == False:
             if value != 'W_s_Z_s':
@@ -406,7 +406,7 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
                 value_for_fig = 'W_s_Z_s'
                 fig_name = out_folder + '\\%s_N_harmonics_r2_by_PSD_t%s_plot.png' % (value_for_fig, threshold_str)
 
-        ax[len(comb)-1].set_xlabel('# of harmonic terms')
+        ax[len(key_zs)-1].set_xlabel('# of harmonic terms')
         for count, z in enumerate(key_zs):
             key_z_r_squares = []
             signal = value_dict[value][count]
@@ -508,19 +508,20 @@ def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_
                     out_dict['%s_%s_%sr%s' % (prefix, val_out, add, suffix)] = df['N'].to_list()[index]
 
     out_df = pd.DataFrame.from_dict(out_dict)
+    out_df.to_csv(out_folder + '\\harmonics_out.csv')
+
+def class_average_harmonic_curve(class_comid_dict):
+    """This function averages, and plots all class averaged N vs R^s curves in square subplots with exagerated Y axis.
+    in_folder must contain sub folders with csvs for each comid from the harmonics_r2_analysis. The function averages the csvs as data frames,
+    and plots the curves with standard deviation bars"""
+    work_on_this = True
 
 
 
 
-
-
-
-
-
-
-comid_list = [17586610, 17610235, 17595173, 17607455, 17586760]
-SCO_list = [3 for i in comid_list]
-key_zs_list = [[0.5, 1.7, 5.4], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.3, 1.4, 4.2], [0.7, 2.7, 5.0]]
+comid_list = [17567211, 17633478, 17562556, 17609947, 17637906, 17570347]
+SCO_list = ['00_new_adds' for i in comid_list]
+key_zs_list = [[0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
 signal_process = True
 
 if signal_process:
@@ -528,7 +529,7 @@ if signal_process:
         key_zs = key_zs_list[count]
         SCO_number = SCO_list[count]
         sc_folder = r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s" % SCO_list[count]
-        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SCO%s\COMID%s" % (SCO_number, comid))
+        direct = (r"Z:\users\xavierrn\SoCoast_Final_ResearchFiles\SC%s\COMID%s" % (SCO_number, comid))
         out_folder = direct + r'\LINEAR_DETREND'
         process_footprint = direct + '\\las_footprint.shp'
         table_location = out_folder + "\\gcs_ready_tables"
@@ -548,6 +549,5 @@ if signal_process:
                                threshold=0.90, in_csv='', by_power=False)
         harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
                                threshold=0.90, in_csv='', by_power=True)
+        #merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
 
-        #  Go back and adjust harmonic r^2 code to export arrays to a csv in order to extract N values for each reach and threhsold or make a quick new function
-        #  Then go and use the N values to make fourier analysis plots with the associated N
