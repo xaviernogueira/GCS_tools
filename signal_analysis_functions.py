@@ -482,11 +482,14 @@ def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_
     """This is a simple function that outputs values for the full sample set csv. Outputs the N number of harmonics associated 0.90 and 0.95 R^2
     thresholds (for by FFT, and PSD). Values can be used for box plotting.
     Threshold must be a list of floats representing R^2 values (i.e 0.9)"""
-    out_dict = {}
+
     prefixs = ['base', 'bf', 'vf'] # Used to match formatting on all sample csv
     values_for_csv = ['ws', 'zs', 'cwz']  # Used to match formatting on all sample csv
     cols = ['Base flow', 'Bank full', 'Valley Fill']  # Input csv column names
     suffix_list = []
+
+    out_x = []
+    out_y = []
 
     for threshold in r2_thresholds:
         threshold_str = str(threshold).split('.')[-1]
@@ -498,8 +501,8 @@ def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_
         suffix = suffix_list[i]
         for j, value in enumerate(values):
             val_out = values_for_csv[j]
-            csvs = [in_folder + '\\%s_harmonics_r2_t%s.csv' % (value, threshold_str[i]),
-                    in_folder + '\\%s_harmonics_r2_by_PSD_t%s.csv' % (value, threshold_str[i])]  # First represents by FFT method, second is by PSD
+            csvs = [in_folder + '\\%s_N_harmonics_r2_t%s.csv' % (value, suffix_list[i]),
+                    in_folder + '\\%s_N_harmonics_r2_by_PSD_t%s.csv' % (value, suffix_list[i])]  # First represents by FFT method, second is by PSD
             adds = ['', 'PSD_']
 
             for m, csv in enumerate(csvs):
@@ -508,12 +511,19 @@ def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_
                 for count, col in enumerate(cols):
                     prefix = prefixs[count]
                     col_as_list = df[col].to_list()
+
                     index = 0
                     if threshold != 0:
-                        while col_as_list[index] < threshold and index < len(col_as_list):
+                        while col_as_list[index] < threshold and index < len(col_as_list) - 1:
                             index += 1
-                    out_dict['%s_%s_%sr%s' % (prefix, val_out, add, suffix)] = df['N'].to_list()[index]
+                    else:
+                        print('Error. Must select a non zero R^2 values to find N number of harmonics associated with it')
 
+                    number = df['N'].to_list()[index]  # number of harmonics
+                    out_x.append('%s_%s_%sr%s' % (prefix, val_out, add, suffix))
+                    out_y.append(number)
+
+    out_dict = {'label': out_x, 'value': out_y}
     out_df = pd.DataFrame.from_dict(out_dict)
     out_df.to_csv(out_folder + '\\harmonics_out.csv')
 
@@ -524,11 +534,9 @@ def class_average_harmonic_curve(class_comid_dict):
     work_on_this = True
 
 
-
-
-comid_list = [17633478, 17562556, 17609947, 17637906, 17570347]
+comid_list = [17609947, 17637906, 17570347]
 SCO_list = ['00_new_adds' for i in comid_list]
-key_zs_list = [[0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
+key_zs_list = [[0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
 signal_process = True
 
 if signal_process:
@@ -552,9 +560,9 @@ if signal_process:
         #powerspec_plotting(in_folder=table_location, out_folder=landform_folder, key_zs=key_zs, fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=True)
-        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               threshold=0.90, in_csv='', by_power=False)
-        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               threshold=0.90, in_csv='', by_power=True)
-        #merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
+        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               #threshold=0.90, in_csv='', by_power=False)
+        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               #threshold=0.90, in_csv='', by_power=True)
+        merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
 
