@@ -478,12 +478,13 @@ def harmonic_r_square_plot(in_folder, out_folder, detrend_folder, key_zs=[], fie
     plt.close('all')
     print('Correlation plots of N # of harmonics IFFT and original signals complete!')
 
+
 def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s']):
     """This is a simple function that outputs values for the full sample set csv. Outputs the N number of harmonics associated 0.90 and 0.95 R^2
     thresholds (for by FFT, and PSD). Values can be used for box plotting.
     Threshold must be a list of floats representing R^2 values (i.e 0.9)"""
 
-    prefixs = ['base', 'bf', 'vf'] # Used to match formatting on all sample csv
+    prefixs = ['base', 'bf', 'vf']  # Used to match formatting on all sample csv
     values_for_csv = ['ws', 'zs', 'cwz']  # Used to match formatting on all sample csv
     cols = ['Base flow', 'Bank full', 'Valley Fill']  # Input csv column names
     suffix_list = []
@@ -527,6 +528,7 @@ def merge_to_csv(in_folder, out_folder, r2_thresholds=[0.90], values=['W_s', 'Z_
     out_df = pd.DataFrame.from_dict(out_dict)
     out_df.to_csv(out_folder + '\\harmonics_out.csv')
 
+
 def class_average_harmonic_curve(class_comid_dict):
     """This function averages, and plots all class averaged N vs R^s curves in square subplots with exagerated Y axis.
     in_folder must contain sub folders with csvs for each comid from the harmonics_r2_analysis. The function averages the csvs as data frames,
@@ -534,9 +536,9 @@ def class_average_harmonic_curve(class_comid_dict):
     work_on_this = True
 
 
-comid_list = [17609947, 17637906, 17570347]
-SCO_list = ['00_new_adds' for i in comid_list]
-key_zs_list = [[0.2, 0.7, 2.6], [0.3, 1.2, 5.3], [0.6, 3.2, 6.0]]
+comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
+SCO_list = ['O1' for i in comid_list]
+key_zs_list = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 signal_process = True
 
 if signal_process:
@@ -560,9 +562,9 @@ if signal_process:
         #powerspec_plotting(in_folder=table_location, out_folder=landform_folder, key_zs=key_zs, fields=['W_s', 'Z_s', 'W_s_Z_s'], smoothing=5)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=False)
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=True)
-        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               #threshold=0.90, in_csv='', by_power=False)
-        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
-                               #threshold=0.90, in_csv='', by_power=True)
+        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               threshold=0.90, in_csv='', by_power=False)
+        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+                               threshold=0.90, in_csv='', by_power=True)
         merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
 

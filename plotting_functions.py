@@ -127,7 +127,7 @@ def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'B
     print('GCS plots saved @ %s' % out_folder)
 
 
-def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', single_plots=False):
+def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', ylim=100, single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
     in_csv must contained data readable by pandas. Out folder is where the plots are saved.
     Fields is a list of fields to make plots from. If single_plots==True(False is default), each field is on the same plots for a single sort_by_field.
@@ -162,7 +162,7 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_title('%s sorted by %s' % (field, sort_by_field))
             ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
-            ax.set_ylim(0, 100)
+            ax.set_ylim(0, ylim)
 
             plot = plt.boxplot(box_dict[field], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['royalblue', 'yellow', 'indianred', 'violet', 'limegreen']
@@ -787,7 +787,7 @@ if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
     base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
     sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\Landform_pie_charts'
+    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\harmonic_box_plots'
 
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
@@ -804,10 +804,15 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
-    vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
-                       geo_classes=folder_list, key_zs=key_zs)
+    cwz = ['base_cwz_r90', 'bf_cwz_r90', 'vf_cwz_r90']
+    ws = ['base_ws_r90', 'bf_ws_r90', 'vf_ws_r90']
+    zs = ['base_zs_r90', 'bf_zs_r90', 'vf_zs_r90']
+    box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=175, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+
+    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
+    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
+    #vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
+                       #geo_classes=folder_list, key_zs=key_zs)
 
         #signal_analysis_functions.cross_corr_analysis(in_folder=landform_folder, out_folder=landform_folder,
                                                       #detrend_folder=out_folder, key_zs=key_zs[count],
@@ -815,7 +820,6 @@ if analysis_plotting == True:
         #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs[count])
 
         #for list in single_plot_lists:
-            #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=list, field_units=['Percent %'], field_title=list[1][3:], sort_by_field='round_log_catch', sort_by_title='Geomorphic class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
     #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
 
