@@ -41,8 +41,8 @@ def transfer_files(class_folders, comids_list, classes_list=classes, in_folder_s
             sc = int(classes[count])
 
             if comid_folder in sub_folders:
-                out_fig_folder = top_out_folder + '\\SC0%s\\COMID%s\\figures' % (comid, sc)
-                out_tables_folder = top_out_folder + '\\SC0%s\\COMID%s\\tables' % (comid, sc)
+                out_fig_folder = top_out_folder + '\\SC0%s\\COMID%s\\figures' % (sc, comid)
+                out_tables_folder = top_out_folder + '\\SC0%s\\COMID%s\\tables' % (sc, comid)
 
                 if not os.path.exists(out_fig_folder):
                     os.makedirs(out_fig_folder)
