@@ -807,7 +807,7 @@ if analysis_plotting == True:
     cwz = ['base_cwz_r90', 'bf_cwz_r90', 'vf_cwz_r90']
     ws = ['base_ws_r90', 'bf_ws_r90', 'vf_ws_r90']
     zs = ['base_zs_r90', 'bf_zs_r90', 'vf_zs_r90']
-    box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=175, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+    box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=300, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
 
     #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
     #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)

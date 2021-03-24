@@ -13,7 +13,7 @@ comids = csv['comid'].to_list()
 classes = csv['manual_class'].to_list()
 comids = [int(i) for i in comids]
 
-sc_suffix = ['SCO2', 'SCO3', 'SCO4', 'SCO5', 'SC00_new_adds']
+sc_suffix = ['SCO1', 'SCO2', 'SCO3', 'SCO4', 'SCO5', 'SC00_new_adds']
 sc_folders = [top_level_directory + '\\%s' % i for i in sc_suffix]
 
 
@@ -36,30 +36,32 @@ def transfer_files(class_folders, comids_list, classes_list=classes, in_folder_s
     for folder in sc_folders:
         sub_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
 
-    for count, comid in enumerate(comids):
-        comid_folder = folder + '\\COMID%s' % comid
-        sc = int(classes[count])
+        for count, comid in enumerate(comids):
+            comid_folder = folder + '\\COMID%s' % comid
+            sc = int(classes[count])
 
-        if comid_folder in sub_folders:
-            out_fig_folder = top_out_folder + '\\SC0%s\\figures' % sc
-            out_tables_folder = top_out_folder + '\\SC0%s\\tables' % sc
+            if comid_folder in sub_folders:
+                out_fig_folder = top_out_folder + '\\SC0%s\\COMID%s\\figures' % (comid, sc)
+                out_tables_folder = top_out_folder + '\\SC0%s\\COMID%s\\tables' % (comid, sc)
 
-            if not os.path.exists(out_fig_folder):
-                os.makedirs(out_fig_folder)
-            if not os.path.exists(out_tables_folder):
-                os.makedirs(out_tables_folder)
+                if not os.path.exists(out_fig_folder):
+                    os.makedirs(out_fig_folder)
+                if not os.path.exists(out_tables_folder):
+                    os.makedirs(out_tables_folder)
 
-        in_folder = comid_folder + in_folder_suffix
+                in_folder = comid_folder + in_folder_suffix
 
-        for file in listdir(in_folder):
-            split = os.path.splitext(file)
-            if split[1] in ['.png', '.pdf', '.jpeg']:
-                shuntil.copy(in_folder + '\\%s' % file, out_fig_folder + '\\%s' % file)
+                for file in listdir(in_folder):
+                    split = os.path.splitext(file)
+                    if split[1] in ['.png', '.pdf', '.jpeg']:
+                        shutil.copy(in_folder + '\\%s' % file, out_fig_folder + '\\%s' % file)
 
-            elif split[1] in ['.csv', '.xlsx']:
-                shuntil.copy(in_folder + '\\%s' % file, out_fig_folder + '\\%s' % file)
+                    elif split[1] in ['.csv', '.xlsx']:
+                        shutil.copy(in_folder + '\\%s' % file, out_tables_folder + '\\%s' % file)
 
-            print('%s moved to %s' % (file, out_fig_folder + '\\%s' % file))
+                    print('%s moved to %s' % (file, out_fig_folder + '\\%s' % file))
+
+
 
 
 # Run functions
