@@ -539,7 +539,7 @@ def class_average_harmonic_curve(class_comid_dict):
 comid_list = [17569535, 22514218, 17607553, 17609707, 17609017, 17610661]
 SCO_list = ['O1' for i in comid_list]
 key_zs_list = [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
-signal_process = True
+signal_process = False
 
 if signal_process:
     for count, comid in enumerate(comid_list):
@@ -564,7 +564,7 @@ if signal_process:
         #fourier_analysis(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'W', 'Z_s'], n=10, in_csv='', by_power=True)
         harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
                                threshold=0.90, in_csv='', by_power=False)
-        harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
+        #harmonic_r_square_plot(in_folder=landform_folder, out_folder=landform_folder, detrend_folder=out_folder, key_zs=key_zs, fields=['W_s_Z_s', 'W_s', 'Z_s'],
                                threshold=0.90, in_csv='', by_power=True)
-        merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
+        #merge_to_csv(in_folder=landform_folder, out_folder=direct, r2_thresholds=[0.90], values=['W_s', 'Z_s', 'W_s_Z_s'])
 

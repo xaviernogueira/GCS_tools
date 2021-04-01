@@ -230,8 +230,8 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
             z_str = float_keyz_format(z)
             temp_percents = []
 
-            data = base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
-
+            data = base_folder + '\\DATASET_by_reach\\\SC%s\COMID%s\Tables\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
+                   
             wb = xl.load_workbook(data)
             ws = wb.active
 
@@ -487,7 +487,7 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             for index, z in enumerate(key_zs[count]):
                 z_str = float_keyz_format(z)
 
-                data = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\%sft_WD_analysis_table.csv' % (geo_class, comid, z_str))
+                data = pd.read_csv(base_folder + '\\DATASET_by_reach\\%s\\COMID%s\\Tables\\%sft_WD_analysis_table.csv' % (geo_class, comid, z_str))
                 x_temp = data.loc[:, ['W_s']].squeeze().to_list()
                 y_temp = data.loc[:, ['Z_s']].squeeze().to_list()
                 for value in range(len(x_temp)):
@@ -569,7 +569,11 @@ def heat_plotter(base_folder, comids, out_folder, class_title='', geo_classes=[]
             ax.set_xlabel('Standardized width (Ws)')
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
-        save_title = out_folder + '\\comid%s_heatplots.png' % comids[0]
+        if class_title == '':
+            save_title = out_folder + '\\comid%s_heatplots.png' % comids[0]
+        else:
+            save_title = out_folder + '\\%s_heatplots.png'
+
         fig = plt.gcf()
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.clf()
@@ -597,7 +601,7 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
 
         for count, comid in enumerate(comids):
             geo_class = geo_classes[count]
-            df = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
+            df = pd.read_csv(base_folder + '\\DATASET_by_reach\\%s\\COMID%s\\Tables\\aligned_locations.csv' % (geo_class, comid))
             data = df.dropna()
 
             for index, z in enumerate(key_zs[count]):
@@ -660,8 +664,11 @@ def vector_plotter(base_folder, comids, out_folder, class_title='', geo_classes=
             ax.set_ylabel('Standardized detrended elevation (Zs)')
 
         #fig.colorbar(matplotlib.cm.ScalarMappable(norm=colors_module.Normalize(vmin=-5, vmax=5), cmap='seismic'), ticks=range(-5, 6, 1), orientation='horizantal', ax=axs)
-        #save_title = out_folder + '\\class%s_vectorplot.png' % class_title
-        save_title = out_folder + '\\comid%s_vectorplot.png' % comid
+        if sc_class == '':
+            save_title = out_folder + '\\comid%s_vectorplot.png' % comid
+        else:
+            save_title = out_folder + '\\class%s_vectorplot.png' % class_title
+
         fig.set_size_inches(10, 10)
         plt.savefig(save_title, dpi=300, bbox_inches='tight')
         plt.clf()
@@ -738,16 +745,16 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 
 #  SCO1 class [17573013, 17573045, 17567211, 17633478, 17562556, 17609947]
 #  SCO2 class [17609707, 17586810, 17609015, 17586760, 17610671, 17637906]
-#  SCO3 class [17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
-#  SCO4 class [17569535, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
-#  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
+#  SCO3 class [17569535, 17586504, 17594703, 17609699, 17570395, 17609755, 17570347]
+#  SCO4 class [17610541, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
+#  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610721]
 
-comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610541, 17610721]
+comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610721]
 sc_class = 'O5'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
-folder_list = ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5']
+key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.4, 1.3, 4.1]]
+#folder_list = ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5']
 
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
@@ -758,9 +765,9 @@ folder_list = ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SC
 
 # SCO1 class [[0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6]]
 # SCO2 class [[0.5, 2.0, 5.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3], [0.7, 2.7, 5.0], [0.4, 2.7, 8.0], [0.3, 1.2, 5.3]]
-# SCO3 class [[0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
-# SCO4 class [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
-# SCO5 class [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.5, 2.3, 5.9], [0.4, 1.3, 4.1]]
+# SCO3 class [[0.9, 3.0, 5.8], [0.7, 2.9, 4.9], [0.5, 2.9, 5.6], [0.5, 2.2, 5.6], [0.2, 1.1, 5.0], [0.2, 1.0, 3.5], [0.6, 3.2, 6.0]]
+# SCO4 class [[0.5, 2.3, 5.9], [0.1, 0.9, 5.2], [0.4, 2.5, 4.9], [0.4, 1.9, 3.8], [0.0, 1.0, 4.6], [0.7, 1.6, 4.8], [0.3, 1.5, 5.0], [0.6, 1.2, 6.0]]
+# SCO5 class [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.4, 1.3, 4.1]]
 
 
 bf_zs = []
@@ -785,9 +792,6 @@ analysis_plotting = True
 
 if analysis_plotting == True:
     arcpy.env.overwriteOutput = True
-    base = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
-    sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    sample_out_folder = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\harmonic_box_plots'
 
     for count, comid in enumerate(comid_list):
         SCO_number = SCO_list[count]
@@ -804,24 +808,17 @@ if analysis_plotting == True:
         wetted_top_folder = out_folder + '\\wetted_polygons'
         key_z_dict = {}
 
+    base = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data'
+    sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
+    out = base + '\\updated_class_plots'
+
     cwz = ['base_cwz_r90', 'bf_cwz_r90', 'vf_cwz_r90']
     ws = ['base_ws_r90', 'bf_ws_r90', 'vf_ws_r90']
     zs = ['base_zs_r90', 'bf_zs_r90', 'vf_zs_r90']
-    box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=300, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
 
-    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
-    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
-    #vector_plotter(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5',
-                       #geo_classes=folder_list, key_zs=key_zs)
+    folder_list = ['\\SC05' for i in comid_list]
+    #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=300, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+    #heat_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title='SC5', geo_classes=folder_list, key_zs=key_zs)
+    landform_pie_charts(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, all_key_zs=key_zs)
+    #vector_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, key_zs=key_zs)
 
-        #signal_analysis_functions.cross_corr_analysis(in_folder=landform_folder, out_folder=landform_folder,
-                                                      #detrend_folder=out_folder, key_zs=key_zs[count],
-                                                      #fields=['W_s_Z_s', 'W_s', 'Z_s'], in_csv='')
-        #nested_landform_analysis(aligned_csv=aligned_csv_loc, key_zs=key_zs[count])
-
-        #for list in single_plot_lists:
-    #heat_plotter(base_folder=base, comids=comid_list, out_folder=base, class_title='SC5', geo_classes=['\\SCO3'], key_zs=key_zs[0])
-    #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=sample_out_folder, class_title='SC5', geo_classes=['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5'], all_key_zs=key_zs)
-
-        #flip_tables(table_folder=table_location, aligned_table=aligned_csv_loc)
-        #gcs_plotter(table_folder=table_location, out_folder=landform_folder, key_zs=key_zs[count], key_z_meanings=['Baseflow', 'Bankfull', 'Valley Fill'], fields=['W_s', 'Z_s', 'W_s_Z_s'])

@@ -4,20 +4,8 @@ import os
 import shutil
 from os import listdir
 
-top_level_directory = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
-top_level_out_directory = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data\DATASET_by_reach'
-in_folder_name = '\\LINEAR_DETREND\\landform_analysis'  #  folder to transfer files to
 
-csv = pandas.read_csv(top_level_directory + '\\classified_sampled_reaches.csv')
-comids = csv['comid'].to_list()
-classes = csv['manual_class'].to_list()
-comids = [int(i) for i in comids]
-
-sc_suffix = ['SCO1', 'SCO2', 'SCO3', 'SCO4', 'SCO5', 'SC00_new_adds']
-sc_folders = [top_level_directory + '\\%s' % i for i in sc_suffix]
-
-
-def dem_to_hillshade(class_folders=sc_folders, comids_list=comids):
+def dem_to_hillshade(class_folders, comids_list):
     for folder in sc_folders:
         sub_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
 
@@ -32,7 +20,7 @@ def dem_to_hillshade(class_folders=sc_folders, comids_list=comids):
                 print('Hillshade made for comid %s, located @ %s' % (comid, hillshade))
 
 
-def transfer_files(class_folders, comids_list, classes_list=classes, in_folder_suffix=in_folder_name, top_out_folder=top_level_out_directory):
+def transfer_files(class_folders, comids_list, classes_list, in_folder_suffix, top_out_folder):
     for folder in sc_folders:
         sub_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
 
@@ -62,10 +50,20 @@ def transfer_files(class_folders, comids_list, classes_list=classes, in_folder_s
                     print('%s moved to %s' % (file, out_fig_folder + '\\%s' % file))
 
 
+top_level_directory = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
+top_level_out_directory = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data\DATASET_by_reach'
+in_folder_name = '\\LINEAR_DETREND\\landform_analysis'
 
+csv = pandas.read_csv(top_level_directory + '\\classified_sampled_reaches.csv')
+comids = csv['comid'].to_list()
+classes = csv['manual_class'].to_list()
+comids = [int(i) for i in comids]
+
+sc_suffix = ['SCO1', 'SCO2', 'SCO3', 'SCO4', 'SCO5', 'SC00_new_adds']
+sc_folders = [top_level_directory + '\\%s' % i for i in sc_suffix]
 
 # Run functions
-transfer_files(class_folders=sc_folders, comids_list=comids, classes_list=classes, in_folder_suffix=in_folder_name, top_out_folder=top_level_out_directory)
+#transfer_files(class_folders=sc_folders, comids_list=comids, classes_list=classes, in_folder_suffix=in_folder_name, top_out_folder=top_level_out_directory)
 
 
 
