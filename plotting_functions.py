@@ -230,8 +230,8 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
             z_str = float_keyz_format(z)
             temp_percents = []
 
-            data = base_folder + '\\DATASET_by_reach\\\SC%s\COMID%s\Tables\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
-                   
+            data = base_folder + '\\DATASET_by_reach\\%s\\COMID%s\\Tables\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
+
             wb = xl.load_workbook(data)
             ws = wb.active
 
@@ -271,7 +271,7 @@ def landform_pie_charts(base_folder, comids, out_folder, class_title='', geo_cla
                 z_str = float_keyz_format(z)
                 temp_percents = []
 
-                data = base_folder + '%s\\COMID%s\\LINEAR_DETREND\\gcs_ready_tables\\GCS_stat_tables_and_plots\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
+                data = base_folder + '\\DATASET_by_reach\\%s\\COMID%s\\Tables\\%sft_stats_table.xlsx' % (geo_class, comid, z_str)
 
                 wb = xl.load_workbook(data)
                 ws = wb.active
@@ -388,7 +388,7 @@ def nested_landform_sankey(base_folder, comids, out_folder, class_title='', geo_
         key_zs = all_key_zs[k]
         key_zs.sort()
 
-        aligned_df = pd.read_csv(base_folder + '%s\\COMID%s\\LINEAR_DETREND\\landform_analysis\\aligned_locations.csv' % (geo_class, comid))
+        aligned_df = pd.read_csv(base_folder + '\\DATASET_by_reach\\%s\\COMID%s\\Tables\\aligned_locations.csv' % (geo_class, comid))
         data = aligned_df.dropna()
 
         code_df_list = []  # code_df_list[0] is baseflow, [1] is bankful, and [2] is flood stage
@@ -749,12 +749,11 @@ def ww_runs_test(in_folder, out_folder, key_zs=[], fields=['W_s', 'Z_s', 'W_s_Z_
 #  SCO4 class [17610541, 22514218, 17610257, 17610235, 17595173, 17563722, 17569841, 17563602]
 #  SCO5 class [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610721]
 
-comid_list = [17607553, 17609017, 17610661, 17586610, 17607455, 17585756, 17611423, 17610721]
-sc_class = 'O5'
+comid_list = [17573013, 17573045, 17567211, 17633478, 17562556, 17609947]
+sc_class = 'O1'
 SCO_list = [sc_class for i in comid_list]
 
-key_zs = [[0.2, 1.1, 2.6], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5], [0.5, 1.7, 5.4], [0.3, 1.4, 4.2], [0.8, 2.0, 4.3], [0.8, 1.8, 6.0], [0.4, 1.3, 4.1]]
-#folder_list = ['\\SCO1', '\\SCO1', '\\SCO1', '\\SCO3', '\\SCO3', '\\SCO4', '\\SCO4', '\\SCO5', '\\SCO5']
+key_zs = [[0.2, 2.2, 5.1], [0.6, 3.1, 12], [0.1, 0.9, 2.6], [0.1, 1.0, 3.1], [0.3, 3.0], [0.2, 0.7, 2.6]]
 
 #  SCO1 fake grouping [[0.9, 3.0, 5.8], [0.1, 0.9, 5.2], [0.2, 1.1, 2.6], [0.5, 2.0, 5.0], [0.5, 4.2, 7.3], [0.5, 2.1, 8.5]]
 #  SCO2 fake grouping [[0.7, 2.9, 4.9], [0.4, 2.5, 4.9], [0.2, 2.2, 5.1], [0.6, 3.1, 12.0], [0.6, 3.6, 8.1], [0.3, 3.4, 10.3]]
@@ -816,9 +815,9 @@ if analysis_plotting == True:
     ws = ['base_ws_r90', 'bf_ws_r90', 'vf_ws_r90']
     zs = ['base_zs_r90', 'bf_zs_r90', 'vf_zs_r90']
 
-    folder_list = ['\\SC05' for i in comid_list]
+    folder_list = ['\\SC01' for i in comid_list]
     #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=300, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title='SC5', geo_classes=folder_list, key_zs=key_zs)
-    landform_pie_charts(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, all_key_zs=key_zs)
+    #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, all_key_zs=key_zs)
     #vector_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, key_zs=key_zs)
 
