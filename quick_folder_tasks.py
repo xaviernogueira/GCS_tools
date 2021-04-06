@@ -77,6 +77,7 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
         str_float_stages = [i[5:][:-2] for i in headers_list if i[:5] == 'code_']
         floats = [(float(v[:-2]) + 0.1 * float(v[-1])) for v in str_float_stages]
 
+        headers_list = list(in_df.columns.values)  # updated headers list
         for i, num in enumerate(floats):
             if num == np.array(floats).min():
                 label = 'base'
@@ -92,6 +93,28 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
                     index = head.find(z_str)
                     print(head[:index] + label)
                     in_df.rename(columns={head: head[:index] + label}, inplace=True)
+
+        in_df.insert(1, 'comid', int(comid))
+        in_df.insert(1, 'class', int(channel_class))
+
+        headers_list = list(in_df.columns.values)  # updated headers list
+        in_df['delta_c_base_to_bf'] = in_df['W_s_Z_s_bf'] - in_df['W_s_Z_s_base']
+
+        if 'W_s_Z_s_vf' in headers_list:
+            in_df['delta_c_bf_to_vf'] = in_df['W_s_Z_s_vf'] - in_df['W_s_Z_s_bf']
+            in_df['delta_c_base_to_vf'] = in_df['W_s_Z_s_vf'] - in_df['W_s_Z_s_base']
+        else:
+            in_df['delta_c_bf_to_vf'] = pd.Series()  # leaves columns empty if there is no vf data
+            in_df['delta_c_base_to_vf'] = pd.Series()
+            
+        if count == 0:
+            out_df = in_df
+
+        else:
+            out_df = pd.concat([out_df, in_df], axis=0)
+
+
+
 
 
 
