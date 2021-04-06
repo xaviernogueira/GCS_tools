@@ -1,5 +1,5 @@
 import arcpy
-import pandas
+import pandas as pd
 import os
 import shutil
 from os import listdir
@@ -50,11 +50,58 @@ def transfer_files(class_folders, comids_list, classes_list, in_folder_suffix, t
                     print('%s moved to %s' % (file, out_fig_folder + '\\%s' % file))
 
 
+def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_suffix, out_folder):
+    """This function searches for sub-folders with the structure \\SC0#\\COMID#### with channel type class and comid
+    that contains the aligned_locations.csv. The function combines all cross sections into a massive csv, with cross sections coded
+    with a comid, and class value. The file is saved to the out_folder as all_cross_sections.csv
+    in_folder_suffix is the sub folder within the comid folder (like \\Tables) that contains teh aligned_locations.csv"""
+
+    out_csv = out_folder + '\\all_cross_sections.csv'
+
+    for count, comid in enumerate(comids_list):
+        channel_class = classes[count]
+
+        in_csv = class_folders + '\\SC0%s\\COMID%s\\Tables\\aligned_locations.csv' % (channel_class, comid)
+        in_df = pd.read_csv(in_csv)
+
+        headers_list = list(in_df.columns.values)
+
+        loc_nums = [int(i[4:][:-2]) for i in headers_list if i[:4] == 'loc_']
+        del_locs = ['loc_%sft' % v for v in loc_nums if v != min(loc_nums)]
+
+        in_df.rename(columns={'loc_%sft' % min(loc_nums): 'dist_down'}, inplace=True)  # We want to rename the smallest loc_ft header as dist_down
+        in_df.drop(del_locs, axis=1, inplace=True)  # And exclude the other loc headers from export
+        in_df.sort_values('dist_down')
+
+        str_float_stages = [i[5:][:-2] for i in headers_list if i[:5] == 'code_']
+        floats = [(float(v[:-2]) + 0.1 * float(v[-1])) for v in str_float_stages]
+
+        for i, num in enumerate(floats):
+            if num == floats.min():
+                label = 'base'
+            elif num == floats.max() and len(floats) == 3:
+                label = 'vf'
+            else:
+                label = 'bf'
+
+            z_str = str_float_stages[i]
+
+            for head in headers_list:
+                if z_str in head:
+                    index = head.find(z_str)
+                    print(head[:index] + label)
+                    in_df.rename(columns={head: head[:index] + label}, inplace=True)
+
+
+
+
+
+
 top_level_directory = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
 top_level_out_directory = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data\DATASET_by_reach'
 in_folder_name = '\\LINEAR_DETREND\\landform_analysis'
 
-csv = pandas.read_csv(top_level_directory + '\\classified_sampled_reaches.csv')
+csv = pd.read_csv(top_level_directory + '\\classified_sampled_reaches.csv')
 comids = csv['comid'].to_list()
 classes = csv['manual_class'].to_list()
 comids = [int(i) for i in comids]
@@ -64,6 +111,7 @@ sc_folders = [top_level_directory + '\\%s' % i for i in sc_suffix]
 
 # Run functions
 #transfer_files(class_folders=sc_folders, comids_list=comids, classes_list=classes, in_folder_suffix=in_folder_name, top_out_folder=top_level_out_directory)
+all_cross_section_csv(class_folders=top_level_out_directory, comids_list=comids, classes_list=classes, in_folder_suffix='\\Tables', out_folder=top_level_out_directory)
 
 
 
