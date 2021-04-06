@@ -106,12 +106,14 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
         else:
             in_df['delta_c_bf_to_vf'] = pd.Series()  # leaves columns empty if there is no vf data
             in_df['delta_c_base_to_vf'] = pd.Series()
-            
+
         if count == 0:
             out_df = in_df
 
         else:
             out_df = pd.concat([out_df, in_df], axis=0)
+
+    out_df.to_csv(out_csv)
 
 
 
