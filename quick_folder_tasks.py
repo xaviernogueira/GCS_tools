@@ -1,4 +1,5 @@
 import arcpy
+import numpy as np
 import pandas as pd
 import os
 import shutil
@@ -77,9 +78,9 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
         floats = [(float(v[:-2]) + 0.1 * float(v[-1])) for v in str_float_stages]
 
         for i, num in enumerate(floats):
-            if num == floats.min():
+            if num == np.array(floats).min():
                 label = 'base'
-            elif num == floats.max() and len(floats) == 3:
+            elif num == np.array(floats).max() and len(floats) == 3:
                 label = 'vf'
             else:
                 label = 'bf'
