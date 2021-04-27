@@ -154,15 +154,12 @@ def relative_landform_csv(class_folders, comids_list, in_folder_suffix, out_fold
                     data = table_folder + '\\%s' % tables[index]
                     wb = xl.load_workbook(data)
                     ws = wb.active
+                    out_dict['comid'].append(comid)
+                    out_dict['class'].append(sc)
+                    out_dict['stage'].append(stage)
 
                     for ind, row_num in enumerate(range(8, 48, 8)):
-                        temp_list.append(float(ws.cell(row=row_num, column=8).value))
-                        out_dict['comid'].append(comid)
-                        out_dict['class'].append(sc)
-                        out_dict['stage'].append(stage)
-
-                        for i, form in enumerate(landforms):
-                            out_dict[form].append(temp_list[i])
+                        out_dict[landforms[ind]].append(float(ws.cell(row=row_num, column=8).value))
 
     out_df = pd.DataFrame.from_dict(out_dict)
     out_df.to_csv(out_csv)
