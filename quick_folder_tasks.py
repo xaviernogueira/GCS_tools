@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import shutil
 from os import listdir
+import openpyxl as xl
 
 
 def dem_to_hillshade(class_folders, comids_list):
@@ -91,7 +92,6 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
             for head in headers_list:
                 if z_str in head:
                     index = head.find(z_str)
-                    print(head[:index] + label)
                     in_df.rename(columns={head: head[:index] + label}, inplace=True)
 
         in_df.insert(1, 'comid', int(comid))
@@ -111,16 +111,60 @@ def all_cross_section_csv(class_folders, comids_list, classes_list,  in_folder_s
             out_df = in_df
 
         else:
-            out_df = pd.concat([out_df, in_df], axis=0)
+            out_df = pd.concat([out_df, in_df], axis=0, sort=True)
 
+    out_df.dropna(how='all', inplace=True)
     out_df.to_csv(out_csv)
 
+def relative_landform_csv(class_folders, comids_list, in_folder_suffix, out_folder):
+    """This function makes a csv that has comids, channel type classes, and relative landform abundance at each stage"""
+    out_csv = out_folder + '\\relative_landforms.csv'
+    out_dict = {'comid': [], 'class': [], 'stage': []}  # stage is a list of strings 'base', 'bf', or 'vf'
+    landforms = ['Oversized', 'Const. Pool', 'Normal', 'Wide bar', 'Nozzle']
+    stages = ['base', 'bf', 'vf']
 
+    sc_suffix = ['SC01', 'SC02', 'SC03', 'SC04', 'SC05']
+    sc_folders = [class_folders + '\\%s' % i for i in sc_suffix]
+    for form in landforms:
+        out_dict[form] = []
 
+    for folder in sc_folders:
+        sub_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
 
+        for count, comid in enumerate(comids):
+            comid_folder = folder + '\\COMID%s' % comid
+            sc = int(classes[count])
 
+            if comid_folder in sub_folders:
+                table_folder = comid_folder + in_folder_suffix
+                tables = [i for i in listdir(table_folder) if i[-16:] == 'stats_table.xlsx']
+                zs = []
 
+                for table in tables:
+                    split_list = table.split('p', 1)
+                    z = float(split_list[0]) + float(split_list[-20:])
+                    zs.append(z)
 
+                indices = np.argsort(np.array(zs))
+
+                for count, stage in enumerate(stages):
+                    temp_list = []
+                    data = table_folder + '\\%s' % tables[indices[count]]
+                    wb = xl.load_workbook(data)
+                    ws = wb.active
+
+                    for ind, row_num in enumerate(range(8, 48, 8)):
+                        temp_list.append(float(ws.cell(row=row_num, column=8).value))
+                        out_dict['comid'].append(comid)
+                        out_dict['class'].append(sc)
+                        out_dict['stage'].append(stage)
+
+                    for i, form in landforms:
+                        out_dict[form].append(temp_list[i])
+
+    out_df = pd.DataFrame.from_dict(out_dict)
+    out_df.to_csv(out_csv)
+    print('Relative landform abundance csv @ %s' % out_folder)
 
 
 top_level_directory = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles'
@@ -137,8 +181,8 @@ sc_folders = [top_level_directory + '\\%s' % i for i in sc_suffix]
 
 # Run functions
 #transfer_files(class_folders=sc_folders, comids_list=comids, classes_list=classes, in_folder_suffix=in_folder_name, top_out_folder=top_level_out_directory)
-all_cross_section_csv(class_folders=top_level_out_directory, comids_list=comids, classes_list=classes, in_folder_suffix='\\Tables', out_folder=top_level_out_directory)
-
+#all_cross_section_csv(class_folders=top_level_out_directory, comids_list=comids, classes_list=classes, in_folder_suffix='\\Tables', out_folder=top_level_out_directory)
+relative_landform_csv(class_folders=top_level_out_directory, comids_list=comids, in_folder_suffix='\\Tables', out_folder=top_level_out_directory)
 
 
 

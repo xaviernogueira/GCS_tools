@@ -127,13 +127,14 @@ def gcs_plotter(table_folder, out_folder, key_zs, key_z_meanings=['Baseflow', 'B
     print('GCS plots saved @ %s' % out_folder)
 
 
-def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', ylim=100, single_plots=False):
+def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields', sort_by_field='', sort_by_title='', ylim=0, single_plots=False):
     """This function takes a csv and creates box and whisker plots for each field.
     in_csv must contained data readable by pandas. Out folder is where the plots are saved.
     Fields is a list of fields to make plots from. If single_plots==True(False is default), each field is on the same plots for a single sort_by_field.
     sort_by_field (int, or str) is the field that contains values to separate plots or for comparison (ex: log(catchment area) or geo_class.
     field_units is a list that MUST be filled with units corresponding to each input field
-    field_title comes into play when single_plots == True and designates the plot title and filename. Default is 'fields' """
+    field_title comes into play when single_plots == True and designates the plot title and filename. Default is 'fields'
+    ! If single_plots=False, a plot is made comparing each class for a given column, if single_plots=True all fields are shown on one plot for each class (assuming sorted by class)"""
     in_df = pd.read_csv(in_csv)
     box_dict = {}  # Either formatted as fields:[[sort_unique1],[],...] if single_plots==False OR sort_uniques:[[field1],[],...] if single_plots == True
 
@@ -162,7 +163,9 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_title('%s sorted by %s' % (field, sort_by_field))
             ax.set_xlabel(sort_by_title)
             ax.set_ylabel(field_units[count])
-            ax.set_ylim(0, ylim)
+
+            if ylim != 0:
+                ax.set_ylim(0, ylim)
 
             plot = plt.boxplot(box_dict[field], medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['royalblue', 'yellow', 'indianred', 'violet', 'limegreen']
@@ -190,6 +193,9 @@ def box_plots(in_csv, out_folder, fields=[], field_units=[], field_title='fields
             ax.set_ylabel(field_units[0])
             ax.set_xticks([1, 2, 3], ['Base', 'BF', 'VF'])
             ax.set_xticklabels(['Base', 'BF', 'VF'])
+
+            if ylim != 0:
+                ax.set_ylim(0, ylim)
 
             plot = plt.boxplot(box_dict[unique], widths=0.6, medianprops=dict(color='black'), patch_artist=True, showfliers=False)
             colors = ['b', 'y', 'r', 'purple', 'g']
@@ -809,19 +815,16 @@ if analysis_plotting == True:
         key_z_dict = {}
 
     base = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data'
-    sample_table = r'Z:\users\xavierrn\SoCoast_Final_ResearchFiles\classified_sampled_reaches.csv'
-    out = base + '\\updated_class_plots'
+    sample_table = r'Z:\rivers\eFlows\6_South_Coast_Ephemeral_Data\classified_sampled_reaches.csv'
+    out = base + '\\Boxplots\\stage_comparison_box_plots_class_sorted\\scaled_0_to_100'
 
-    cwz = ['base_cwz_r90', 'bf_cwz_r90', 'vf_cwz_r90']
-    ws = ['base_ws_r90', 'bf_ws_r90', 'vf_ws_r90']
-    zs = ['base_zs_r90', 'bf_zs_r90', 'vf_zs_r90']
+    more_roots = ['mean_cwz', 'mean_cwz', 'mean_cwz']
+    items = ['base_mean_cwz', 'bf_mean_cwz', 'vf_mean_cwz']
 
-    folder_list = ['\\SC05' for i in comid_list]
-    class_plot_title = 'SC5'
-    #box_plots(in_csv=sample_table, out_folder=sample_out_folder, fields=cwz, field_units=['# of harmonics' for i in zs], ylim=300, field_title='by_manual_class', sort_by_field='manual_class', sort_by_title='Geomorphic class', single_plots=False)
+    box_plots(in_csv=sample_table, out_folder=out, fields=items, field_units=['Mean C(Ws,Zs)' for i in items], ylim=1, field_title='mean_cwz_no_cap', sort_by_field='manual_class', sort_by_title='Channel type class', single_plots=True)
     #heat_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title='SC5', geo_classes=folder_list, key_zs=key_zs)
     #landform_pie_charts(base_folder=base, comids=comid_list, out_folder=out, class_title='SC1', geo_classes=folder_list, all_key_zs=key_zs)
-    vector_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, key_zs=key_zs)
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
-    nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
+    #vector_plotter(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, key_zs=key_zs)
+    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=False)
+    #nested_landform_sankey(base_folder=base, comids=comid_list, out_folder=out, class_title=class_plot_title, geo_classes=folder_list, all_key_zs=key_zs, ignore_normal=True)
 
